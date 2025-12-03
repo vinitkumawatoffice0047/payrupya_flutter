@@ -15,6 +15,9 @@ import 'package:permission_handler/permission_handler.dart';
 import '../view/other_users_screen.dart';
 import '../view/payrupya_main_screen.dart';
 
+import '../view/other_users_screen.dart';
+import '../view/payrupya_main_screen.dart';
+
 class LoginController extends GetxController {
   Rx<TextEditingController> emailController = TextEditingController(text: "").obs;
   Rx<TextEditingController> mobileController = TextEditingController(text: "").obs;

@@ -1,9 +1,18 @@
+import 'dart:ffi';
+
+// import 'package:e_commerce_app/utils/ConsoleLog.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
-import 'package:payrupya/view/payrupya_main_screen.dart';
+// import 'package:groticshop/View/Dashboard/Home/HomeScreen.dart';
 import 'package:quickalert/quickalert.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+// import '../../DataProvider/api_provider.dart';
+// import '../../DataProvider/app_shared_preferences.dart';
+// import '../../DataProvider/web_api_constant.dart';
+// import '../../Util/Print/print_log.dart';
+// import '../../Util/QuickAlert/QuickAlert.dart';
+// import '../Dashboard/DashboardScreen.dart';
 import '../api/api_provider.dart';
 import '../api/web_api_constant.dart';
 import '../models/CartListApiResponseModel.dart';
@@ -11,6 +20,7 @@ import '../utils/ConsoleLog.dart';
 import '../utils/CustomDialog.dart';
 import '../utils/app_shared_preferences.dart';
 import '../utils/custom_success_dialog.dart';
+import '../view/main_screen.dart';
 
 class AddToCartScreenController extends GetxController{
   String? userAccessToken;
@@ -90,7 +100,7 @@ class AddToCartScreenController extends GetxController{
       if (response != null) {
         if (response.error != true && response.errorCode == 0) {
           if (response.data!= null) {
-            cartList.value=response.data ??[];
+            cartList.value=response.data! ??[];
             cart_item.value=response.cart_item!;
             total_price.value=response.total_amt!;
             actual_amt.value=response.actual_amt!;
@@ -125,8 +135,7 @@ class AddToCartScreenController extends GetxController{
             text: response['message'], // Display the message from the response
             confirmBtnText: 'OK',
             onConfirmBtnTap: () {
-              // Get.offAll(MainScreen(selectedIndex: 2,));
-              Get.offAll(PayrupyaMainScreen());
+              Get.offAll(MainScreen(selectedIndex: 2,));
              // Navigator.of(context).popUntil((route) => route.isFirst);
             },
           );//         Get.back();
