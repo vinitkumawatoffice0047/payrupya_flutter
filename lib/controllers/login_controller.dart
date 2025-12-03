@@ -14,6 +14,9 @@ import '../view/main_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../view/other_users_screen.dart';
+import '../view/payrupya_main_screen.dart';
+
 class LoginController extends GetxController {
   Rx<TextEditingController> emailController = TextEditingController(text: "").obs;
   Rx<TextEditingController> mobileController = TextEditingController(text: "").obs;
@@ -230,7 +233,25 @@ class LoginController extends GetxController {
           gravity: ToastGravity.TOP,
         );
 
+        if(userRole == "1"){
+          OtherUsersScreen(UserName: "Admin",);
+          //Admin
+        }else if(userRole == "2"){
+          OtherUsersScreen(UserName: "Super Distributor",);
+          //SuperDistributor
+        }else if(userRole == "3"){
+          OtherUsersScreen(UserName: "Distributor",);
+          //Distributor
+        }else if(userRole == "4"){
+          Get.offAll(PayrupyaMainScreen(), transition: Transition.fadeIn);
+          // OtherUsersScreen(UserName: "Retailer",);
+          //Retailor
+        }else{
+          OtherUsersScreen(UserName: "Other",);
+          //Other
+        }
         // Get.offAll(MainScreen(selectedIndex: 0));
+        // Get.offAll(PayrupyaMainScreen());
       }
 
       // OTP REQUIRED CASE (TFA)

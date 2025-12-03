@@ -76,99 +76,67 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     });
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: Colors.transparent,
-      body: Container(
-        height: GlobalUtils.getScreenHeight(),
-        width: GlobalUtils.getScreenWidth(),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: GlobalUtils.getBackgroundColor()
+      body: SingleChildScrollView(
+        child: Container(
+          height: GlobalUtils.getScreenHeight(),
+          width: GlobalUtils.getScreenWidth(),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: GlobalUtils.getBackgroundColor()
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              buildCustomAppBar(),
-              Expanded(
-                child: Obx(()=> SizedBox(
-                  width: GlobalUtils.screenWidth,
-                  height: GlobalUtils.screenHeight,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      /// SUBTITLE TEXT
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Text(
-                          "Access your PayRupya account securely and continue your payments journey.",
-                          style: GoogleFonts.albertSans(
-                            fontSize: GlobalUtils.screenWidth * (14 / 393),
-                            color: Colors.black45,
-                            height: 1.5,
+          child: SafeArea(
+            child: Column(
+              children: [
+                buildCustomAppBar(),
+                Expanded(
+                  child: Obx(()=> SizedBox(
+                    width: GlobalUtils.screenWidth,
+                    height: GlobalUtils.screenHeight,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        /// SUBTITLE TEXT
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            "Access your PayRupya account securely and continue your payments journey.",
+                            style: GoogleFonts.albertSans(
+                              fontSize: GlobalUtils.screenWidth * (14 / 393),
+                              color: Colors.black45,
+                              height: 1.5,
+                            ),
                           ),
                         ),
-                      ),
-
-                      // SizedBox(height: GlobalUtils.screenHeight * 0.03),
-                      SizedBox(height: GlobalUtils.screenHeight * 0.035,),
-
-                      // GlobalUtils.CustomGradientText(
-                      //   gradient: LinearGradient(
-                      //     colors: [Colors.blue, Colors.purple],
-                      //   ),
-                      //   "Login",
-                      //   style: GoogleFonts.sail(
-                      //     fontSize: GlobalUtils.screenWidth * 0.15,
-                      //     color: GlobalUtils.titleColor,
-                      //   ),
-                      // ),
-                      //
-                      // SizedBox(height: GlobalUtils.screenHeight * 0.1,),
-
-                      GlobalUtils.CustomTextField(
-                        label: "Mobile Number",
-                        showLabel: false,
-                        controller: loginController.mobileController.value.obs(),
-                        prefixIcon: Icon(Icons.phone, color: Color(0xFF6B707E)),
-                        isMobileNumber: true,
-                        placeholder: "Mobile number",
-                        placeholderColor: Colors.white,
-                        placeholderStyle: GoogleFonts.albertSans(
-                          fontSize: GlobalUtils.screenWidth * (14 / 393),
-                          color: Color(0xFF6B707E),
-                        ),
-                        inputTextStyle: GoogleFonts.albertSans(
-                          fontSize: GlobalUtils.screenWidth * (14 / 393),
-                          color: Color(0xFF1B1C1C),
-                        ),
-                        height: GlobalUtils.screenWidth * (60 / 393),
-                        width: GlobalUtils.screenWidth*0.9,
-                        autoValidate: false,
-                        backgroundColor: Colors.white,
-                        borderRadius: 16,
-                        // backgroundGradient: LinearGradient(
-                        //   colors: [Colors.blueAccent, Colors.purple.shade300],
+        
+                        // SizedBox(height: GlobalUtils.screenHeight * 0.03),
+                        SizedBox(height: GlobalUtils.screenHeight * 0.035,),
+        
+                        // GlobalUtils.CustomGradientText(
+                        //   gradient: LinearGradient(
+                        //     colors: [Colors.blue, Colors.purple],
+                        //   ),
+                        //   "Login",
+                        //   style: GoogleFonts.sail(
+                        //     fontSize: GlobalUtils.screenWidth * 0.15,
+                        //     color: GlobalUtils.titleColor,
+                        //   ),
                         // ),
-                        errorColor:  Colors.red,
-                        errorFontSize: 12
-                      ),
-
-                      SizedBox(height: 20,),
-
-                      GlobalUtils.CustomTextField(
-                          label: "Password",
+                        //
+                        // SizedBox(height: GlobalUtils.screenHeight * 0.1,),
+        
+                        GlobalUtils.CustomTextField(
+                          label: "Mobile Number",
                           showLabel: false,
-                          controller: loginController.passwordController.value.obs(),
-                          prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF6B707E)),
-                          isPassword: true,
-                          placeholder: "Password",
+                          controller: loginController.mobileController.value.obs(),
+                          prefixIcon: Icon(Icons.phone, color: Color(0xFF6B707E)),
+                          isMobileNumber: true,
+                          placeholder: "Mobile number",
                           placeholderColor: Colors.white,
-                          height: GlobalUtils.screenWidth * (60 / 393),
-                          width: GlobalUtils.screenWidth * 0.9,
-                          autoValidate: false,
-                          backgroundColor: Colors.white,
                           placeholderStyle: GoogleFonts.albertSans(
                             fontSize: GlobalUtils.screenWidth * (14 / 393),
                             color: Color(0xFF6B707E),
@@ -177,96 +145,131 @@ class _LoginScreenState extends State<LoginScreen> {
                             fontSize: GlobalUtils.screenWidth * (14 / 393),
                             color: Color(0xFF1B1C1C),
                           ),
+                          height: GlobalUtils.screenWidth * (60 / 393),
+                          width: GlobalUtils.screenWidth*0.9,
+                          autoValidate: false,
+                          backgroundColor: Colors.white,
                           borderRadius: 16,
                           // backgroundGradient: LinearGradient(
                           //   colors: [Colors.blueAccent, Colors.purple.shade300],
                           // ),
                           errorColor:  Colors.red,
-                          errorFontSize: 12,
-                      ),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(onPressed: () {Get.to(() => ForgotPasswordScreen());},
-                              child: Text("Forgot Password?", style: GoogleFonts.albertSans(
-                                fontSize: GlobalUtils.screenWidth * (16 / 393),
-                                color: Color(0xFF6B707E),
-                              ),)
-                          ),
-                          SizedBox(
-                            width: GlobalUtils.screenWidth * 0.02,
-                          )
-                        ],
-                      ),
-
-                      // SizedBox(
-                      //   height: GlobalUtils.screenWidth * 0.2,
-                      // ),
-
-                      Spacer(),
-
-                      GlobalUtils.CustomButton(
-                        text: "LOG IN",
-                        onPressed: (){
-                          // loginController.isValidUserID.value = TxtValidation.normalTextField(loginController.emailController.value);
-                          // loginController.isValidPassword.value = TxtValidation.normalTextField(loginController.passwordController.value);
-                          if(loginController.isValidUserID.value && loginController.isValidPassword.value){
-                            loginController.loginApi(context);
-                          }
-                          // Get.offAll(MainScreen());//
-                        },
-                        textStyle: GoogleFonts.albertSans(
-                          fontSize: GlobalUtils.screenWidth * (16 / 393),
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
+                          errorFontSize: 12
                         ),
-                        width: GlobalUtils.screenWidth * 0.9,
-                        height: GlobalUtils.screenWidth * (60 / 393),
-                        backgroundGradient: GlobalUtils.blueBtnGradientColor,/*LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Color(0xFF0054D3), Color(0xFF71A9FF)],
-                        ),*/
-                        borderColor: Color(0xFF71A9FF),
-                        showShadow: false,
-                        textColor: Colors.white,
-                        animation: ButtonAnimation.fade,
-                        animationDuration: const Duration(milliseconds: 150),
-                        buttonType: ButtonType.elevated,
-                        borderRadius: 16,
-                      ),
-
-                      SizedBox(height: GlobalUtils.screenWidth * 0.02),
-                      // Spacer(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text("Don't have an account?",
-                              style: GoogleFonts.albertSans(color: Color(0xFF6B707E),
-                                fontSize: GlobalUtils.screenWidth * (16 / 393),
-                              )),
-                          GlobalUtils.CustomButton(
-                              onPressed: (){Get.to(()=>SignupScreen());},
-                              buttonType: ButtonType.text,
-                              text: "Signup",
-                              padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-                              // textColor: Color(0xFF0054D3),
-                              textStyle: GoogleFonts.albertSans(
-                                fontSize: GlobalUtils.screenWidth * (16 / 393),
-                                color: Color(0xFF0054D3),
-                                fontWeight: FontWeight.w600,
-                              )
-                              // textGradient: LinearGradient(colors: [Colors.purple, Colors.pink, Colors.orange],
-                              )
-                        ],
-                      ),
-                      SizedBox(height: GlobalUtils.screenWidth * 0.05)
-                    ],
-                  ),
-                ),),
-              ),
-            ],
+        
+                        SizedBox(height: 20,),
+        
+                        GlobalUtils.CustomTextField(
+                            label: "Password",
+                            showLabel: false,
+                            controller: loginController.passwordController.value.obs(),
+                            prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF6B707E)),
+                            isPassword: true,
+                            placeholder: "Password",
+                            placeholderColor: Colors.white,
+                            height: GlobalUtils.screenWidth * (60 / 393),
+                            width: GlobalUtils.screenWidth * 0.9,
+                            autoValidate: false,
+                            backgroundColor: Colors.white,
+                            placeholderStyle: GoogleFonts.albertSans(
+                              fontSize: GlobalUtils.screenWidth * (14 / 393),
+                              color: Color(0xFF6B707E),
+                            ),
+                            inputTextStyle: GoogleFonts.albertSans(
+                              fontSize: GlobalUtils.screenWidth * (14 / 393),
+                              color: Color(0xFF1B1C1C),
+                            ),
+                            borderRadius: 16,
+                            // backgroundGradient: LinearGradient(
+                            //   colors: [Colors.blueAccent, Colors.purple.shade300],
+                            // ),
+                            errorColor:  Colors.red,
+                            errorFontSize: 12,
+                        ),
+        
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(onPressed: () {Get.to(() => ForgotPasswordScreen());},
+                                child: Text("Forgot Password?", style: GoogleFonts.albertSans(
+                                  fontSize: GlobalUtils.screenWidth * (16 / 393),
+                                  color: Color(0xFF6B707E),
+                                ),)
+                            ),
+                            SizedBox(
+                              width: GlobalUtils.screenWidth * 0.02,
+                            )
+                          ],
+                        ),
+        
+                        // SizedBox(
+                        //   height: GlobalUtils.screenWidth * 0.2,
+                        // ),
+        
+                        Spacer(),
+        
+                        GlobalUtils.CustomButton(
+                          text: "LOG IN",
+                          onPressed: (){
+                            // loginController.isValidUserID.value = TxtValidation.normalTextField(loginController.emailController.value);
+                            // loginController.isValidPassword.value = TxtValidation.normalTextField(loginController.passwordController.value);
+                            if(loginController.isValidUserID.value && loginController.isValidPassword.value){
+                              loginController.loginApi(context);
+                            }
+                            // Get.offAll(MainScreen());//
+                          },
+                          textStyle: GoogleFonts.albertSans(
+                            fontSize: GlobalUtils.screenWidth * (16 / 393),
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          width: GlobalUtils.screenWidth * 0.9,
+                          height: GlobalUtils.screenWidth * (60 / 393),
+                          backgroundGradient: GlobalUtils.blueBtnGradientColor,/*LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0xFF0054D3), Color(0xFF71A9FF)],
+                          ),*/
+                          borderColor: Color(0xFF71A9FF),
+                          showShadow: false,
+                          textColor: Colors.white,
+                          animation: ButtonAnimation.fade,
+                          animationDuration: const Duration(milliseconds: 150),
+                          buttonType: ButtonType.elevated,
+                          borderRadius: 16,
+                        ),
+        
+                        SizedBox(height: GlobalUtils.screenWidth * 0.02),
+                        // Spacer(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text("Don't have an account?",
+                                style: GoogleFonts.albertSans(color: Color(0xFF6B707E),
+                                  fontSize: GlobalUtils.screenWidth * (16 / 393),
+                                )),
+                            GlobalUtils.CustomButton(
+                                onPressed: (){Get.to(()=>SignupScreen());},
+                                buttonType: ButtonType.text,
+                                text: "Signup",
+                                padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                                // textColor: Color(0xFF0054D3),
+                                textStyle: GoogleFonts.albertSans(
+                                  fontSize: GlobalUtils.screenWidth * (16 / 393),
+                                  color: Color(0xFF0054D3),
+                                  fontWeight: FontWeight.w600,
+                                )
+                                // textGradient: LinearGradient(colors: [Colors.purple, Colors.pink, Colors.orange],
+                                )
+                          ],
+                        ),
+                        SizedBox(height: GlobalUtils.screenWidth * 0.05)
+                      ],
+                    ),
+                  ),),
+                ),
+              ],
+            ),
           ),
         ),
       ),
