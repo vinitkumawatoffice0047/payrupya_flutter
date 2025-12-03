@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../api/web_api_constant.dart';
 import '../controllers/signup_controller.dart';
 import '../utils/global_utils.dart';
 import 'login_screen.dart';

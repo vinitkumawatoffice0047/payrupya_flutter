@@ -7,12 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:payrupya/view/payrupya_main_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../utils/app_shared_preferences.dart';
 import '../utils/comming_soon_dialog.dart';
 import '../utils/global_utils.dart';
-import 'login_screen.dart';
-import 'main_screen.dart';
 import 'onboarding_screen.dart';
 import 'other_users_screen.dart';
 

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:payrupya/view/payrupya_home_screen.dart';
-
 import 'payment_screen.dart';
 import 'profile_screen.dart';
 import 'transaction_screen.dart';

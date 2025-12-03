@@ -4,12 +4,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import '../controllers/login_controller.dart';
 import '../utils/global_utils.dart';
-import '../utils/text_validation.dart';
 import 'forgot_password_screen.dart';
-import 'main_screen.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {

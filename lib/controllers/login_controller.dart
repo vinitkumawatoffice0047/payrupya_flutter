@@ -10,10 +10,8 @@ import '../utils/app_shared_preferences.dart';
 import '../utils/connection_validator.dart';
 import '../utils/custom_loading.dart';
 import '../utils/global_utils.dart';
-import '../view/main_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
-
 import '../view/other_users_screen.dart';
 import '../view/payrupya_main_screen.dart';
 
