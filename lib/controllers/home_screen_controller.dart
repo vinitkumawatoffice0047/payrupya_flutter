@@ -20,11 +20,28 @@ class HomeScreenController extends GetxController{
   RxList<MaleWellness> maleWellnessProduct = <MaleWellness>[].obs;
   RxList<FemaleWellness> femaleWellness = <FemaleWellness>[].obs;
   List<Category> filteredCategories = [];
+
+
+  var balance = '0.00'.obs;
+  var location = 'Add Location'.obs;
+  var coordinates = '0.0, 0.0'.obs;
+  var downBanks = <Map<String, dynamic>>[].obs;
+
+
   // @override
   @override
   void onInit() async {
     super.onInit();
     await getToken(Get.context!);
+  }
+
+  // API calls
+  Future<void> getBalance() async {
+    // API implementation
+  }
+
+  Future<void> getDownBanks() async {
+    // API implementation
   }
 
   Future<void> loadHomePageAPI(BuildContext context) async {

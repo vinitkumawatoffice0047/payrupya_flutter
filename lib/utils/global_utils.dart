@@ -154,8 +154,8 @@ class GlobalUtils {
   );
 
   static Gradient loginButtonGradient = const LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
     colors: [
       Color(0xFF0A63FF), // bright top blue
       Color(0xFF1575FF), // soft light mid blue

@@ -4,6 +4,7 @@ import 'dart:ffi';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import 'package:payrupya/view/payrupya_main_screen.dart';
 // import 'package:groticshop/View/Dashboard/Home/HomeScreen.dart';
 import 'package:quickalert/quickalert.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
@@ -135,7 +136,8 @@ class AddToCartScreenController extends GetxController{
             text: response['message'], // Display the message from the response
             confirmBtnText: 'OK',
             onConfirmBtnTap: () {
-              Get.offAll(MainScreen(selectedIndex: 2,));
+              // Get.offAll(MainScreen(selectedIndex: 2,));
+              Get.offAll(PayrupyaMainScreen());
              // Navigator.of(context).popUntil((route) => route.isFirst);
             },
           );//         Get.back();

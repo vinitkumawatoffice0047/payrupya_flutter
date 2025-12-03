@@ -190,62 +190,62 @@ class _SignupScreenState extends State<SignupScreen> {
                             showLabel: false,
                             controller: signupController.mobileController.value,
                             prefixIcon: Icon(Icons.call, color: Color(0xFF6B707E)),
-                            suffixIcon: Obx(() {
-                              if (signupController.isMobileVerified.value) {
-                                return Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                              Image.asset("assets/images/verified_icon.png",
-                              height: 20,
-                              ),
-                              SizedBox(width: 2,),
-                              Text("Verified", style: GoogleFonts.albertSans(
-                                fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                color: Color(0xFF0054D3),
-                                fontWeight: FontWeight.w500,
-                              ),),
-                              SizedBox(width: 12,),
-                            ],);
-                            /*Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.check_circle, color: Colors.green, size: 20),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      "Verified",
-                                      style: GoogleFonts.albertSans(
-                                        fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                  ],
-                                );*/
-                              } else {
-                                return TextButton(
-                                  onPressed: () async {
-                                    String mobile = signupController.mobileController.value.text.trim();
-
-                                    if (mobile.isEmpty || mobile.length != 10) {
-                                      Fluttertoast.showToast(msg: "Please enter valid 10-digit mobile number");
-                                      return;
-                                    }
-
-                                    // Call the updated sendMobileOtp function
-                                    await signupController.sendMobileOtp(context);
-                                  },
-                                  child: Text(
-                                    "Verify",
-                                    style: GoogleFonts.albertSans(
-                                      fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                      color: Color(0xFF0054D3),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                );
-                              }
-                            }),
+                            // suffixIcon: Obx(() {
+                            //   if (signupController.isMobileVerified.value) {
+                            //     return Row(
+                            //   mainAxisSize: MainAxisSize.min,
+                            //   children: [
+                            //   Image.asset("assets/images/verified_icon.png",
+                            //   height: 20,
+                            //   ),
+                            //   SizedBox(width: 2,),
+                            //   Text("Verified", style: GoogleFonts.albertSans(
+                            //     fontSize: GlobalUtils.screenWidth * (14 / 393),
+                            //     color: Color(0xFF0054D3),
+                            //     fontWeight: FontWeight.w500,
+                            //   ),),
+                            //   SizedBox(width: 12,),
+                            // ],);
+                            // /*Row(
+                            //       mainAxisSize: MainAxisSize.min,
+                            //       children: [
+                            //         Icon(Icons.check_circle, color: Colors.green, size: 20),
+                            //         SizedBox(width: 4),
+                            //         Text(
+                            //           "Verified",
+                            //           style: GoogleFonts.albertSans(
+                            //             fontSize: GlobalUtils.screenWidth * (14 / 393),
+                            //             color: Colors.green,
+                            //             fontWeight: FontWeight.w600,
+                            //           ),
+                            //         ),
+                            //         SizedBox(width: 12),
+                            //       ],
+                            //     );*/
+                            //   } else {
+                            //     return TextButton(
+                            //       onPressed: () async {
+                            //         String mobile = signupController.mobileController.value.text.trim();
+                            //
+                            //         if (mobile.isEmpty || mobile.length != 10) {
+                            //           Fluttertoast.showToast(msg: "Please enter valid 10-digit mobile number");
+                            //           return;
+                            //         }
+                            //
+                            //         // Call the updated sendMobileOtp function
+                            //         await signupController.sendMobileOtp(context);
+                            //       },
+                            //       child: Text(
+                            //         "Verify",
+                            //         style: GoogleFonts.albertSans(
+                            //           fontSize: GlobalUtils.screenWidth * (14 / 393),
+                            //           color: Color(0xFF0054D3),
+                            //           fontWeight: FontWeight.w500,
+                            //         ),
+                            //       ),
+                            //     );
+                            //   }
+                            // }),
                             isMobileNumber: true,
                             placeholder: "Phone Number",
                             placeholderColor: Colors.white,

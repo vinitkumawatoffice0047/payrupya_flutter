@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:payrupya/view/payrupya_main_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -13,6 +14,7 @@ import '../utils/global_utils.dart';
 import 'login_screen.dart';
 import 'main_screen.dart';
 import 'onboarding_screen.dart';
+import 'other_users_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -29,6 +31,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   bool isSecurityEnabled = false;
   bool isIntro = false;
   String userType = "";
+  String userRole = "";
 
   @override
   void initState() {
@@ -57,7 +60,26 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     Future.delayed(Duration(seconds: 3), () {
       if(isLogin) {
-        Get.offAll(() => MainScreen(selectedIndex: 0), transition: Transition.fadeIn);
+        // Get.offAll(() => MainScreen(selectedIndex: 0), transition: Transition.fadeIn);
+        // Get.offAll(() => PayrupyaMainScreen(), transition: Transition.fadeIn);
+        if(userRole == "1"){
+          Get.offAll(OtherUsersScreen(UserName: "Admin"), transition: Transition.fadeIn);
+          //Admin
+        }else if(userRole == "2"){
+          Get.offAll(OtherUsersScreen(UserName: "Super Distributor"), transition: Transition.fadeIn);
+          //SuperDistributor
+        }else if(userRole == "3"){
+          Get.offAll(OtherUsersScreen(UserName: "Distributor"), transition: Transition.fadeIn);
+          //Distributor
+        }else if(userRole == "4"){
+          // Get.offAll(OtherUsersScreen(UserName: "Retailer"), transition: Transition.fadeIn);
+          Get.offAll(PayrupyaMainScreen(), transition: Transition.fadeIn);
+          // OtherUsersScreen(UserName: "Retailer",);
+          //Retailor
+        }else{
+          Get.offAll(OtherUsersScreen(UserName: "Other"), transition: Transition.fadeIn);
+          //Other
+        }
       } else {
         // Get.offAll(LoginScreen(), transition: Transition.fadeIn);//26.11.2025
         Get.offAll(()=>OnboardingScreen(), transition: Transition.fadeIn);
@@ -80,6 +102,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       isLogin = value.getBool(AppSharedPreferences.isLogin) ?? false;
       isIntro = value.getBool(AppSharedPreferences.isIntro) ?? false;
       userType = value.getString(AppSharedPreferences.usertype) ?? "";
+      userRole = value.getString(AppSharedPreferences.userRole) ?? "";
       print(".............isLogin: $isLogin");
       print(".............isIntro: $isIntro");
       print(".............userType: $userType");
