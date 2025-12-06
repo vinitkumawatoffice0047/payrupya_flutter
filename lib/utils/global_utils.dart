@@ -488,6 +488,31 @@ class GlobalUtils {
     return null;
   }
 
+  // Number Validation
+  static String? numberValidator(String? value/*, {int? minLength, int? maxLength}*/) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter a valid number.';
+    }
+
+    // सिर्फ digits allow
+    if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+      return 'Only digits are allowed.';
+    }
+
+    // // Minimum length check (optional)
+    // if (minLength != null && value.length < minLength) {
+    //   return 'Number must be at least $minLength digits.';
+    // }
+    //
+    // // Maximum length check (optional)
+    // if (maxLength != null && value.length > maxLength) {
+    //   return 'Number cannot exceed $maxLength digits.';
+    // }
+
+    return null;
+  }
+
+
   // 💰 Price Formatter
   static String formatPrice(double price, {String currency = '₹'}) {
     return '$currency${price.toStringAsFixed(2)}';
@@ -766,6 +791,7 @@ class GlobalUtils {
     bool isConfirmPassword = false,
     bool isMobileNumber = false,
     bool isAadharNumber = false,
+    bool isNumber = false,
     String? passwordToMatch, // For confirm password validation
 
     // Icons
@@ -825,9 +851,11 @@ class GlobalUtils {
     TextInputAction textInputAction = TextInputAction.next,
     FocusNode? focusNode,
     VoidCallback? onEditingComplete,
+    TextInputType keyboardType = TextInputType.text,
     Function(String)? onChanged,
     Function(String)? onSubmitted,
     int? maxLength,
+    int? minLines,
     int? maxLines,
     bool autoValidate = false,
     bool shouldValidate = false,
@@ -855,6 +883,8 @@ class GlobalUtils {
         return mobileValidator(value);
       }else if (isAadharNumber) {
         return aadharValidator(value);
+      }else if (isNumber) {
+        return numberValidator(value);
       } else {
         if (value == null || value.isEmpty && shouldValidate) {
           return 'This field cannot be empty.';
@@ -873,8 +903,10 @@ class GlobalUtils {
         return TextInputType.visiblePassword;
       } else if (isAadharNumber) {
         return TextInputType.number;
+      } else if (isNumber) {
+        return TextInputType.number;
       }
-      return TextInputType.text;
+      return keyboardType;
     }
 
     // Input Formatters
@@ -981,6 +1013,7 @@ class GlobalUtils {
                           onSubmitted(value);
                         }
                       },
+                      minLines: 1,
                       maxLines: (isPassword || isConfirmPassword) ? 1 : (maxLines ?? 1),
                       autovalidateMode: autoValidate
                           ? AutovalidateMode.onUserInteraction

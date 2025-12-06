@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:payrupya/view/otp_verification_screen.dart';
 import 'dart:async';
+
+import 'package:payrupya/view/wallet_screen.dart';
 
 class PayrupyaHomeScreen extends StatefulWidget {
   const PayrupyaHomeScreen({super.key});
@@ -289,7 +293,14 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
             itemBuilder: (context, index) {
               final item = quickLinks[index];
               return GestureDetector(
-                onTap: () => print('Tapped on ${item['label']}'),
+                onTap: () {
+                  if(item['label'] == "Payrupya\nWallet"){
+                    Get.to(WalletScreen(showBackButton: true));
+                  }else if(item['label'] == "DMT KYC"){
+                    Get.to(OtpVerificationScreen(phoneNumber: "1234567890", referenceId: "referenceId"));
+                  }
+                  print('Tapped on ${item['label']}');
+                  },
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [

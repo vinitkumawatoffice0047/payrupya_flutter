@@ -22,7 +22,7 @@ class _PayrupyaMainScreenState extends State<PayrupyaMainScreen> {
     PayrupyaHomeScreen(),
     PaymentScreen(),
     TransactionScreen(),
-    WalletScreen(),
+    WalletScreen(showBackButton: false),
     ProfileScreen(),
     // HomeScreen(),
     // PaymentScreen(),
