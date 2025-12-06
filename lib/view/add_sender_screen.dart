@@ -63,7 +63,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
   // List<TextEditingController> otpControllers = List.generate(6, (_) => TextEditingController());
   // List<FocusNode> otpFocusNodes = List.generate(6, (_) => FocusNode());
   // ⬇️ Ye naya key OTP widget ko control karne ke liye
-  final GlobalKey<OtpInputFieldsState> _otpKey =  GlobalKey<OtpInputFieldsState>();
+  final GlobalKey<OtpInputFieldsState> otpKey =  GlobalKey<OtpInputFieldsState>();
 
   // @override
   // void initState() {
@@ -278,8 +278,8 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                         // Dialog khulne ke baad OTP fields reset + focus first
                         Future.delayed(const Duration(milliseconds: 100), () {
                           if (showOtpDialog && mounted) {
-                            _otpKey.currentState?.clear();
-                            _otpKey.currentState?.focusFirst();
+                            otpKey.currentState?.clear();
+                            otpKey.currentState?.focusFirst();
                           }
                         });
                       },
@@ -1050,7 +1050,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
 
               /// 🔹 Yahan reusable OTP widget use ho raha hai
               OtpInputFields(
-                key: _otpKey,
+                key: otpKey,
                 length: 6,
               ),
               SizedBox(height: 16),
@@ -1073,8 +1073,8 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                     // },
                     onTap: () {
                       // OTP reset + focus first
-                      _otpKey.currentState?.clear();
-                      _otpKey.currentState?.focusFirst();
+                      otpKey.currentState?.clear();
+                      otpKey.currentState?.focusFirst();
                       Fluttertoast.showToast(msg: "OTP sent successfully");
                     },
                     child: Text(
@@ -1093,7 +1093,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
               GlobalUtils.CustomButton(
                 text: "VERIFY",
                 onPressed: () {
-                  final otp = _otpKey.currentState?.currentOtp ?? '';
+                  final otp = otpKey.currentState?.currentOtp ?? '';
 
                   if (otp.length < 6) {
                     Fluttertoast.showToast(

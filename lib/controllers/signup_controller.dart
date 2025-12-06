@@ -6,6 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/api_provider.dart';
 import '../api/web_api_constant.dart';
+import '../models/forgot_password_models.dart';
+import '../models/location_api_models.dart';
+import '../models/signup_response_model.dart';
 import '../utils/ConsoleLog.dart';
 import '../utils/app_shared_preferences.dart';
 import '../utils/global_utils.dart';
@@ -103,12 +106,19 @@ class SignupController extends GetxController {
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
-        if (data['Resp_code'] == 'RCS') {
-          mobileOtp = data['otp']?.toString() ?? "";
-          referenceId.value = data['data']?['referenceid']?.toString() ?? "";
+        // Parse using model
+        ForgotPasswordSendOtpResponseModel otpResponse =
+        ForgotPasswordSendOtpResponseModel.fromJson(data);
+
+        if (otpResponse.respCode == 'RCS') {
+          mobileOtp = otpResponse.otp?.toString() ?? "";
+          referenceId.value = otpResponse.data?.referenceid ?? "";
+          // mobileOtp = data['otp']?.toString() ?? "";
+          // referenceId.value = data['data']?['referenceid']?.toString() ?? "";
           ConsoleLog.printColor("===>>>>> referenceId ${referenceId.value}");
           ConsoleLog.printSuccess("Mobile OTP sent successfully");
-          Fluttertoast.showToast(msg: data['Resp_desc'] ?? "OTP sent successfully");
+          // Fluttertoast.showToast(msg: otpResponse.respDesc ?? "OTP sent successfully");
+          // Fluttertoast.showToast(msg: data['Resp_desc'] ?? "OTP sent successfully");
 
           // Navigate to OTP screen with phone number
           Get.to(() => OtpVerificationScreen(
@@ -122,7 +132,8 @@ class SignupController extends GetxController {
           );
         } else {
           Fluttertoast.showToast(
-            msg: data['Resp_desc'] ?? "Failed to send OTP",
+            msg: otpResponse.respDesc ?? "Failed to send OTP",
+            // msg: data['Resp_desc'] ?? "Failed to send OTP",
             toastLength: Toast.LENGTH_LONG,
           );
         }
@@ -163,17 +174,31 @@ class SignupController extends GetxController {
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
-        if (data['Resp_code'] == 'RCS') {
-          String newReferenceId = data['data']?['referenceid']?.toString() ?? "";
+        // Parse using resend model
+        ForgotPasswordResendOtpResponseModel resendResponse =
+        ForgotPasswordResendOtpResponseModel.fromJson(data);
+        if (resendResponse.respCode == 'RCS') {
+          String newReferenceId = resendResponse.data?.referenceid ?? "";
           referenceId.value = newReferenceId;
           ConsoleLog.printSuccess("OTP resent successfully");
-          Fluttertoast.showToast(msg: "OTP sent successfully");
+          Fluttertoast.showToast(msg: resendResponse.respDesc ?? "OTP sent successfully");
         } else {
           Fluttertoast.showToast(
-            msg: data['Resp_desc'] ?? "Failed to resend OTP",
+            msg: resendResponse.respDesc ?? "Failed to resend OTP",
             toastLength: Toast.LENGTH_LONG,
           );
         }
+        // if (data['Resp_code'] == 'RCS') {
+        //   String newReferenceId = data['data']?['referenceid']?.toString() ?? "";
+        //   referenceId.value = newReferenceId;
+        //   ConsoleLog.printSuccess("OTP resent successfully");
+        //   Fluttertoast.showToast(msg: "OTP sent successfully");
+        // } else {
+        //   Fluttertoast.showToast(
+        //     msg: data['Resp_desc'] ?? "Failed to resend OTP",
+        //     toastLength: Toast.LENGTH_LONG,
+        //   );
+        // }
       }
     } catch (e) {
       ConsoleLog.printError("Error resending OTP: $e");
@@ -193,11 +218,6 @@ class SignupController extends GetxController {
 
       if (referenceId.isEmpty) {
         Fluttertoast.showToast(msg: "Reference ID not found. Please resend OTP");
-        return;
-      }
-
-      if (otp.isEmpty || otp.length != 6) {
-        Fluttertoast.showToast(msg: "Please enter 6-digit OTP");
         return;
       }
 
@@ -222,15 +242,25 @@ class SignupController extends GetxController {
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
-        if (data['Resp_code'] == 'RCS') {
+        // Parse using verify model
+        ForgotPasswordVerifyOtpResponseModel verifyResponse = ForgotPasswordVerifyOtpResponseModel.fromJson(data);
+        if (verifyResponse.respCode == 'RCS' && verifyResponse.data?.otpVerified == true) {
           isMobileVerified.value = true;
           ConsoleLog.printSuccess("Mobile verified successfully");
-          Fluttertoast.showToast(msg: "Mobile number verified successfully");
-
+          Fluttertoast.showToast(msg: verifyResponse.respDesc ?? "Mobile number verified successfully");
           Get.back(); // Close OTP screen
         } else {
-          Fluttertoast.showToast(msg: data['Resp_desc'] ?? "Invalid OTP");
+          Fluttertoast.showToast(msg: verifyResponse.respDesc ?? "Invalid OTP");
         }
+        // if (data['Resp_code'] == 'RCS') {
+        //   isMobileVerified.value = true;
+        //   ConsoleLog.printSuccess("Mobile verified successfully");
+        //   Fluttertoast.showToast(msg: "Mobile number verified successfully");
+        //
+        //   Get.back(); // Close OTP screen
+        // } else {
+        //   Fluttertoast.showToast(msg: data['Resp_desc'] ?? "Invalid OTP");
+        // }
       }
     } catch (e) {
       ConsoleLog.printError("Error verifying mobile OTP: $e");
@@ -339,15 +369,28 @@ class SignupController extends GetxController {
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
-        if (data['Resp_code'] == 'RCS' && data['data'] != null) {
-          List<dynamic> states = data['data'];
-          stateList.value = states
-              .map((state) => state['state_name'].toString())
+
+        // Parse using model
+        GetStatesResponseModel statesResponse = GetStatesResponseModel.fromJson(data);
+
+        if (statesResponse.respCode == 'RCS' && statesResponse.data != null) {
+          stateList.value = statesResponse.data!
+              .map((state) => state.stateName ?? "")
+              .where((name) => name.isNotEmpty)
               .toList();
           ConsoleLog.printSuccess("States loaded: ${stateList.length}");
         } else {
-          Fluttertoast.showToast(msg: "Failed to load states");
+          Fluttertoast.showToast(msg: statesResponse.respDesc ?? "Failed to load states");
         }
+        // if (data['Resp_code'] == 'RCS' && data['data'] != null) {
+        //   List<dynamic> states = data['data'];
+        //   stateList.value = states
+        //       .map((state) => state['state_name'].toString())
+        //       .toList();
+        //   ConsoleLog.printSuccess("States loaded: ${stateList.length}");
+        // } else {
+        //   Fluttertoast.showToast(msg: "Failed to load states");
+        // }
       }
     } catch (e) {
       ConsoleLog.printError("Error fetching states: $e");
@@ -381,10 +424,13 @@ class SignupController extends GetxController {
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
-        if (data['Resp_code'] == 'RCS' && data['data'] != null) {
-          List<dynamic> cities = data['data'];
-          cityList.value = cities
-              .map((city) => city['city'].toString())
+        // Parse using model
+        GetCitiesResponseModel citiesResponse = GetCitiesResponseModel.fromJson(data);
+
+        if (citiesResponse.respCode == 'RCS' && citiesResponse.data != null) {
+          cityList.value = citiesResponse.data!
+              .map((city) => city.city ?? "")
+              .where((name) => name.isNotEmpty)
               .toList();
           ConsoleLog.printSuccess("Cities loaded: ${cityList.length}");
 
@@ -393,13 +439,32 @@ class SignupController extends GetxController {
           selectedPincode.value = '';
           pincodeList.clear();
         } else {
-          Fluttertoast.showToast(msg: "Failed to load cities");
+          Fluttertoast.showToast(msg: citiesResponse.respDesc ?? "Failed to load cities");
           cityList.clear();
           selectedCity.value = '';
           selectedPincode.value = '';
           pincodeList.clear();
         }
       }
+      //   if (data['Resp_code'] == 'RCS' && data['data'] != null) {
+      //     List<dynamic> cities = data['data'];
+      //     cityList.value = cities
+      //         .map((city) => city['city'].toString())
+      //         .toList();
+      //     ConsoleLog.printSuccess("Cities loaded: ${cityList.length}");
+      //
+      //     // Clear previous selections
+      //     selectedCity.value = '';
+      //     selectedPincode.value = '';
+      //     pincodeList.clear();
+      //   } else {
+      //     Fluttertoast.showToast(msg: "Failed to load cities");
+      //     cityList.clear();
+      //     selectedCity.value = '';
+      //     selectedPincode.value = '';
+      //     pincodeList.clear();
+      //   }
+      // }
     } catch (e) {
       ConsoleLog.printError("Error fetching cities: $e");
       Fluttertoast.showToast(msg: "Error loading cities");
@@ -442,21 +507,39 @@ class SignupController extends GetxController {
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
-        if (data['Resp_code'] == 'RCS' && data['data'] != null) {
-          List<dynamic> pincodes = data['data'];
-          pincodeList.value = pincodes
-              .map((pincode) => pincode['pincode'].toString())
+        // Parse using model
+        GetPincodesResponseModel pincodesResponse = GetPincodesResponseModel.fromJson(data);
+
+        if (pincodesResponse.respCode == 'RCS' && pincodesResponse.data != null) {
+          pincodeList.value = pincodesResponse.data!
+              .map((pincode) => pincode.pincode ?? "")
+              .where((code) => code.isNotEmpty)
               .toList();
-          ConsoleLog.printSuccess("Pincodes loaded for ${selectedCity.value}: ${pincodeList.length}");
+          ConsoleLog.printSuccess("Pincodes loaded: ${pincodeList.length}");
 
           // Clear previous selection
           selectedPincode.value = '';
         } else {
-          Fluttertoast.showToast(msg: "Failed to load pincodes");
+          Fluttertoast.showToast(msg: pincodesResponse.respDesc ?? "Failed to load pincodes");
           pincodeList.clear();
           selectedPincode.value = '';
         }
       }
+      //   if (data['Resp_code'] == 'RCS' && data['data'] != null) {
+      //     List<dynamic> pincodes = data['data'];
+      //     pincodeList.value = pincodes
+      //         .map((pincode) => pincode['pincode'].toString())
+      //         .toList();
+      //     ConsoleLog.printSuccess("Pincodes loaded for ${selectedCity.value}: ${pincodeList.length}");
+      //
+      //     // Clear previous selection
+      //     selectedPincode.value = '';
+      //   } else {
+      //     Fluttertoast.showToast(msg: "Failed to load pincodes");
+      //     pincodeList.clear();
+      //     selectedPincode.value = '';
+      //   }
+      // }
     } catch (e) {
       ConsoleLog.printError("Error fetching pincodes: $e");
       Fluttertoast.showToast(msg: "Error loading pincodes");
@@ -616,9 +699,12 @@ class SignupController extends GetxController {
       ConsoleLog.printJsonResponse(response, tag: "Signup Response");
 
       if (response != null) {
-        if (response['Resp_code'] == 'RCS') {
+        // Parse using model
+        SignupApiResponseModel signupResponse = SignupApiResponseModel.fromJson(response);
+
+        if (signupResponse.respCode == 'RCS') {
           Fluttertoast.showToast(
-            msg: response["Resp_desc"] ?? "Registration successful",
+            msg: signupResponse.respDesc ?? "Registration successful",
             toastLength: Toast.LENGTH_LONG,
           );
 
@@ -634,13 +720,39 @@ class SignupController extends GetxController {
           Get.offAll(() => LoginScreen());
         } else {
           Fluttertoast.showToast(
-            msg: response["Resp_desc"] ?? "Registration failed",
+            msg: signupResponse.respDesc ?? "Registration failed",
             toastLength: Toast.LENGTH_LONG,
           );
         }
       } else {
         Fluttertoast.showToast(msg: "Registration failed. Please try again.");
       }
+      // if (response != null) {
+      //   if (response['Resp_code'] == 'RCS') {
+      //     Fluttertoast.showToast(
+      //       msg: response["Resp_desc"] ?? "Registration successful",
+      //       toastLength: Toast.LENGTH_LONG,
+      //     );
+      //
+      //     // Save mobile number
+      //     await SharedPreferences.getInstance().then((prefs) {
+      //       prefs.setString(
+      //         AppSharedPreferences.mobileNo,
+      //         mobileController.value.text.trim(),
+      //       );
+      //     });
+      //
+      //     // Navigate to login screen
+      //     Get.offAll(() => LoginScreen());
+      //   } else {
+      //     Fluttertoast.showToast(
+      //       msg: response["Resp_desc"] ?? "Registration failed",
+      //       toastLength: Toast.LENGTH_LONG,
+      //     );
+      //   }
+      // } else {
+      //   Fluttertoast.showToast(msg: "Registration failed. Please try again.");
+      // }
     } catch (e) {
       ConsoleLog.printError("Registration Exception: $e");
       Fluttertoast.showToast(msg: WebApiConstant.ApiError);
