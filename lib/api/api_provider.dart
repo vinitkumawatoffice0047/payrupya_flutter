@@ -94,7 +94,7 @@ class ApiProvider {
         "Authorization": "Bearer $token",
         "Authkey": authKey,
       };
-      dictParameter["versionNew"] = 1;
+      // dictParameter["versionNew"] = 1;
       ConsoleLog.printColor("Headers: $headers", color: "yellow");
       ConsoleLog.printColor("Url:  $url", color: "yellow");
       ConsoleLog.printColor("Token:  $token", color: "yellow");

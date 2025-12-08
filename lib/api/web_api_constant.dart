@@ -21,6 +21,24 @@ class WebApiConstant{
   // static const String API_URL_GET_ADDRESS = "${BASE_URL}/user/address";
   // static const String API_URL_CHANGE_ADDRESS = "${BASE_URL}/user/change-address";
 
+  // DMT/Wallet APIs
+  static const String API_URL_CHECK_SENDER = "${BASE_URL}Action/process_remit_action_new";
+  static const String API_URL_ADD_SENDER = "${BASE_URL}Action/process_remit_action_new";
+  static const String API_URL_VERIFY_SENDER_OTP = "${BASE_URL}Action/process_remit_action_new";
+  static const String API_URL_GET_BENEFICIARY_LIST = "${BASE_URL}Fetch/getBeneList";
+  static const String API_URL_ADD_BENEFICIARY = "${BASE_URL}Action/addBeneData";
+  static const String API_URL_DELETE_BENEFICIARY = "${BASE_URL}Action/delete_beneficiary";
+  static const String API_URL_VERIFY_ACCOUNT = "${BASE_URL}Action/getAccountHolderName";
+  static const String API_URL_TRANSFER_MONEY = "${BASE_URL}Action/process_remit_action";
+  static const String API_URL_GET_ALL_BANKS = "${BASE_URL}Fetch/getAllBanksList";
+  static const String API_URL_GET_ALL_BENEFICIARY_DETAILS = "${BASE_URL}Fetch/getAllBeneficiaryDetails";
+
+  // Service Type
+  static const String API_URL_GET_SERVICE_TYPE = "${BASE_URL}Fetch/getAllowedServiceByType";
+
+
+
+
   static const String API_URL_HOME_DETAIL                      = "${BASE_URL}user/home";                     //Done
   static const String API_URL_HOME_PRODUCT_DETAILS             = "${BASE_URL}user/get-product-detail";       //Pending1
   static const String API_URL_ADD_TO_CART                      = "${BASE_URL}user/add-to-cart";              //Pending2

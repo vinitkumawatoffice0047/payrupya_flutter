@@ -792,6 +792,7 @@ class GlobalUtils {
     bool isMobileNumber = false,
     bool isAadharNumber = false,
     bool isNumber = false,
+    bool isObscure = false,
     String? passwordToMatch, // For confirm password validation
 
     // Icons
@@ -977,7 +978,7 @@ class GlobalUtils {
                       controller: controller,
                       enabled: enabled,
                       readOnly: readOnly,
-                      obscureText: (isPassword || isConfirmPassword) && obscureValue,
+                      obscureText: !isObscure ? ((isPassword || isConfirmPassword) && obscureValue) : isObscure,
                       validator: (value) {
                         if(shouldValidate){
                         final error = baseValidatorFunction(value);
