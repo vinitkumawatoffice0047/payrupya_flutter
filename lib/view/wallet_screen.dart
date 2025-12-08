@@ -549,38 +549,40 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
           ),
           // More Options
-          SizedBox(
-            width: 40,
-            child: PopupMenuButton(
-              icon: Icon(Icons.more_vert, color: Colors.grey[600], size: 20),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12),),
-              color: Colors.white,
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'edit',
-                  child: Text('Edit', style: GoogleFonts.albertSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xff1B1C1C),
-                  ),),
-                ),
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Text('Delete', style: GoogleFonts.albertSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.red,
-                  ),),
-                ),
-              ],
-              onSelected: (value) {
-                if (value == 'delete') {
-                  showDeleteDialog(context);
-                }
-              },
-            ),
-          ),
-          // SizedBox(width: 8),
+          // SizedBox(
+          //   width: 40,
+          //   child: PopupMenuButton(
+          //     icon: Icon(Icons.more_vert, color: Colors.grey[600], size: 20),
+          //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12),),
+          //     color: Colors.white,
+          //     itemBuilder: (context) => [
+          //       PopupMenuItem(
+          //         value: 'edit',
+          //         child: Text('Edit', style: GoogleFonts.albertSans(
+          //           fontSize: 14,
+          //           fontWeight: FontWeight.w400,
+          //           color: Color(0xff1B1C1C),
+          //         ),),
+          //       ),
+          //       PopupMenuItem(
+          //         value: 'delete',
+          //         child: Text('Delete', style: GoogleFonts.albertSans(
+          //           fontSize: 14,
+          //           fontWeight: FontWeight.w400,
+          //           color: Colors.red,
+          //         ),),
+          //       ),
+          //     ],
+          //     onSelected: (value) {
+          //       if (value == 'delete') {
+          //         showDeleteDialog(context);
+          //       }
+          //     },
+          //   ),
+          // ),
+          IconButton(onPressed: (){
+            showDeleteDialog(context);
+          }, icon: Icon(Icons.delete, color: Colors.red,)),
           // Transfer Button
           SizedBox(
             width: 76,

@@ -494,6 +494,8 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
             onPressed: () {
               if(isMobileNumberAlreadyRegistered) {
                 Get.to(WalletScreen(showBackButton: true));
+              }else{
+                Get.to(WalletScreen(showBackButton: true));
               }
             },
             textStyle: GoogleFonts.albertSans(
