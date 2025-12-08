@@ -153,7 +153,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                 ),
               ],
               ),
-              child: Obx(()=>
+              child:
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -291,49 +291,51 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                   buildLabelText('State'),
                   SizedBox(height: 8),
                   /// STATE DROPDOWN WITH SEARCH
-                  GestureDetector(
-                    onTap: () {
-                      signupController.fetchStates(context);
-                      showSearchableDropdown(
-                        context,
-                        'Select State',
-                        signupController.stateList,
-                        signupController.selectedState,
-                            (value) {
-                          signupController.selectedState.value = value;
-                          signupController.fetchCities(context);
-                        },
-                      );
-                    },
-                    child: Container(
-                      height: GlobalUtils.screenWidth * (60 / 393),
-                      width: GlobalUtils.screenWidth * 0.9,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Color(0xffE2E5EC)),
-                      ),
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          // Icon(Icons.location_on, color: Color(0xFF6B707E)),
-                          // SizedBox(width: 12),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              signupController.selectedState.value.isEmpty
-                                  ? "Select State"
-                                  : signupController.selectedState.value,
-                              style: GoogleFonts.albertSans(
-                                fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                color: signupController.selectedState.value.isEmpty
-                                    ? Color(0xFF6B707E)
-                                    : Color(0xFF1B1C1C),
+                  Obx(()=>
+                    GestureDetector(
+                      onTap: () {
+                        signupController.fetchStates(context);
+                        showSearchableDropdown(
+                          context,
+                          'Select State',
+                          signupController.stateList,
+                          signupController.selectedState,
+                              (value) {
+                            signupController.selectedState.value = value;
+                            signupController.fetchCities(context);
+                          },
+                        );
+                      },
+                      child: Container(
+                        height: GlobalUtils.screenWidth * (60 / 393),
+                        width: GlobalUtils.screenWidth * 0.9,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Color(0xffE2E5EC)),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            // Icon(Icons.location_on, color: Color(0xFF6B707E)),
+                            // SizedBox(width: 12),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                signupController.selectedState.value.isEmpty
+                                    ? "Select State"
+                                    : signupController.selectedState.value,
+                                style: GoogleFonts.albertSans(
+                                  fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                  color: signupController.selectedState.value.isEmpty
+                                      ? Color(0xFF6B707E)
+                                      : Color(0xFF1B1C1C),
+                                ),
                               ),
                             ),
-                          ),
-                          Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
-                        ],
+                            Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -484,7 +486,6 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                   SizedBox(height: 10),
                 ],
               ),
-            ),
           ),
           SizedBox(height: 24),
           // Continue Button
