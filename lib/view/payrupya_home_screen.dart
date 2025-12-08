@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:payrupya/view/add_sender_screen.dart';
 import 'package:payrupya/view/otp_verification_screen.dart';
 import 'dart:async';
 
@@ -295,7 +296,8 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
               return GestureDetector(
                 onTap: () {
                   if(item['label'] == "Payrupya\nWallet"){
-                    Get.to(WalletScreen(showBackButton: true));
+                    // Get.to(WalletScreen(showBackButton: true));
+                    Get.to(AddSenderScreen(showBackButton: true));
                   }else if(item['label'] == "DMT KYC"){
                     Get.to(OtpVerificationScreen(phoneNumber: "1234567890", referenceId: "referenceId"));
                   }

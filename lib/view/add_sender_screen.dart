@@ -8,9 +8,11 @@ import 'package:google_fonts/google_fonts.dart';
 import '../controllers/signup_controller.dart';
 import '../utils/global_utils.dart';
 import '../utils/otp_input_fields.dart';
+import 'wallet_screen.dart';
 
 class AddSenderScreen extends StatefulWidget {
-  const AddSenderScreen({super.key});
+  final bool showBackButton;
+  const AddSenderScreen({super.key, this.showBackButton = true});
 
   @override
   State<AddSenderScreen> createState() => _AddSenderScreenState();
@@ -50,6 +52,7 @@ class AddSenderScreen extends StatefulWidget {
 
 class _AddSenderScreenState extends State<AddSenderScreen> {
   bool verifyByMobile = true;
+  bool isMobileNumberAlreadyRegistered = false;
   bool showOtpDialog = false;
 
   final TextEditingController mobileController = TextEditingController();
@@ -60,19 +63,8 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
   RxString selectedCity = 'Jaipur'.obs;
   RxString selectedState = 'Rajasthan'.obs;
 
-  // List<TextEditingController> otpControllers = List.generate(6, (_) => TextEditingController());
-  // List<FocusNode> otpFocusNodes = List.generate(6, (_) => FocusNode());
-  // ⬇️ Ye naya key OTP widget ko control karne ke liye
   final GlobalKey<OtpInputFieldsState> otpKey =  GlobalKey<OtpInputFieldsState>();
 
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   // Initialize controllers with '-'
-  //   for (int i = 0; i < 6; i++) {
-  //     otpControllers[i].clear();
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +75,9 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
           SafeArea(
             child: Column(
               children: [
+                if(!widget.showBackButton)...[
+                  SizedBox(height: GlobalUtils.screenHeight * (12 / 393)),
+                ],
                 buildCustomAppBar(),
                 Expanded(
                   child: SingleChildScrollView(
@@ -109,6 +104,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
       ),
       child: Row(
         children: [
+          if(widget.showBackButton)...[
             /// BACK BUTTON
             GestureDetector(
               onTap: () => Get.back(),
@@ -124,6 +120,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
             ),
 
             SizedBox(width: GlobalUtils.screenWidth * (14 / 393)),
+          ],
           /// TITLE
           Text(
             "Payrupya Wallet",
@@ -189,25 +186,6 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                           setState(() => verifyByMobile = true);
                         }),
                       ),
-                      /*Spacer(),
-                      SizedBox(
-                        width: GlobalUtils.screenWidth * (174/393),
-                        height: 60,
-                        child: buildToggleButton('Bank Account', !verifyByMobile, () {
-                          setState(() => verifyByMobile = false);
-                        }),
-                      ),*/
-                      // Expanded(
-                      //   child: _buildToggleButton('Mobile Number', verifyByMobile, () {
-                      //     setState(() => verifyByMobile = true);
-                      //   }),
-                      // ),
-                      // SizedBox(width: 12),
-                      // Expanded(
-                      //   child: _buildToggleButton('Bank Account', !verifyByMobile, () {
-                      //     setState(() => verifyByMobile = false);
-                      //   }),
-                      // ),
                     ],
                   ),
                   SizedBox(height: 20),
@@ -240,29 +218,6 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                     errorColor: Colors.red,
                     errorFontSize: 12,
                     suffixIcon: TextButton(
-                      // onPressed: () {
-                      //   if (mobileController.text.isEmpty || mobileController.text.length != 10) {
-                      //     Fluttertoast.showToast(
-                      //       msg: "Please enter valid 10-digit mobile number",
-                      //       backgroundColor: Colors.red,
-                      //     );
-                      //     return;
-                      //   }
-                      //
-                      //   // Clear all OTP fields
-                      //   for (int i = 0; i < 6; i++) {
-                      //     otpControllers[i].clear();
-                      //   }
-                      //
-                      //   setState(() => showOtpDialog = true);
-                      //
-                      //   // Auto-focus first field after dialog appears
-                      //   Future.delayed(Duration(milliseconds: 100), () {
-                      //     if (showOtpDialog && mounted) {
-                      //       FocusScope.of(context).requestFocus(otpFocusNodes[0]);
-                      //     }
-                      //   });
-                      // },
                       onPressed: () {
                         if (mobileController.text.isEmpty ||
                             mobileController.text.length != 10) {
@@ -293,14 +248,9 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                       ),
                     ),
                   ),
-                  // _buildTextField(
-                  //   controller: _mobileController,
-                  //   hint: 'Mobile Number',
-                  //   suffixText: 'Verify',
-                  //   onSuffixTap: () {
-                  //     setState(() => showOtpDialog = true);
-                  //   },
-                  // ),
+
+
+                  if(isMobileNumberAlreadyRegistered)...[
                   SizedBox(height: 16),
                   // Name Field
                   buildLabelText('Your Name'),
@@ -335,11 +285,8 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                     // enabled: !signupController.isMobileVerified.value,
                     // readOnly: signupController.isMobileVerified.value,
                   ),
-                  // _buildTextField(
-                  //   controller: _nameController,
-                  //   hint: 'Your Name',
-                  // ),
                   SizedBox(height: 16),
+
                   // State Dropdown With Search
                   buildLabelText('State'),
                   SizedBox(height: 8),
@@ -505,59 +452,8 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                       ),
                     ),
                   ),
-                  // // Pincode Field
-                  // buildLabelText('Pincode'),
-                  // SizedBox(height: 8),
-                  // GlobalUtils.CustomTextField(
-                  //   label: "Pincode",
-                  //   showLabel: false,
-                  //   controller: _pincodeController,
-                  //   // prefixIcon: Icon(Icons.call, color: Color(0xFF6B707E)),
-                  //   isNumber: true,
-                  //   placeholder: "Pincode",
-                  //   placeholderColor: Colors.white,
-                  //   height: GlobalUtils.screenWidth * (60 / 393),
-                  //   width: GlobalUtils.screenWidth * 0.9,
-                  //   autoValidate: false,
-                  //   backgroundColor: Colors.white,
-                  //   borderColor: Color(0xffE2E5EC),
-                  //   borderRadius: 16,
-                  //   placeholderStyle: GoogleFonts.albertSans(
-                  //     fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  //     color: Color(0xFF6B707E),
-                  //   ),
-                  //   inputTextStyle: GoogleFonts.albertSans(
-                  //     fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  //     color: Color(0xFF1B1C1C),
-                  //   ),
-                  //   errorColor: Colors.red,
-                  //   errorFontSize: 12,
-                  //   // onChanged: (value) {
-                  //   //   signupController.isMobileNo.value = value.length == 10;
-                  //   // },
-                  //   // enabled: !signupController.isMobileVerified.value,
-                  //   // readOnly: signupController.isMobileVerified.value,
-                  // ),
-                  // // _buildTextField(
-                  // //   controller: _pincodeController,
-                  // //   hint: '322001',
-                  // //   keyboardType: TextInputType.number,
-                  // // ),
-                  // SizedBox(height: 16),
-                  // // City Dropdown
-                  // buildLabelText('City'),
-                  // SizedBox(height: 8),
-                  // _buildDropdown(selectedCity, ['Jaipur', 'Delhi', 'Mumbai'], (value) {
-                  //   setState(() => selectedCity = value!);
-                  // }),
-                  // SizedBox(height: 16),
-                  // // State Dropdown
-                  // buildLabelText('State'),
-                  // SizedBox(height: 8),
-                  // _buildDropdown(selectedState, ['Rajasthan', 'Delhi', 'Maharashtra'], (value) {
-                  //   setState(() => selectedState = value!);
-                  // }),
                   SizedBox(height: 16),
+
                   // Address Field
                   buildLabelText('Address'),
                   SizedBox(height: 8),
@@ -584,7 +480,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                     maxLines: 3,
                     errorColor: Colors.red,
                     errorFontSize: 12,
-                  ),
+                  ),],
                   SizedBox(height: 10),
                 ],
               ),
@@ -595,7 +491,9 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
           GlobalUtils.CustomButton(
             text: "Continue",
             onPressed: () {
-              Get.back();
+              if(isMobileNumberAlreadyRegistered) {
+                Get.to(WalletScreen(showBackButton: true));
+              }
             },
             textStyle: GoogleFonts.albertSans(
               fontSize: 16,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:payrupya/view/payrupya_home_screen.dart';
+import 'add_sender_screen.dart';
 import 'payment_screen.dart';
 import 'profile_screen.dart';
 import 'transaction_screen.dart';
@@ -22,7 +23,8 @@ class _PayrupyaMainScreenState extends State<PayrupyaMainScreen> {
     PayrupyaHomeScreen(),
     PaymentScreen(),
     TransactionScreen(),
-    WalletScreen(showBackButton: false),
+    // WalletScreen(showBackButton: false),
+    AddSenderScreen(showBackButton: true),
     ProfileScreen(),
     // HomeScreen(),
     // PaymentScreen(),
