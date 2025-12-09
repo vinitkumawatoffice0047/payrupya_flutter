@@ -200,18 +200,43 @@ class LoginController extends GetxController {
 
       // SUCCESS RESPONSE
       if (loginResponse.respCode == "RCS") {
+        // ✅ ADD THIS DEBUG CODE
+        ConsoleLog.printColor("=== LOGIN RESPONSE DEBUG ===", color: "green");
+        ConsoleLog.printColor("Full Response: ${response}", color: "yellow");
+        ConsoleLog.printColor("Token: ${loginResponse.data?.tokenid}", color: "cyan");
+        ConsoleLog.printColor("Request ID: ${loginResponse.data?.requestId}", color: "cyan");
+
+        // Check if there's a signature field
+        if (response.containsKey('signature')) {
+          ConsoleLog.printColor("Signature Field: ${response['signature']}", color: "cyan");
+        }
+        if (response.containsKey('data') && response['data'] != null) {
+          if (response['data'].containsKey('signature')) {
+            ConsoleLog.printColor("Data.Signature: ${response['data']['signature']}", color: "cyan");
+          }
+        }
+        ConsoleLog.printColor("=== END DEBUG ===", color: "green");
+
         // Extract data using model properties
         String tokenId = loginResponse.data?.tokenid ?? "";
-        String signature = loginResponse.data?.requestId ?? "";
+        String requestId = loginResponse.data?.requestId ?? "";
+        String signature = loginResponse.data?.signature ?? "";
+
+        // ✅ If signature is empty, use requestId as fallback
+        if (signature.isEmpty) {
+          signature = requestId;
+          ConsoleLog.printWarning("⚠️ No separate signature field found, using request_id");
+        }
+
         UserData? userData = loginResponse.data?.userdata;
 
-        // Save auth exactly like Ionic
-        if (tokenId.isNotEmpty && signature.isNotEmpty) {
-          await AppSharedPreferences.saveLoginAuth(
-            token: tokenId,
-            signature: signature,
-          );
-        }
+        // // Save auth exactly like Ionic
+        // if (tokenId.isNotEmpty && signature.isNotEmpty) {
+        //   await AppSharedPreferences.saveLoginAuth(
+        //     token: tokenId,
+        //     signature: signature,
+        //   );
+        // }
 
         if (userData != null) {
           String userId = userData.accountidf ?? "";
@@ -222,6 +247,7 @@ class LoginController extends GetxController {
 
           ConsoleLog.printSuccess("Login successful for user: $userName");
           ConsoleLog.printInfo("Token: $tokenId");
+          ConsoleLog.printInfo("Request ID: $requestId");
           ConsoleLog.printInfo("Signature: $signature");
           ConsoleLog.printInfo("User ID: $userId");
           ConsoleLog.printInfo("Mobile: $mobileNo");

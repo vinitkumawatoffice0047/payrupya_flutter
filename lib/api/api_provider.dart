@@ -44,7 +44,7 @@ class ApiProvider {
     "Content-type": "application/json",
     // "Authorization": 'Bearer $authToken',
   };
-  String authKey = "DREAD*RK&Y&*T9KeykhfdiT";
+  // String authKey = "DREAD*RK&Y&*T9KeykhfdiT";
 
   //Get API Request Method
   Future<Response?> requestGetForApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
@@ -52,7 +52,7 @@ class ApiProvider {
       Map<String, String> headers = {
         "Content-type": "application/json",
         "Authorization": "Bearer $token",
-        "Authkey": authKey,
+        // "Authkey": authKey,
       };
 
       ConsoleLog.printColor("Headers: $headers", color: "yellow");
@@ -105,11 +105,11 @@ class ApiProvider {
       }
 
       // dictParameter["versionNew"] = 1;
-      ConsoleLog.printColor("Headers: $headers", color: "yellow");
-      ConsoleLog.printColor("Url:  $url", color: "yellow");
-      ConsoleLog.printColor("Token:  $token", color: "yellow");
-      ConsoleLog.printColor("Signature: $signature", color: "cyan");
-      ConsoleLog.printColor("DictParameter: $dictParameter", color: "yellow");
+      ConsoleLog.printColor("=== API REQUEST ===", color: "blue");
+      ConsoleLog.printColor("URL: $url", color: "yellow");
+      ConsoleLog.printColor("Headers: $headers", color: "cyan");
+      ConsoleLog.printColor("Body: $dictParameter", color: "yellow");
+      ConsoleLog.printColor("=== END REQUEST ===", color: "blue");
 
       BaseOptions options = BaseOptions(
         baseUrl: WebApiConstant.BASE_URL,
@@ -127,12 +127,10 @@ class ApiProvider {
           headers: headers,
         ),
       );
-      ConsoleLog.printJsonResponse("Response21: ${response.data}", color: "yellow", tag: "Response");
-      ConsoleLog.printColor("Response1: ${response.data["errorCode"]}", color: "yellow");
-      ConsoleLog.printColor("Response_headers: ${response.headers}", color: "yellow");
-      ConsoleLog.printColor("Response_realUri: ${response.realUri}", color: "yellow");
-      ConsoleLog.printColor("Response: ${response.data}", color: "yellow");
+      ConsoleLog.printColor("=== API RESPONSE ===", color: "green");
       ConsoleLog.printColor("Status: ${response.statusCode}", color: "yellow");
+      ConsoleLog.printColor("Data: ${response.data}", color: "yellow");
+      ConsoleLog.printColor("=== END RESPONSE ===", color: "green");
       // if(response.data != null && response.data["status"] == "error"){
       //   response.data["data"] = null;
       //   return response;
@@ -150,7 +148,7 @@ class ApiProvider {
       if (response.data is Map<String, dynamic>) {
         Map<String, dynamic>? result = Map<String, dynamic>.from(response.data);
         if (result["errorCode"] == 7) {
-          ConsoleLog.printError("Authentication failed");
+          ConsoleLog.printError("❌ Authentication failed - Error Code 7");
           logoutUser();
           return response;
         }
@@ -170,7 +168,7 @@ class ApiProvider {
       Map<String, String> headers = {
         "Content-type": "application/json",
         "Authorization": "Bearer $token",
-        "Authkey": authKey,
+        // "Authkey": authKey,
       };
 
       print("Headers: $headers");

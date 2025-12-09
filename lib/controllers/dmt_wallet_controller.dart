@@ -20,6 +20,7 @@ import '../utils/app_shared_preferences.dart';
 import '../utils/connection_validator.dart';
 import '../utils/custom_loading.dart';
 import '../utils/global_utils.dart';
+import '../view/login_screen.dart';
 import 'login_controller.dart';
 
 class DmtWalletController extends GetxController {
@@ -98,11 +99,40 @@ class DmtWalletController extends GetxController {
     return GlobalUtils.generateRandomId(6);
   }
 
+  Future<bool> isTokenValid() async {
+    // Check if token exists and is not expired
+    if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+      ConsoleLog.printError("❌ Token or Signature missing");
+      return false;
+    }
+
+    // You can add timestamp-based expiry check here if needed
+    return true;
+  }
+
+  Future<void> refreshToken(BuildContext context) async {
+    ConsoleLog.printWarning("⚠️ Token expired, please login again");
+
+    // Clear stored credentials
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+
+    // Navigate to login
+    Get.offAll(() => LoginScreen());
+  }
+
   // ============================================
   // 1. CHECK SENDER (REMITTER)
   // ============================================
   Future<void> checkSender(BuildContext context, String mobile) async {
     try {
+
+      // ✅ Validate token first
+      if (!await isTokenValid()) {
+        await refreshToken(context);
+        return;
+      }
+
       if (mobile.isEmpty || mobile.length != 10) {
         Fluttertoast.showToast(msg: "Please enter valid 10-digit mobile number");
         return;
@@ -236,7 +266,8 @@ class DmtWalletController extends GetxController {
         context,
         WebApiConstant.API_URL_ADD_SENDER,
         body,
-        "",
+        userAuthToken.value,
+        userSignature.value,
       );
 
       CustomLoading().hide;
@@ -302,7 +333,8 @@ class DmtWalletController extends GetxController {
         context,
         WebApiConstant.API_URL_VERIFY_SENDER_OTP,
         body,
-        "",
+        userAuthToken.value,
+        userSignature.value,
       );
 
       CustomLoading().hide;
@@ -356,7 +388,8 @@ class DmtWalletController extends GetxController {
         context,
         WebApiConstant.API_URL_GET_BENEFICIARY_LIST,
         body,
-        "",
+        userAuthToken.value,
+        userSignature.value,
       );
 
       CustomLoading().hide;
@@ -424,7 +457,8 @@ class DmtWalletController extends GetxController {
         context,
         WebApiConstant.API_URL_ADD_BENEFICIARY,
         body,
-        "",
+        userAuthToken.value,
+        userSignature.value,
       );
 
       CustomLoading().hide;
@@ -486,7 +520,8 @@ class DmtWalletController extends GetxController {
         context,
         WebApiConstant.API_URL_DELETE_BENEFICIARY,
         body,
-        "",
+        userAuthToken.value,
+        userSignature.value,
       );
 
       CustomLoading().hide;
@@ -547,7 +582,8 @@ class DmtWalletController extends GetxController {
         context,
         WebApiConstant.API_URL_VERIFY_ACCOUNT,
         body,
-        "",
+        userAuthToken.value,
+        userSignature.value,
       );
 
       CustomLoading().hide;
@@ -626,7 +662,8 @@ class DmtWalletController extends GetxController {
         context,
         WebApiConstant.API_URL_TRANSFER_MONEY,
         body,
-        "",
+        userAuthToken.value,
+        userSignature.value,
       );
 
       CustomLoading().hide;
@@ -674,7 +711,8 @@ class DmtWalletController extends GetxController {
         context,
         WebApiConstant.API_URL_GET_ALL_BANKS,
         body,
-        "",
+        userAuthToken.value,
+        userSignature.value,
       );
 
       if (response != null && response.statusCode == 200) {
