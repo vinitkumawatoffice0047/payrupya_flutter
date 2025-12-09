@@ -7,7 +7,7 @@ class AppSharedPreferences {
   static const isIntro = "isIntro";
   static const usertype = "usertype";
   static const token = "token";
-  static const String signature = 'x_signature';
+  static const signature = 'signature';
   static const userID = "userID";
   static const mobileNo = "mobileNo";
   static const email = "email";
@@ -36,24 +36,51 @@ class AppSharedPreferences {
       await SharedPreferences.getInstance();
 
   // ============================
-  // LOGIN RELATED DATA
+  // ✅ LOGIN AUTHENTICATION - FIXED
   // ============================
   static Future<void> saveLoginAuth({
     required String token,
     required String signature,
   }) async {
     final prefs = await _pref();
-    prefs.setString(AppSharedPreferences.token, token);
-    prefs.setString("signature", signature);
-    prefs.setBool(isLogin, true);
+    await prefs.setString(AppSharedPreferences.token, token);
+    await prefs.setString(AppSharedPreferences.signature, signature);
+    await prefs.setBool(isLogin, true);
+
+    print("✅ SAVED - Token: ${token.substring(0, 10)}...");
+    print("✅ SAVED - Signature: ${signature.substring(0, 10)}...");
   }
 
   static Future<Map<String, String>> getLoginAuth() async {
     final prefs = await _pref();
+    String savedToken = prefs.getString(token) ?? "";
+    String savedSignature = prefs.getString(signature) ?? "";
+
+    print("📖 RETRIEVED - Token: ${savedToken.isNotEmpty ? '${savedToken.substring(0, 10)}...' : 'EMPTY'}");
+    print("📖 RETRIEVED - Signature: ${savedSignature.isNotEmpty ? '${savedSignature.substring(0, 10)}...' : 'EMPTY'}");
+
     return {
-      "token": prefs.getString(token) ?? "",
-      "signature": prefs.getString("signature") ?? "",
+      "token": savedToken,
+      "signature": savedSignature,
     };
+  }
+
+  // ✅ Get Token Only
+  static Future<String> getToken() async {
+    final prefs = await _pref();
+    return prefs.getString(token) ?? "";
+  }
+
+  // ✅ Get Signature Only
+  static Future<String> getSignature() async {
+    final prefs = await _pref();
+    return prefs.getString(signature) ?? "";
+  }
+
+  // ✅ Check if user is logged in
+  static Future<bool> isUserLoggedIn() async {
+    final prefs = await _pref();
+    return prefs.getBool(isLogin) ?? false;
   }
 
   static Future<void> saveUserRole(String role) async {
@@ -92,6 +119,17 @@ class AppSharedPreferences {
   static Future<String?> getUserName() async{
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(userName);
+  }
+
+  //Mobile
+  static Future<void> setMobileNo(String mobile) async{
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(mobileNo, mobile);
+  }
+
+  static Future<String?> getMobileNo() async{
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(mobileNo);
   }
 
   //Email

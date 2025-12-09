@@ -35,25 +35,30 @@ class DmtWalletController extends GetxController {
     loadAuthCredentials();
   }
 
-  // Load both token and signature
+  // ✅ FIXED: Load both token and signature properly
   Future<void> loadAuthCredentials() async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
+      // Use the correct method to get auth credentials
+      Map<String, String> authData = await AppSharedPreferences.getLoginAuth();
 
-      String token = prefs.getString(AppSharedPreferences.token) ?? '';
-      String signature = prefs.getString(AppSharedPreferences.signature) ?? '';
+      userAuthToken.value = authData["token"] ?? "";
+      userSignature.value = authData["signature"] ?? "";
 
-      userAuthToken.value = token;
-      userSignature.value = signature;
+      ConsoleLog.printInfo("Token: ${userAuthToken.value.isNotEmpty ? 'Found' : 'NOT FOUND'}");
+      ConsoleLog.printInfo("Signature: ${userSignature.value.isNotEmpty ? 'Found' : 'NOT FOUND'}");
 
-      ConsoleLog.printInfo("Token: ${token.isNotEmpty ? 'Found' : 'NOT FOUND'}");
-      ConsoleLog.printInfo("Signature: ${signature.isNotEmpty ? 'Found' : 'NOT FOUND'}");
+      // Debug: Print first 20 chars
+      if (userAuthToken.value.isNotEmpty) {
+        ConsoleLog.printColor("Token Preview: ${userAuthToken.value.substring(0, 20)}...", color: "cyan");
+      }
+      if (userSignature.value.isNotEmpty) {
+        ConsoleLog.printColor("Signature Preview: ${userSignature.value.substring(0, 20)}...", color: "cyan");
+      }
 
     } catch (e) {
       ConsoleLog.printError("Error loading auth credentials: $e");
     }
   }
-
 
   // Text Controllers
   Rx<TextEditingController> senderMobileController = TextEditingController().obs;
@@ -100,13 +105,16 @@ class DmtWalletController extends GetxController {
   }
 
   Future<bool> isTokenValid() async {
-    // Check if token exists and is not expired
+    // Reload credentials first
+    await loadAuthCredentials();
+
     if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
       ConsoleLog.printError("❌ Token or Signature missing");
+      ConsoleLog.printError("Token Length: ${userAuthToken.value.length}");
+      ConsoleLog.printError("Signature Length: ${userSignature.value.length}");
       return false;
     }
 
-    // You can add timestamp-based expiry check here if needed
     return true;
   }
 
@@ -114,11 +122,11 @@ class DmtWalletController extends GetxController {
     ConsoleLog.printWarning("⚠️ Token expired, please login again");
 
     // Clear stored credentials
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await AppSharedPreferences.clearAll();
 
     // Navigate to login
     Get.offAll(() => LoginScreen());
+    Fluttertoast.showToast(msg: "Session expired. Please login again.");
   }
 
   // ============================================
@@ -201,10 +209,8 @@ class DmtWalletController extends GetxController {
           ConsoleLog.printError("Error: ${checkSenderResponse.respDesc}");
 
           if (checkSenderResponse.respDesc?.toLowerCase().contains('unauthorized') ?? false) {
-            CustomDialog.error(
-              context: context,
-              message: "Authentication failed. Please login again.",
-            );
+            // Token is invalid
+            await refreshToken(context);
           } else {
             CustomDialog.error(
               context: context,
@@ -230,6 +236,11 @@ class DmtWalletController extends GetxController {
   // ============================================
   Future<void> addSender(BuildContext context) async {
     try {
+      if (!await isTokenValid()) {
+        await refreshToken(context);
+        return;
+      }
+
       String mobile = senderMobileController.value.text.trim();
       String name = senderNameController.value.text.trim();
       String address = senderAddressController.value.text.trim();
@@ -291,6 +302,8 @@ class DmtWalletController extends GetxController {
             message: addSenderResponse.respDesc ?? "Failed to add sender",
           );
         }
+      }else if (response?.statusCode == 401) {
+        await refreshToken(context);
       }
     } catch (e) {
       CustomLoading().hide;
@@ -369,7 +382,10 @@ class DmtWalletController extends GetxController {
   // ============================================
   Future<void> getBeneficiaryList(BuildContext context, String senderMobile) async {
     try {
-      CustomLoading().show(context);
+      if (!await isTokenValid()) {
+        await refreshToken(context);
+        return;
+      }
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -408,9 +424,10 @@ class DmtWalletController extends GetxController {
           beneficiaryList.clear();
           filteredBeneficiaryList.clear();
         }
+      }else if (response?.statusCode == 401) {
+        await refreshToken(context);
       }
     } catch (e) {
-      CustomLoading().hide;
       ConsoleLog.printError("GET BENEFICIARY LIST ERROR: $e");
     }
   }

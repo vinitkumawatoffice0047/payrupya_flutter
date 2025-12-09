@@ -151,8 +151,23 @@ class LoginController extends GetxController {
     String mobile = mobileController.value.text.trim();
     String password = passwordController.value.text.trim();
 
-    if (mobile.isEmpty || password.isEmpty) {
-      CustomDialog.error(context: context, message: "Please enter mobile and password");
+    ConsoleLog.printColor("Mobile: $mobile");
+    ConsoleLog.printColor("Password: ${password.replaceAll(RegExp(r'.'), '*')}");
+
+
+    // Validation
+    if (mobile.isEmpty) {
+      Fluttertoast.showToast(msg: "Please enter mobile number");
+      return;
+    }
+
+    if (mobile.length != 10) {
+      Fluttertoast.showToast(msg: "Please enter valid 10-digit mobile number");
+      return;
+    }
+
+    if (password.isEmpty) {
+      Fluttertoast.showToast(msg: "Please enter password");
       return;
     }
 
@@ -162,14 +177,14 @@ class LoginController extends GetxController {
     ConsoleLog.printInfo("Is Connected: $isConnected");
 
     if (!isConnected) {
-      CustomDialog.error(context: context, message: "No Internet Connection!");
+      Fluttertoast.showToast(msg: "No Internet Connection!");
       return;
     }
 
     // Show Loader
     CustomLoading().show(context);
 
-    Map<String, dynamic> body = {
+    Map<String, dynamic> requestBody = {
       "login": mobile,
       "password": password,
       "request_id": GlobalUtils.generateRandomId(8),
@@ -177,13 +192,13 @@ class LoginController extends GetxController {
       "long": longitude.value.toString(),
     };
 
-    ConsoleLog.printColor("LOGIN REQ: $body");
+    ConsoleLog.printColor("LOGIN REQ: $requestBody");
 
     try {
       var response = await ApiProvider().loginApi(
         context,
         WebApiConstant.API_URL_LOGIN,
-        body,
+        requestBody,
         "",
       );
 
@@ -191,125 +206,264 @@ class LoginController extends GetxController {
       ConsoleLog.printColor("LOGIN RESPONSE: $response");
 
       if (response == null) {
-        CustomDialog.error(context: context, message: "Server not responding!");
+        Fluttertoast.showToast(msg: "No response from server");
         return;
       }
 
-      // Parse response using model
-      LoginApiResponseModel loginResponse = LoginApiResponseModel.fromJson(response);
+      // ✅ CRITICAL FIX: Handle both success and error responses safely
+      try {
+        // Check response code first
+        String respCode = response["Resp_code"] ?? "";
+        String respDesc = response["Resp_desc"] ?? "";
 
-      // SUCCESS RESPONSE
-      if (loginResponse.respCode == "RCS") {
-        // ✅ ADD THIS DEBUG CODE
-        ConsoleLog.printColor("=== LOGIN RESPONSE DEBUG ===", color: "green");
-        ConsoleLog.printColor("Full Response: ${response}", color: "yellow");
-        ConsoleLog.printColor("Token: ${loginResponse.data?.tokenid}", color: "cyan");
-        ConsoleLog.printColor("Request ID: ${loginResponse.data?.requestId}", color: "cyan");
+        ConsoleLog.printColor("Response Code: $respCode", color: "yellow");
+        ConsoleLog.printColor("Response Desc: $respDesc", color: "yellow");
 
-        // Check if there's a signature field
-        if (response.containsKey('signature')) {
-          ConsoleLog.printColor("Signature Field: ${response['signature']}", color: "cyan");
-        }
-        if (response.containsKey('data') && response['data'] != null) {
-          if (response['data'].containsKey('signature')) {
-            ConsoleLog.printColor("Data.Signature: ${response['data']['signature']}", color: "cyan");
+        if (respCode == "RCS") {
+          // ✅ SUCCESS CASE - data will be a Map
+          if (response["data"] == null) {
+            ConsoleLog.printError("❌ No data in response");
+            Fluttertoast.showToast(msg: "Login failed: No data received");
+            return;
           }
-        }
-        ConsoleLog.printColor("=== END DEBUG ===", color: "green");
 
-        // Extract data using model properties
-        String tokenId = loginResponse.data?.tokenid ?? "";
-        String requestId = loginResponse.data?.requestId ?? "";
-        String signature = loginResponse.data?.signature ?? "";
+          // Check if data is a Map (success case)
+          if (response["data"] is! Map) {
+            ConsoleLog.printError("❌ Invalid data format");
+            Fluttertoast.showToast(msg: "Login failed: Invalid response format");
+            return;
+          }
 
-        // ✅ If signature is empty, use requestId as fallback
-        if (signature.isEmpty) {
-          signature = requestId;
-          ConsoleLog.printWarning("⚠️ No separate signature field found, using request_id");
-        }
+          // Parse response using model
+          LoginApiResponseModel loginResponse = LoginApiResponseModel.fromJson(response);
 
-        UserData? userData = loginResponse.data?.userdata;
+          // ✅ Extract token and signature
+          String token = loginResponse.data?.tokenid ?? "";
+          String signature = loginResponse.data?.requestId ?? "";
 
-        // // Save auth exactly like Ionic
-        // if (tokenId.isNotEmpty && signature.isNotEmpty) {
-        //   await AppSharedPreferences.saveLoginAuth(
-        //     token: tokenId,
-        //     signature: signature,
-        //   );
-        // }
+          if (token.isEmpty) {
+            ConsoleLog.printError("❌ Token is empty in response");
+            Fluttertoast.showToast(msg: "Login failed: Invalid token");
+            return;
+          }
 
-        if (userData != null) {
-          String userId = userData.accountidf ?? "";
-          String mobileNo = userData.mobile ?? "";
-          String userName = userData.contactPerson ?? "";
-          String userEmail = userData.email ?? "";
-          String userRole = userData.roleidf ?? "";
+          if (signature.isEmpty) {
+            ConsoleLog.printWarning("⚠️ No separate signature field found, using request_id");
+            signature = loginResponse.data?.requestId ?? "";
+          }
 
-          ConsoleLog.printSuccess("Login successful for user: $userName");
-          ConsoleLog.printInfo("Token: $tokenId");
-          ConsoleLog.printInfo("Request ID: $requestId");
-          ConsoleLog.printInfo("Signature: $signature");
-          ConsoleLog.printInfo("User ID: $userId");
-          ConsoleLog.printInfo("Mobile: $mobileNo");
-          ConsoleLog.printInfo("Email: $userEmail");
-          ConsoleLog.printInfo("Role: $userRole");
-
-          // Save User Data
-          SharedPreferences pref = await SharedPreferences.getInstance();
-          pref.setBool(AppSharedPreferences.isLogin, true);
-          pref.setString(AppSharedPreferences.token, tokenId);
-          pref.setString(AppSharedPreferences.signature, signature);
-          pref.setString(AppSharedPreferences.userID, userId);
-          pref.setString(AppSharedPreferences.mobileNo, mobileNo);
-          pref.setString(AppSharedPreferences.userName, userName);
-          pref.setString(AppSharedPreferences.email, userEmail);
-          pref.setString(AppSharedPreferences.userRole, userRole);
-
-          // Update Observables
-          name.value = userName;
-          email.value = userEmail;
-          this.mobile.value = mobileNo;
-
-          Fluttertoast.showToast(
-            msg: loginResponse.respDesc ?? "Login Successful",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.TOP,
+          // ✅ Save to SharedPreferences
+          await AppSharedPreferences.saveLoginAuth(
+            token: token,
+            signature: signature,
           );
 
-          // Navigate based on user role
-          if (userRole == "1") {
-            Get.offAll(() => OtherUsersScreen(UserName: "Admin"));
-          } else if (userRole == "2") {
-            Get.offAll(() => OtherUsersScreen(UserName: "Super Distributor"));
-          } else if (userRole == "3") {
-            Get.offAll(() => OtherUsersScreen(UserName: "Distributor"));
-          } else if (userRole == "4") {
-            Get.offAll(() => PayrupyaMainScreen(), transition: Transition.fadeIn);
-          } else {
-            Get.offAll(() => OtherUsersScreen(UserName: "Other"));
+          // ✅ Save user details
+          await AppSharedPreferences.setUserId(
+              loginResponse.data?.userdata?.accountidf ?? ""
+          );
+          await AppSharedPreferences.setMobileNo(
+              loginResponse.data?.userdata?.mobile ?? ""
+          );
+          await AppSharedPreferences.setEmail(
+              loginResponse.data?.userdata?.email ?? ""
+          );
+          await AppSharedPreferences.setUserName(
+              loginResponse.data?.userdata?.contactPerson ?? ""
+          );
+          await AppSharedPreferences.saveUserRole(
+              loginResponse.data?.userdata?.roleidf ?? ""
+          );
+
+          ConsoleLog.printSuccess("✅ Login successful for user: ${loginResponse.data?.userdata?.contactPerson}");
+          ConsoleLog.printInfo("Token: $token");
+          ConsoleLog.printInfo("Signature: $signature");
+          ConsoleLog.printInfo("User ID: ${loginResponse.data?.userdata?.accountidf}");
+
+          // ✅ Navigate to Main Screen
+          Fluttertoast.showToast(
+            msg: "Login successful! Welcome ${loginResponse.data?.userdata?.contactPerson}",
+            toastLength: Toast.LENGTH_LONG,
+          );
+          Get.offAll(() => PayrupyaMainScreen());
+
+        } else if (respCode == "ERR") {
+          // ✅ ERROR CASE - data might be a List or null
+          ConsoleLog.printError("❌ Login failed: $respDesc");
+
+          // Show user-friendly error message
+          String errorMessage = respDesc;
+
+          // Handle specific error messages
+          if (respDesc.toLowerCase().contains('invalid mobile')) {
+            errorMessage = "Invalid mobile number or password";
+          } else if (respDesc.toLowerCase().contains('invalid password')) {
+            errorMessage = "Invalid mobile number or password";
+          } else if (respDesc.toLowerCase().contains('user not found')) {
+            errorMessage = "User not found. Please register first.";
+          } else if (respDesc.toLowerCase().contains('account blocked')) {
+            errorMessage = "Your account has been blocked. Contact support.";
           }
+
+          Fluttertoast.showToast(
+            msg: errorMessage,
+            toastLength: Toast.LENGTH_LONG,
+            backgroundColor: Colors.red,
+          );
+
         } else {
-          CustomDialog.error(context: context, message: "User data not found!");
+          // Unknown response code
+          ConsoleLog.printError("❌ Unexpected response code: $respCode");
+          Fluttertoast.showToast(
+            msg: respDesc.isNotEmpty ? respDesc : "Login failed: Unexpected error",
+            toastLength: Toast.LENGTH_LONG,
+          );
+        }
+
+      } catch (parseError) {
+        ConsoleLog.printError("❌ PARSE ERROR: $parseError");
+
+        // Try to show error message from response if available
+        if (response is Map && response.containsKey("Resp_desc")) {
+          Fluttertoast.showToast(
+            msg: response["Resp_desc"] ?? "Login failed",
+            toastLength: Toast.LENGTH_LONG,
+          );
+        } else {
+          Fluttertoast.showToast(msg: "Login failed: Unable to parse response");
         }
       }
-      // OTP REQUIRED CASE (TFA)
-      else if (loginResponse.respCode == "TFA") {
-        Fluttertoast.showToast(msg: "OTP Required");
-        // Get.to(() => OtpScreen(referenceId: response["data"]["referenceid"]));
-      }
-      // ERROR MESSAGE
-      else {
-        ConsoleLog.printError("Login Failed: ${loginResponse.respDesc}");
-        CustomDialog.error(
-          context: context,
-          message: loginResponse.respDesc ?? "Login failed!",
-        );
-      }
-    } catch (e) {
-      CustomLoading().hide;
-      ConsoleLog.printError("LOGIN ERROR: $e");
-      CustomDialog.error(context: context, message: "Technical issue, please try again!");
+      // // Parse response using model
+      // LoginApiResponseModel loginResponse = LoginApiResponseModel.fromJson(response);
+      //
+      // // SUCCESS RESPONSE
+      // if (loginResponse.respCode == "RCS") {
+      //   // ✅ ADD THIS DEBUG CODE
+      //   ConsoleLog.printColor("=== LOGIN RESPONSE DEBUG ===", color: "green");
+      //   ConsoleLog.printColor("Full Response: ${response}", color: "yellow");
+      //   ConsoleLog.printColor("Token: ${loginResponse.data?.tokenid}", color: "cyan");
+      //   ConsoleLog.printColor("Request ID: ${loginResponse.data?.requestId}", color: "cyan");
+      //
+      //   // Check if there's a signature field
+      //   if (response.containsKey('signature')) {
+      //     ConsoleLog.printColor("Signature Field: ${response['signature']}", color: "cyan");
+      //   }
+      //   if (response.containsKey('data') && response['data'] != null) {
+      //     if (response['data'].containsKey('signature')) {
+      //       ConsoleLog.printColor("Data.Signature: ${response['data']['signature']}", color: "cyan");
+      //     }
+      //   }
+      //   ConsoleLog.printColor("=== END DEBUG ===", color: "green");
+      //
+      //   // Extract data using model properties
+      //   String tokenId = loginResponse.data?.tokenid ?? "";
+      //   String requestId = loginResponse.data?.requestId ?? "";
+      //   String signature = loginResponse.data?.signature ?? "";
+      //
+      //   // ✅ If signature is empty, use requestId as fallback
+      //   if (signature.isEmpty) {
+      //     signature = requestId;
+      //     ConsoleLog.printWarning("⚠️ No separate signature field found, using request_id");
+      //   }
+      //
+      //   UserData? userData = loginResponse.data?.userdata;
+      //
+      //   // // Save auth exactly like Ionic
+      //   // if (tokenId.isNotEmpty && signature.isNotEmpty) {
+      //   //   await AppSharedPreferences.saveLoginAuth(
+      //   //     token: tokenId,
+      //   //     signature: signature,
+      //   //   );
+      //   // }
+      //
+      //   if (userData != null) {
+      //     String userId = userData.accountidf ?? "";
+      //     String mobileNo = userData.mobile ?? "";
+      //     String userName = userData.contactPerson ?? "";
+      //     String userEmail = userData.email ?? "";
+      //     String userRole = userData.roleidf ?? "";
+      //
+      //     ConsoleLog.printSuccess("Login successful for user: $userName");
+      //     ConsoleLog.printInfo("Token: $tokenId");
+      //     ConsoleLog.printInfo("Request ID: $requestId");
+      //     ConsoleLog.printInfo("Signature: $signature");
+      //     ConsoleLog.printInfo("User ID: $userId");
+      //     ConsoleLog.printInfo("Mobile: $mobileNo");
+      //     ConsoleLog.printInfo("Email: $userEmail");
+      //     ConsoleLog.printInfo("Role: $userRole");
+      //
+      //     // Save User Data
+      //     SharedPreferences pref = await SharedPreferences.getInstance();
+      //     pref.setBool(AppSharedPreferences.isLogin, true);
+      //     pref.setString(AppSharedPreferences.token, tokenId);
+      //     pref.setString(AppSharedPreferences.signature, signature);
+      //     pref.setString(AppSharedPreferences.userID, userId);
+      //     pref.setString(AppSharedPreferences.mobileNo, mobileNo);
+      //     pref.setString(AppSharedPreferences.userName, userName);
+      //     pref.setString(AppSharedPreferences.email, userEmail);
+      //     pref.setString(AppSharedPreferences.userRole, userRole);
+      //
+      //     // Update Observables
+      //     name.value = userName;
+      //     email.value = userEmail;
+      //     this.mobile.value = mobileNo;
+      //
+      //     Fluttertoast.showToast(
+      //       msg: loginResponse.respDesc ?? "Login Successful",
+      //       toastLength: Toast.LENGTH_SHORT,
+      //       gravity: ToastGravity.TOP,
+      //     );
+      //
+      //     // Navigate based on user role
+      //     if (userRole == "1") {
+      //       Get.offAll(() => OtherUsersScreen(UserName: "Admin"));
+      //     } else if (userRole == "2") {
+      //       Get.offAll(() => OtherUsersScreen(UserName: "Super Distributor"));
+      //     } else if (userRole == "3") {
+      //       Get.offAll(() => OtherUsersScreen(UserName: "Distributor"));
+      //     } else if (userRole == "4") {
+      //       Get.offAll(() => PayrupyaMainScreen(), transition: Transition.fadeIn);
+      //     } else {
+      //       Get.offAll(() => OtherUsersScreen(UserName: "Other"));
+      //     }
+      //   } else {
+      //     CustomDialog.error(context: context, message: "User data not found!");
+      //   }
+      // }
+      // // OTP REQUIRED CASE (TFA)
+      // else if (loginResponse.respCode == "TFA") {
+      //   Fluttertoast.showToast(msg: "OTP Required");
+      //   // Get.to(() => OtpScreen(referenceId: response["data"]["referenceid"]));
+      // }
+      // // ERROR MESSAGE
+      // else {
+      //   ConsoleLog.printError("Login Failed: ${loginResponse.respDesc}");
+      //   CustomDialog.error(
+      //     context: context,
+      //     message: loginResponse.respDesc ?? "Login failed!",
+      //   );
+      // }
+    } catch (e, stackTrace) {
+      ConsoleLog.printError("❌ LOGIN ERROR: $e");
+      ConsoleLog.printError("STACK TRACE: $stackTrace");
+
+      Fluttertoast.showToast(
+        msg: "Technical issue occurred! Please try again.",
+        toastLength: Toast.LENGTH_LONG,
+      );
     }
+  }
+
+  // // Toggle password visibility
+  // void togglePasswordVisibility() {
+  //   obscurePassword.value = !obscurePassword.value;
+  // }
+
+  @override
+  void onClose() {
+    mobileController.value.dispose();
+    passwordController.value.dispose();
+    super.onClose();
   }
   // Future<void> loginApi(BuildContext context) async {
   //   String mobile = mobileController.value.text.trim();
