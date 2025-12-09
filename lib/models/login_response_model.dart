@@ -31,20 +31,20 @@ class LoginApiResponseModel {
 class LoginData {
   String? tokenid;
   String? requestId;
-  String? signature;
+  // String? signature;
   UserData? userdata;
 
   LoginData({
     this.tokenid,
     this.requestId,
-    this.signature,
+    // this.signature,
     this.userdata,
   });
 
   LoginData.fromJson(Map<String, dynamic> json) {
     tokenid = json['tokenid']?.toString();
     requestId = json['request_id']?.toString();
-    signature = json['signature']?.toString();
+    // signature = json['signature']?.toString();
     userdata = json['userdata'] != null ? UserData.fromJson(json['userdata']) : null;
   }
 
@@ -52,7 +52,7 @@ class LoginData {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['tokenid'] = tokenid;
     data['request_id'] = requestId;
-    data['signature'] = signature;
+    // data['signature'] = signature;
     if (userdata != null) {
       data['userdata'] = userdata!.toJson();
     }
