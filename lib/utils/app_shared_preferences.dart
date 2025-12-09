@@ -7,6 +7,7 @@ class AppSharedPreferences {
   static const isIntro = "isIntro";
   static const usertype = "usertype";
   static const token = "token";
+  static const String signature = 'x_signature';
   static const userID = "userID";
   static const mobileNo = "mobileNo";
   static const email = "email";

@@ -1,20 +1,36 @@
 class CheckSenderResponseModel {
   String? respCode;
   String? respDesc;
+  String? requestId;
   SenderData? data;
 
-  CheckSenderResponseModel({this.respCode, this.respDesc, this.data});
+  CheckSenderResponseModel({
+    this.respCode,
+    this.respDesc,
+    this.requestId,
+    this.data
+  });
 
   CheckSenderResponseModel.fromJson(Map<String, dynamic> json) {
     respCode = json['Resp_code'];
     respDesc = json['Resp_desc'];
-    data = json['data'] != null ? SenderData.fromJson(json['data']) : null;
+    requestId = json['request_id'];
+
+    // ✅ FIX: Handle both array and object
+    if (json['data'] != null) {
+      if (json['data'] is Map<String, dynamic>) {
+        data = SenderData.fromJson(json['data']);
+      } else if (json['data'] is List) {
+        data = null;  // Empty array case
+      }
+    }
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['Resp_code'] = respCode;
     data['Resp_desc'] = respDesc;
+    data['request_id'] = requestId;
     if (this.data != null) {
       data['data'] = this.data!.toJson();
     }

@@ -26,26 +26,30 @@ class DmtWalletController extends GetxController {
   LoginController loginController = Get.put(LoginController());
 
   RxString userAuthToken = "".obs;
+  RxString userSignature = "".obs;
 
   @override
   void onInit() {
     super.onInit();
-    loadAuthToken();
+    loadAuthCredentials();
   }
 
-  // Load auth token
-  // Alternative: Simple method without controller check
-  Future<void> loadAuthToken() async {
+  // Load both token and signature
+  Future<void> loadAuthCredentials() async {
     try {
-      // Just get from shared preferences directly
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      String token = prefs.getString(AppSharedPreferences.token) ?? '';
-      userAuthToken.value = token;
 
-      ConsoleLog.printInfo("Auth Token from SharedPrefs: ${token.isNotEmpty ? 'Found' : 'Not Found'}");
+      String token = prefs.getString(AppSharedPreferences.token) ?? '';
+      String signature = prefs.getString(AppSharedPreferences.signature) ?? '';
+
+      userAuthToken.value = token;
+      userSignature.value = signature;
+
+      ConsoleLog.printInfo("Token: ${token.isNotEmpty ? 'Found' : 'NOT FOUND'}");
+      ConsoleLog.printInfo("Signature: ${signature.isNotEmpty ? 'Found' : 'NOT FOUND'}");
 
     } catch (e) {
-      ConsoleLog.printError("Error loading auth token: $e");
+      ConsoleLog.printError("Error loading auth credentials: $e");
     }
   }
 
@@ -129,12 +133,18 @@ class DmtWalletController extends GetxController {
         WebApiConstant.API_URL_CHECK_SENDER,
         body,
         userAuthToken.value,
+        userSignature.value,
       );
 
       CustomLoading().hide;
+      if (response == null) {
+        CustomDialog.error(context: context, message: "No response from server");
+        return;
+      }
+
       ConsoleLog.printColor("CHECK SENDER RESPONSE: ${response?.data}");
 
-      if (response != null && response.statusCode == 200) {
+      if (response.statusCode == 200) {
         CheckSenderResponseModel checkSenderResponse = 
             CheckSenderResponseModel.fromJson(response.data);
 
@@ -157,10 +167,24 @@ class DmtWalletController extends GetxController {
           ConsoleLog.printWarning("Sender not found");
           Fluttertoast.showToast(msg: "Please register sender first");
           
+        } else if (checkSenderResponse.respCode == "ERR") {
+          ConsoleLog.printError("Error: ${checkSenderResponse.respDesc}");
+
+          if (checkSenderResponse.respDesc?.toLowerCase().contains('unauthorized') ?? false) {
+            CustomDialog.error(
+              context: context,
+              message: "Authentication failed. Please login again.",
+            );
+          } else {
+            CustomDialog.error(
+              context: context,
+              message: checkSenderResponse.respDesc ?? "Failed to check sender",
+            );
+          }
         } else {
           CustomDialog.error(
             context: context,
-            message: checkSenderResponse.respDesc ?? "Failed to check sender",
+            message: checkSenderResponse.respDesc ?? "Unexpected response",
           );
         }
       }

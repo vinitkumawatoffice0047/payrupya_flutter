@@ -87,17 +87,28 @@ class ApiProvider {
   }
 
   //Post API Request Method
-  Future<Response?> requestPostForApi(context, String url, Map<dynamic, dynamic> dictParameter, String token) async {
+  Future<Response?> requestPostForApi(BuildContext context, String url, Map<dynamic, dynamic> dictParameter, String token, [String signature = ""]) async {
     try {
       Map<String, String> headers = {
         "Content-type": "application/json",
-        "Authorization": "Bearer $token",
-        "Authkey": authKey,
+        // "Authkey": authKey,
       };
+
+      // Authorization header
+      if (token.isNotEmpty) {
+        headers["Authorization"] = "Bearer $token";
+      }
+
+      // X-Signature header
+      if (signature.isNotEmpty) {
+        headers["X-Signature"] = signature;
+      }
+
       // dictParameter["versionNew"] = 1;
       ConsoleLog.printColor("Headers: $headers", color: "yellow");
       ConsoleLog.printColor("Url:  $url", color: "yellow");
       ConsoleLog.printColor("Token:  $token", color: "yellow");
+      ConsoleLog.printColor("Signature: $signature", color: "cyan");
       ConsoleLog.printColor("DictParameter: $dictParameter", color: "yellow");
 
       BaseOptions options = BaseOptions(
@@ -120,23 +131,35 @@ class ApiProvider {
       ConsoleLog.printColor("Response1: ${response.data["errorCode"]}", color: "yellow");
       ConsoleLog.printColor("Response_headers: ${response.headers}", color: "yellow");
       ConsoleLog.printColor("Response_realUri: ${response.realUri}", color: "yellow");
+      ConsoleLog.printColor("Response: ${response.data}", color: "yellow");
+      ConsoleLog.printColor("Status: ${response.statusCode}", color: "yellow");
       // if(response.data != null && response.data["status"] == "error"){
       //   response.data["data"] = null;
       //   return response;
       // }else {
 
-      Map<String, dynamic>? result = Map<String, dynamic>.from(response.data);
-      if (result["errorCode"] == 7) {
-        ConsoleLog.printColor("authentication failed",color: "red");
-        // onLogout();
-        logoutUser();
-        return response;
-      } else {
-        return response;
+      // Map<String, dynamic>? result = Map<String, dynamic>.from(response.data);
+      // if (result["errorCode"] == 7) {
+      //   ConsoleLog.printColor("authentication failed",color: "red");
+      //   // onLogout();
+      //   logoutUser();
+      //   return response;
+      // } else {
+      //   return response;
+      // }
+      if (response.data is Map<String, dynamic>) {
+        Map<String, dynamic>? result = Map<String, dynamic>.from(response.data);
+        if (result["errorCode"] == 7) {
+          ConsoleLog.printError("Authentication failed");
+          logoutUser();
+          return response;
+        }
       }
+      return response;
+
       // }
     } catch (error) {
-      ConsoleLog.printError("Exception_Main: $error");
+      ConsoleLog.printError("API Exception: $error");
       return null;
     }
   }

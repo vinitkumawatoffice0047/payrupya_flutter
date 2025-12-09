@@ -202,7 +202,16 @@ class LoginController extends GetxController {
       if (loginResponse.respCode == "RCS") {
         // Extract data using model properties
         String tokenId = loginResponse.data?.tokenid ?? "";
+        String signature = loginResponse.data?.requestId ?? "";
         UserData? userData = loginResponse.data?.userdata;
+
+        // Save auth exactly like Ionic
+        if (tokenId.isNotEmpty && signature.isNotEmpty) {
+          await AppSharedPreferences.saveLoginAuth(
+            token: tokenId,
+            signature: signature,
+          );
+        }
 
         if (userData != null) {
           String userId = userData.accountidf ?? "";
@@ -212,6 +221,8 @@ class LoginController extends GetxController {
           String userRole = userData.roleidf ?? "";
 
           ConsoleLog.printSuccess("Login successful for user: $userName");
+          ConsoleLog.printInfo("Token: $tokenId");
+          ConsoleLog.printInfo("Signature: $signature");
           ConsoleLog.printInfo("User ID: $userId");
           ConsoleLog.printInfo("Mobile: $mobileNo");
           ConsoleLog.printInfo("Email: $userEmail");
@@ -221,6 +232,7 @@ class LoginController extends GetxController {
           SharedPreferences pref = await SharedPreferences.getInstance();
           pref.setBool(AppSharedPreferences.isLogin, true);
           pref.setString(AppSharedPreferences.token, tokenId);
+          pref.setString(AppSharedPreferences.signature, signature);
           pref.setString(AppSharedPreferences.userID, userId);
           pref.setString(AppSharedPreferences.mobileNo, mobileNo);
           pref.setString(AppSharedPreferences.userName, userName);

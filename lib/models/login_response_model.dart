@@ -30,21 +30,25 @@ class LoginApiResponseModel {
 
 class LoginData {
   String? tokenid;
+  String? requestId;
   UserData? userdata;
 
   LoginData({
     this.tokenid,
+    this.requestId,
     this.userdata,
   });
 
   LoginData.fromJson(Map<String, dynamic> json) {
     tokenid = json['tokenid']?.toString();
+    requestId = json['request_id']?.toString();
     userdata = json['userdata'] != null ? UserData.fromJson(json['userdata']) : null;
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['tokenid'] = tokenid;
+    data['request_id'] = requestId;
     if (userdata != null) {
       data['userdata'] = userdata!.toJson();
     }
