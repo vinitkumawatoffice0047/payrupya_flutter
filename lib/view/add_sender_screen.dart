@@ -1070,7 +1070,9 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../controllers/dmt_wallet_controller.dart';
+import '../controllers/login_controller.dart';
 import '../controllers/signup_controller.dart';
+import '../utils/ConsoleLog.dart';
 import '../utils/global_utils.dart';
 import '../utils/otp_input_fields.dart';
 import 'wallet_screen.dart';
@@ -1096,12 +1098,19 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
 
   final DmtWalletController dmtController = Get.put(DmtWalletController());
   final SignupController signupController = Get.put(SignupController());
+  final LoginController loginController = Get.find<LoginController>();
+  bool _isInitialized = false;
+  bool _isLoading = true;
 
   final GlobalKey<OtpInputFieldsState> otpKey = GlobalKey<OtpInputFieldsState>();
 
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeServices();
+    });
 
     // If initial mobile is provided, set it and check sender
     if (widget.initialMobile != null && widget.initialMobile!.isNotEmpty) {
@@ -1121,6 +1130,56 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
         signupController.fetchStates(Get.context!);
       }
     });
+  }
+
+  Future<void> _initializeServices() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      ConsoleLog.printInfo("=== Initializing DMT Services ===");
+
+      // 1. Load auth credentials first
+      await dmtController.loadAuthCredentials();
+
+      // 2. Check if service code is already loaded
+      if (dmtController.serviceCode.value.isEmpty) {
+        ConsoleLog.printWarning("Service code empty, loading from API...");
+
+        // 3. Load service code
+        // await dmtController.getAllowedServiceByType(context);
+
+        // Wait for service to load
+        await Future.delayed(Duration(milliseconds: 1000));
+
+        if (dmtController.serviceCode.value.isEmpty) {
+          ConsoleLog.printWarning("Still empty, setting default...");
+          // dmtController.serviceCode.value = "DMTRZP";
+          await dmtController.getAllowedServiceByType(context);
+        }
+      }
+
+      // 4. Load banks list
+      await dmtController.getAllBanks(context);
+
+      setState(() {
+        _isInitialized = true;
+        _isLoading = false;
+      });
+
+      ConsoleLog.printSuccess("✅ Services initialized. Service Code: ${dmtController.serviceCode.value}");
+
+    } catch (e) {
+      ConsoleLog.printError("Failed to initialize services: $e");
+      // dmtController.serviceCode.value = "DMTRZP"; // Set default
+      await dmtController.getAllowedServiceByType(context);
+
+      setState(() {
+        _isInitialized = true;
+        _isLoading = false;
+      });
+    }
   }
 
   @override

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:payrupya/controllers/dmt_wallet_controller.dart';
 import 'package:payrupya/view/add_sender_screen.dart';
+import 'package:payrupya/controllers/login_controller.dart';
 import 'package:payrupya/view/otp_verification_screen.dart';
 import 'dart:async';
 
 import 'package:payrupya/view/wallet_screen.dart';
+
+import '../utils/ConsoleLog.dart';
 
 class PayrupyaHomeScreen extends StatefulWidget {
   const PayrupyaHomeScreen({super.key});
@@ -24,8 +28,8 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
     "assets/images/banner.png", // Aap yahaan alag-alag image paths daal sakte hain
     "assets/images/banner.png",
   ];
-  late PageController _pageController;
-  Timer? _timer;
+  late PageController pageController;
+  Timer? timer;
 
   final List<Map<String, dynamic>> quickLinks = [
     {'img': 'assets/icons/dmtkyc.png', 'label': 'DMT KYC'},
@@ -44,20 +48,75 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
     {'name': 'Union Bank', 'time': '2 hrs', 'img': 'assets/images/union_logo.png'},
   ];
 
+  bool isServiceLoading = true;
+  bool isServiceLoaded = false;
+
+  DmtWalletController dmtController = Get.put(DmtWalletController());
+  final LoginController loginController = Get.find<LoginController>();
+
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(
-      // viewportFraction: 0.85, // Ek time pe kitna item dikhega
-      viewportFraction: 1, // Ek time pe kitna item dikhega
-      initialPage: _promoImages.length * 1000, // Bahut bada initial page endless effect ke liye
-    );
-    _startAutoScroll();
+    Future.delayed(Duration.zero, () {
+      dmtController.getAllowedServiceByType(context);
+    });
+    _initialize();
   }
 
-  void _startAutoScroll() {
-    _timer = Timer.periodic(Duration(seconds: 3), (timer) {
-      _pageController.nextPage(
+  Future<void> _initialize() async {
+    pageController = PageController(
+      viewportFraction: 1,
+      initialPage: _promoImages.length * 1000,
+    );
+    startAutoScroll();
+
+    // ✅ Better way to check location
+    if (loginController.latitude.value != 0.0 &&
+        loginController.longitude.value != 0.0) {
+
+      ConsoleLog.printInfo("Location available, loading services...");
+      await _loadServices();
+    } else {
+      ConsoleLog.printWarning("Location not available yet");
+      isServiceLoading = false;
+    }
+  }
+
+  Future<void> _loadServices() async {
+    try {
+      setState(() {
+        isServiceLoading = true;
+      });
+
+      // ✅ Wait for service to load
+      // await dmtController.getAllowedServiceByType(context);
+
+      // ✅ Check if service code was loaded
+      if (dmtController.serviceCode.value.isNotEmpty) {
+        setState(() {
+          isServiceLoaded = true;
+          isServiceLoading = false;
+        });
+        ConsoleLog.printSuccess("Service loaded successfully: ${dmtController.serviceCode.value}");
+      } else {
+        setState(() {
+          isServiceLoaded = false;
+          isServiceLoading = false;
+        });
+        ConsoleLog.printWarning("Service code empty after loading");
+      }
+    } catch (e) {
+      setState(() {
+        isServiceLoading = false;
+      });
+      ConsoleLog.printError("Failed to load services: $e");
+    }
+  }
+
+
+  void startAutoScroll() {
+    timer = Timer.periodic(Duration(seconds: 3), (timer) {
+      pageController.nextPage(
         duration: Duration(milliseconds: 500),
         curve: Curves.easeIn,
       );
@@ -359,7 +418,7 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
       child: ClipRRect( // Outer ClipRRect for curved edges
         borderRadius: BorderRadius.circular(15),
         child: PageView.builder(
-          controller: _pageController,
+          controller: pageController,
           itemBuilder: (context, index) {
             final imageIndex = index % _promoImages.length;
             return Image.asset(
@@ -524,8 +583,8 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
 
   @override
   void dispose() {
-    _timer?.cancel();
-    _pageController.dispose();
+    timer?.cancel();
+    pageController.dispose();
     super.dispose();
   }
 }

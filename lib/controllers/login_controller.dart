@@ -47,12 +47,13 @@ class LoginController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    getLocation();
     init();
   }
 
   void init() async{
-    await askLocationPermission();
-    await getUserLocation();
+    // await askLocationPermission();
+    // await getUserLocation();
 
     SharedPreferences.getInstance().then((value) {
       value.setBool(AppSharedPreferences.isIntro, true);
@@ -70,6 +71,29 @@ class LoginController extends GetxController {
       ConsoleLog.printColor("Name: $name");
     });
   }
+
+  Future<void> getLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      Fluttertoast.showToast(msg: "Location permission permanently denied");
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    latitude.value = position.latitude;
+    longitude.value = position.longitude;
+
+    ConsoleLog.printInfo("Lat: ${latitude.value}, Lng: ${longitude.value}");
+  }
+
 
   // ======================================================
   // PERMISSION HANDLER (Popup Guaranteed)

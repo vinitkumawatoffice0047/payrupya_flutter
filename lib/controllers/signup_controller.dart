@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:payrupya/controllers/login_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -56,15 +57,41 @@ class SignupController extends GetxController {
   String mobileOtp = "";
   String emailOtp = "";
 
+  RxDouble latitude = 0.0.obs;
+  RxDouble longitude = 0.0.obs;
+
   @override
   void onInit() {
     super.onInit();
+    getLocation();
     // Fetch states when controller initializes
     Future.delayed(Duration(milliseconds: 500), () {
       if (Get.context != null) {
         fetchStates(Get.context!);
       }
     });
+  }
+
+  Future<void> getLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      Fluttertoast.showToast(msg: "Location permission permanently denied");
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    latitude.value = position.latitude;
+    longitude.value = position.longitude;
+
+    ConsoleLog.printInfo("Lat: ${latitude.value}, Lng: ${longitude.value}");
   }
 
   // Generate Request ID
@@ -352,6 +379,13 @@ class SignupController extends GetxController {
   // Fetch States
   Future<void> fetchStates(BuildContext context) async {
     try {
+      if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
+        ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
+        ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
+        Fluttertoast.showToast(msg: "Please enable location service");
+        return;
+      }
+
       Map<String, dynamic> dict = {
         "request_id": generateRequestId(),
         "lat": loginController.latitude.value.toString(),

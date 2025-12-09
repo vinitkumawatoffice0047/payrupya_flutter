@@ -11,6 +11,7 @@ import '../models/add_sender_response_model.dart';
 import '../models/check_sender_response_model.dart';
 import '../models/delete_beneficiary_response_model.dart';
 import '../models/get_all_banks_response_model.dart';
+import '../models/get_allowed_service_by_type_response_model.dart';
 import '../models/get_beneficiary_list_response_model.dart';
 import '../models/transfer_money_response_model.dart';
 import '../models/verify_account_response_model.dart';
@@ -33,9 +34,10 @@ class DmtWalletController extends GetxController {
   void onInit() {
     super.onInit();
     loadAuthCredentials();
+    // getAllowedServiceByType(Get.context!);
   }
 
-  // ✅ FIXED: Load both token and signature properly
+  // Load both token and signature properly
   Future<void> loadAuthCredentials() async {
     try {
       // Use the correct method to get auth credentials
@@ -49,10 +51,19 @@ class DmtWalletController extends GetxController {
 
       // Debug: Print first 20 chars
       if (userAuthToken.value.isNotEmpty) {
-        ConsoleLog.printColor("Token Preview: ${userAuthToken.value.substring(0, 20)}...", color: "cyan");
+        int tokenLength = userAuthToken.value.length;
+        int previewLength = tokenLength > 20 ? 20 : tokenLength;
+        if (previewLength > 0) {
+          ConsoleLog.printColor("Token Preview: ${userAuthToken.value.substring(0, previewLength)}...", color: "cyan");
+        }
       }
+
       if (userSignature.value.isNotEmpty) {
-        ConsoleLog.printColor("Signature Preview: ${userSignature.value.substring(0, 20)}...", color: "cyan");
+        int signatureLength = userSignature.value.length;
+        int previewLength = signatureLength > 20 ? 20 : signatureLength;
+        if (previewLength > 0) {
+          ConsoleLog.printColor("Signature Preview: ${userSignature.value.substring(0, previewLength)}...", color: "cyan");
+        }
       }
 
     } catch (e) {
@@ -99,6 +110,8 @@ class DmtWalletController extends GetxController {
   
   // Search
   RxString searchQuery = ''.obs;
+  RxString serviceCode = ''.obs;
+  RxBool isServiceLoaded = false.obs;
 
   String generateRequestId() {
     return GlobalUtils.generateRandomId(6);
@@ -130,6 +143,115 @@ class DmtWalletController extends GetxController {
   }
 
   // ============================================
+  // 0. GET ALL BANKS LIST
+  // ============================================
+  Future<void> getAllowedServiceByType(BuildContext context) async {
+    try {
+      // ✅ Validate token first
+      if (!await isTokenValid()) {
+        await refreshToken(context);
+        return;
+      }
+
+      // if (mobile.isEmpty || mobile.length != 10) {
+      //   Fluttertoast.showToast(msg: "Please enter valid 10-digit mobile number");
+      //   return;
+      // }
+
+      if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
+        ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
+        ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
+        Fluttertoast.showToast(msg: "Please enable location service");
+        return;
+      }
+
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(context: context, message: "No Internet Connection!");
+        return;
+      }
+
+      CustomLoading().show(context);
+
+      isServiceLoaded.value = false;
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+      };
+
+      var response = await ApiProvider().requestPostForApi(
+          context,
+          WebApiConstant.API_URL_GET_SERVICE_TYPE,
+          body,
+          userAuthToken.value,
+          userSignature.value,
+      );
+
+      if (response != null && response.statusCode == 200) {
+        ConsoleLog.printColor("GET ALLOWED SERVICE RESP: ${response.data}");
+
+        GetAllowedServiceByTypeResponseModel apiResponse =
+        GetAllowedServiceByTypeResponseModel.fromJson(response.data);
+
+        if (apiResponse.respCode == "RCS" &&
+            apiResponse.data != null &&
+            apiResponse.data!.isNotEmpty) {
+
+          // ✅ Find DMT service specifically
+          var dmtService = apiResponse.data!.firstWhere(
+                (service) => service.serviceType == "REMITTANCE" ||
+                (service.serviceName?.toUpperCase().contains("DMT") ?? false),
+            orElse: () => ServiceData(),
+          );
+
+          if (dmtService.serviceCode != null && dmtService.serviceCode!.isNotEmpty) {
+            serviceCode.value = dmtService.serviceCode!;
+            ConsoleLog.printSuccess("✅ Service Code Loaded: ${serviceCode.value}");
+          } else if (apiResponse.data![0].serviceCode != null) {
+            // Fallback to first service
+            serviceCode.value = apiResponse.data![0].serviceCode!;
+            ConsoleLog.printSuccess("✅ Using first service: ${serviceCode.value}");
+          } else {
+            // Default fallback
+            // serviceCode.value = "DMTRZP";
+            await getAllowedServiceByType(context);
+            ConsoleLog.printWarning("⚠️ Using default service code: DMTRZP");
+          }
+
+          isServiceLoaded.value = true;
+
+          // ✅ Debug: Print all services
+          ConsoleLog.printInfo("=== Available Services ===");
+          for (var service in apiResponse.data!) {
+            ConsoleLog.printInfo("${service.serviceName} (${service.serviceCode}) - ${service.serviceType}");
+          }
+
+        } else {
+          ConsoleLog.printWarning("⚠️ No services found or empty response");
+          // Set default
+          // serviceCode.value = "DMTRZP";
+          await getAllowedServiceByType(context);
+          // isServiceLoaded.value = true;
+        }
+      } else {
+        ConsoleLog.printError("❌ API Error: ${response?.statusCode}");
+        // Set default
+        // serviceCode.value = "DMTRZP";
+        await getAllowedServiceByType(context);
+        // isServiceLoaded.value = true;
+      }
+    } catch (e) {
+      ConsoleLog.printError("❌ GET ALLOWED SERVICE ERROR: $e");
+      // Set default
+      // serviceCode.value = "DMTRZP";
+      await getAllowedServiceByType(context);
+      // isServiceLoaded.value = true;
+    }
+  }
+  // ============================================
   // 1. CHECK SENDER (REMITTER)
   // ============================================
   Future<void> checkSender(BuildContext context, String mobile) async {
@@ -160,7 +282,7 @@ class DmtWalletController extends GetxController {
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
         "sender": mobile,
-        "service": "DMT",
+        "service": serviceCode.value,
         "request_type": "CHECK REMITTER",
       };
 
@@ -267,7 +389,7 @@ class DmtWalletController extends GetxController {
         "state": selectedState.value,
         "city": selectedCity.value,
         "pincode": selectedPincode.value,
-        "service": "DMT",
+        "service": serviceCode.value,
         "request_type": "REGISTER REMITTER",
       };
 
@@ -336,7 +458,7 @@ class DmtWalletController extends GetxController {
         "sender": senderMobileController.value.text.trim(),
         "otp": otp,
         "referenceid": referenceId.value,
-        "service": "DMT",
+        "service": serviceCode.value,
         "request_type": "VERIFY OTP",
       };
 
@@ -392,7 +514,7 @@ class DmtWalletController extends GetxController {
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
         "sender": senderMobile,
-        "service": "DMT",
+        "service": serviceCode.value,
         "start": "0",
         "limit": "100",
         "searchby": "",
@@ -464,7 +586,7 @@ class DmtWalletController extends GetxController {
         "ifsc": ifsc,
         "mobile": mobile,
         "bank_id": selectedBankId.value,
-        "service": "DMT",
+        "service": serviceCode.value,
         "request_type": "ADD BENEFICIARY",
       };
 
@@ -527,7 +649,7 @@ class DmtWalletController extends GetxController {
         "long": loginController.longitude.value.toString(),
         "sender": currentSender.value?.mobile ?? "",
         "bene_id": beneId,
-        "service": "DMT",
+        "service": serviceCode.value,
         "request_type": "DELETE BENEFICIARY",
       };
 
@@ -669,7 +791,7 @@ class DmtWalletController extends GetxController {
         "bene_id": beneficiary.beneId,
         "amount": amount,
         "tpin": tpin,
-        "service": "DMT",
+        "service": serviceCode.value,
         "request_type": "TRANSFER",
       };
 
@@ -718,6 +840,12 @@ class DmtWalletController extends GetxController {
   // ============================================
   Future<void> getAllBanks(BuildContext context) async {
     try {
+      if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
+        ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
+        ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
+        Fluttertoast.showToast(msg: "Please enable location service");
+        return;
+      }
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
         "lat": loginController.latitude.value.toString(),
