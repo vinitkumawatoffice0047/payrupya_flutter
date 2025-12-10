@@ -33,5 +33,5 @@ Future<void> logoutUser() async {
     value.remove(AppSharedPreferences.mobileNo);
     value.remove(AppSharedPreferences.userName);
   });
-  Get.offAll(LoginScreen());
+  Get.offAll(()=>LoginScreen());
 }

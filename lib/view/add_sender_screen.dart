@@ -1148,7 +1148,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
         ConsoleLog.printWarning("Service code empty, loading from API...");
 
         // 3. Load service code
-        // await dmtController.getAllowedServiceByType(context);
+        await dmtController.getAllowedServiceByType(context);
 
         // Wait for service to load
         await Future.delayed(Duration(milliseconds: 1000));
@@ -1173,7 +1173,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
     } catch (e) {
       ConsoleLog.printError("Failed to initialize services: $e");
       // dmtController.serviceCode.value = "DMTRZP"; // Set default
-      await dmtController.getAllowedServiceByType(context);
+      // await dmtController.getAllowedServiceByType(context);
 
       setState(() {
         _isInitialized = true;

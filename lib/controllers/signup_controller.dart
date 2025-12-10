@@ -65,7 +65,7 @@ class SignupController extends GetxController {
     super.onInit();
     getLocation();
     // Fetch states when controller initializes
-    Future.delayed(Duration(milliseconds: 500), () {
+    Future.delayed(Duration(seconds: 2), () {
       if (Get.context != null) {
         fetchStates(Get.context!);
       }
@@ -382,7 +382,7 @@ class SignupController extends GetxController {
       if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
         ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
         ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
-        Fluttertoast.showToast(msg: "Please enable location service");
+        // Fluttertoast.showToast(msg: "Please enable location service");
         return;
       }
 

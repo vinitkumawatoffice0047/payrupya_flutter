@@ -1,5 +1,7 @@
 // lib/controllers/dmt_wallet_controller.dart
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
@@ -22,6 +24,7 @@ import '../utils/connection_validator.dart';
 import '../utils/custom_loading.dart';
 import '../utils/global_utils.dart';
 import '../view/login_screen.dart';
+import '../view/onboarding_screen.dart';
 import 'login_controller.dart';
 
 class DmtWalletController extends GetxController {
@@ -133,12 +136,8 @@ class DmtWalletController extends GetxController {
 
   Future<void> refreshToken(BuildContext context) async {
     ConsoleLog.printWarning("⚠️ Token expired, please login again");
-
-    // Clear stored credentials
     await AppSharedPreferences.clearAll();
-
-    // Navigate to login
-    Get.offAll(() => LoginScreen());
+    Get.offAll(() => OnboardingScreen());
     Fluttertoast.showToast(msg: "Session expired. Please login again.");
   }
 
@@ -148,10 +147,14 @@ class DmtWalletController extends GetxController {
   Future<void> getAllowedServiceByType(BuildContext context) async {
     try {
       // ✅ Validate token first
-      if (!await isTokenValid()) {
-        await refreshToken(context);
-        return;
-      }
+      // if (!await isTokenValid()) {
+      //   await refreshToken(context);
+      //   return;
+      // }
+      // if (!await isTokenValid()) {
+      //   await refreshToken(context);
+      //   return await getAllowedServiceByType(context);
+      // }
 
       // if (mobile.isEmpty || mobile.length != 10) {
       //   Fluttertoast.showToast(msg: "Please enter valid 10-digit mobile number");
@@ -161,7 +164,6 @@ class DmtWalletController extends GetxController {
       if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
         ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
         ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
-        Fluttertoast.showToast(msg: "Please enable location service");
         return;
       }
 
@@ -178,9 +180,12 @@ class DmtWalletController extends GetxController {
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
-        "lat": loginController.latitude.value.toString(),
-        "long": loginController.longitude.value.toString(),
+        "lat": loginController.latitude.value,
+        "long": loginController.longitude.value,
+        "type": "REMITTANCE"
       };
+
+      // Map<String, dynamic> body = {"request_id":generateRequestId(),"lat":26.9767144,"long":75.753097,"type":"REMITTANCE"};
 
       var response = await ApiProvider().requestPostForApi(
           context,
@@ -189,8 +194,19 @@ class DmtWalletController extends GetxController {
           userAuthToken.value,
           userSignature.value,
       );
+      
+      ConsoleLog.printColor("Get Allowed Service By Type Api Request: ${jsonEncode(body)}", color: "yellow");
+      
+      // var response = await ApiProvider().postApiRequest(
+      //   dictParameter: body,
+      //   signature: userSignature.value,
+      //   token: userAuthToken.value,
+      //   url: WebApiConstant.API_URL_GET_SERVICE_TYPE,
+      //   // extraHeaders:
+      // );
 
       if (response != null && response.statusCode == 200) {
+        CustomLoading().hide(context);
         ConsoleLog.printColor("GET ALLOWED SERVICE RESP: ${response.data}");
 
         GetAllowedServiceByTypeResponseModel apiResponse =
@@ -217,7 +233,7 @@ class DmtWalletController extends GetxController {
           } else {
             // Default fallback
             // serviceCode.value = "DMTRZP";
-            await getAllowedServiceByType(context);
+            // await getAllowedServiceByType(context);
             ConsoleLog.printWarning("⚠️ Using default service code: DMTRZP");
           }
 
@@ -228,26 +244,25 @@ class DmtWalletController extends GetxController {
           for (var service in apiResponse.data!) {
             ConsoleLog.printInfo("${service.serviceName} (${service.serviceCode}) - ${service.serviceType}");
           }
-
         } else {
           ConsoleLog.printWarning("⚠️ No services found or empty response");
           // Set default
           // serviceCode.value = "DMTRZP";
-          await getAllowedServiceByType(context);
+          // await getAllowedServiceByType(context);
           // isServiceLoaded.value = true;
         }
       } else {
         ConsoleLog.printError("❌ API Error: ${response?.statusCode}");
         // Set default
         // serviceCode.value = "DMTRZP";
-        await getAllowedServiceByType(context);
+        // await getAllowedServiceByType(context);
         // isServiceLoaded.value = true;
       }
     } catch (e) {
       ConsoleLog.printError("❌ GET ALLOWED SERVICE ERROR: $e");
       // Set default
       // serviceCode.value = "DMTRZP";
-      await getAllowedServiceByType(context);
+      // await getAllowedServiceByType(context);
       // isServiceLoaded.value = true;
     }
   }
@@ -296,7 +311,6 @@ class DmtWalletController extends GetxController {
         userSignature.value,
       );
 
-      CustomLoading().hide;
       if (response == null) {
         CustomDialog.error(context: context, message: "No response from server");
         return;
@@ -305,7 +319,8 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("CHECK SENDER RESPONSE: ${response?.data}");
 
       if (response.statusCode == 200) {
-        CheckSenderResponseModel checkSenderResponse = 
+        CustomLoading().hide(context);
+        CheckSenderResponseModel checkSenderResponse =
             CheckSenderResponseModel.fromJson(response.data);
 
         if (checkSenderResponse.respCode == "RCS") {
@@ -347,7 +362,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide;
+      CustomLoading().hide(context);
       ConsoleLog.printError("CHECK SENDER ERROR: $e");
       CustomDialog.error(context: context, message: "Technical issue!");
     }
@@ -403,10 +418,11 @@ class DmtWalletController extends GetxController {
         userSignature.value,
       );
 
-      CustomLoading().hide;
+      CustomLoading().hide(context);
       ConsoleLog.printColor("ADD SENDER RESPONSE: ${response?.data}");
 
       if (response != null && response.statusCode == 200) {
+        CustomLoading().hide(context);
         AddSenderResponseModel addSenderResponse = 
             AddSenderResponseModel.fromJson(response.data);
 
@@ -428,7 +444,7 @@ class DmtWalletController extends GetxController {
         await refreshToken(context);
       }
     } catch (e) {
-      CustomLoading().hide;
+      CustomLoading().hide(context);
       ConsoleLog.printError("ADD SENDER ERROR: $e");
       CustomDialog.error(context: context, message: "Technical issue!");
     }
@@ -472,9 +488,10 @@ class DmtWalletController extends GetxController {
         userSignature.value,
       );
 
-      CustomLoading().hide;
+      CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
+        CustomLoading().hide(context);
         var data = response.data;
         
         if (data['Resp_code'] == 'RCS') {
@@ -493,7 +510,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide;
+      CustomLoading().hide(context);
       ConsoleLog.printError("VERIFY SENDER OTP ERROR: $e");
       CustomDialog.error(context: context, message: "Technical issue!");
     }
@@ -530,7 +547,7 @@ class DmtWalletController extends GetxController {
         userSignature.value,
       );
 
-      CustomLoading().hide;
+      CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
         GetBeneficiaryListResponseModel beneListResponse = 
@@ -600,9 +617,10 @@ class DmtWalletController extends GetxController {
         userSignature.value,
       );
 
-      CustomLoading().hide;
+      CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
+        CustomLoading().hide(context);
         AddBeneficiaryResponseModel addBeneResponse = 
             AddBeneficiaryResponseModel.fromJson(response.data);
 
@@ -630,7 +648,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide;
+      CustomLoading().hide(context);
       ConsoleLog.printError("ADD BENEFICIARY ERROR: $e");
       CustomDialog.error(context: context, message: "Technical issue!");
     }
@@ -663,9 +681,10 @@ class DmtWalletController extends GetxController {
         userSignature.value,
       );
 
-      CustomLoading().hide;
+      CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
+        CustomLoading().hide(context);
         DeleteBeneficiaryResponseModel deleteResponse = 
             DeleteBeneficiaryResponseModel.fromJson(response.data);
 
@@ -685,7 +704,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide;
+      CustomLoading().hide(context);
       ConsoleLog.printError("DELETE BENEFICIARY ERROR: $e");
       CustomDialog.error(context: context, message: "Technical issue!");
     }
@@ -725,9 +744,10 @@ class DmtWalletController extends GetxController {
         userSignature.value,
       );
 
-      CustomLoading().hide;
+      CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
+        CustomLoading().hide(context);
         VerifyAccountResponseModel verifyResponse = 
             VerifyAccountResponseModel.fromJson(response.data);
 
@@ -751,7 +771,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide;
+      CustomLoading().hide(context);
       ConsoleLog.printError("VERIFY ACCOUNT ERROR: $e");
       CustomDialog.error(context: context, message: "Technical issue!");
     }
@@ -805,9 +825,10 @@ class DmtWalletController extends GetxController {
         userSignature.value,
       );
 
-      CustomLoading().hide;
+      CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
+        CustomLoading().hide(context);
         TransferMoneyResponseModel transferResponse = 
             TransferMoneyResponseModel.fromJson(response.data);
 
@@ -829,7 +850,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide;
+      CustomLoading().hide(context);
       ConsoleLog.printError("TRANSFER MONEY ERROR: $e");
       CustomDialog.error(context: context, message: "Technical issue!");
     }
@@ -843,7 +864,6 @@ class DmtWalletController extends GetxController {
       if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
         ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
         ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
-        Fluttertoast.showToast(msg: "Please enable location service");
         return;
       }
       Map<String, dynamic> body = {

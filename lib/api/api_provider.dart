@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 // import 'package:e_commerce_app/api/web_api_constant.dart';
 // import 'package:e_commerce_app/utils/ConsoleLog.dart';
@@ -37,11 +39,31 @@ import 'web_api_constant.dart';
 // import '../Util/CustomLoading/custom_loading.dart';
 // import '../Util/WillPopValidtion/will_pop_validation.dart';
 
+class ApiResponse {
+  final int code;
+  final String message;
+  final dynamic data;
+
+  ApiResponse({
+    required this.code,
+    required this.message,
+    this.data,
+  });
+
+  factory ApiResponse.fromJson(Map<String, dynamic> json) {
+    return ApiResponse(
+      code: json['code'] ?? json['statusCode'] ?? 500,
+      message: json['message'] ?? json['respDesc'] ?? 'Unknown error',
+      data: json['data'] ?? json,
+    );
+  }
+}
+
 class ApiProvider {
   Dio dio = Dio();
 
   Map<String, String> headers = {
-    "Content-type": "application/json",
+    "Content-Type": "application/json",
     // "Authorization": 'Bearer $authToken',
   };
   // String authKey = "DREAD*RK&Y&*T9KeykhfdiT";
@@ -50,7 +72,7 @@ class ApiProvider {
   Future<Response?> requestGetForApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
     try {
       Map<String, String> headers = {
-        "Content-type": "application/json",
+        "Content-Type": "application/json",
         "Authorization": "Bearer $token",
         // "Authkey": authKey,
       };
@@ -86,29 +108,85 @@ class ApiProvider {
     }
   }
 
+  // Future<ApiResponse> postApiRequest({
+  //   required String url,
+  //   required String token,
+  //   required Map<String, dynamic> dictParameter,
+  //   required String signature,
+  //   // Map<String, String>? extraHeaders,
+  // }) async {
+  //   try {
+  //     var headers = {
+  //       "Content-Type": "application/json",
+  //       "Authorization": "Bearer $token",
+  //       "X-Signature": signature,
+  //       // ...?extraHeaders, // ← optional extra headers
+  //     };
+  //
+  //     ConsoleLog.printColor("=== NEW API REQUEST ===", color: "blue");
+  //     ConsoleLog.printColor("URL: $url", color: "cyan");
+  //     ConsoleLog.printColor("Json Headers: ${jsonEncode(headers)}", color: "cyan");
+  //     ConsoleLog.printColor("Json Body: ${jsonEncode(dictParameter)}", color: "yellow");
+  //     ConsoleLog.printColor("=== END REQUEST ===", color: "blue");
+  //
+  //     Response  response = await dio.post(
+  //       url,
+  //       data: dictParameter,
+  //       options: Options(
+  //         headers: headers,
+  //         followRedirects: false,
+  //         validateStatus: (status) => true,
+  //       ),
+  //     );
+  //
+  //     ConsoleLog.printColor("=== API RESPONSE ===", color: "green");
+  //     ConsoleLog.printColor("Status: ${jsonEncode(response.statusCode)}", color: "yellow");
+  //     ConsoleLog.printColor("Data: ${jsonEncode(response.data)}", color: "yellow");
+  //     ConsoleLog.printColor("=== END RESPONSE ===", color: "green");
+  //
+  //     return ApiResponse.fromJson(response.data);
+  //   } catch (e) {
+  //     ConsoleLog.printError("API Exception: $e");
+  //     return ApiResponse(code: 500, message: e.toString());
+  //   }
+  // }
+
   //Post API Request Method
   Future<Response?> requestPostForApi(BuildContext context, String url, Map<dynamic, dynamic> dictParameter, String token, [String signature = ""]) async {
     try {
       Map<String, String> headers = {
-        "Content-type": "application/json",
+        "Content-Type": "application/json",
         // "Authkey": authKey,
       };
 
-      // Authorization header
+      // // Authorization header
+      // if (token.isNotEmpty) {
+      //   headers["Authorization"] = "Bearer $token";
+      // }
+      //
+      // // X-Signature header
+      // if (signature.isNotEmpty) {
+      //   headers["X-Signature"] = signature;
+      // }
+      // Standard Authorization header (for good practice)
       if (token.isNotEmpty) {
         headers["Authorization"] = "Bearer $token";
+        // headers["Bearer"] = token;  // ✅ Backend expects this key directly
       }
 
       // X-Signature header
       if (signature.isNotEmpty) {
         headers["X-Signature"] = signature;
+        // headers["xsignature"] = signature;  // ✅ Backend expects this key directly
       }
 
       // dictParameter["versionNew"] = 1;
       ConsoleLog.printColor("=== API REQUEST ===", color: "blue");
       ConsoleLog.printColor("URL: $url", color: "yellow");
       ConsoleLog.printColor("Headers: $headers", color: "cyan");
+      ConsoleLog.printColor("Json Headers: ${jsonEncode(headers)}", color: "cyan");
       ConsoleLog.printColor("Body: $dictParameter", color: "yellow");
+      ConsoleLog.printColor("Json Body: ${jsonEncode(dictParameter)}", color: "yellow");
       ConsoleLog.printColor("=== END REQUEST ===", color: "blue");
 
       BaseOptions options = BaseOptions(
@@ -128,9 +206,16 @@ class ApiProvider {
         ),
       );
       ConsoleLog.printColor("=== API RESPONSE ===", color: "green");
-      ConsoleLog.printColor("Status: ${response.statusCode}", color: "yellow");
-      ConsoleLog.printColor("Data: ${response.data}", color: "yellow");
+      ConsoleLog.printColor("Status: ${jsonEncode(response.statusCode)}", color: "yellow");
+      ConsoleLog.printColor("Data: ${jsonEncode(response.data)}", color: "yellow");
       ConsoleLog.printColor("=== END RESPONSE ===", color: "green");
+
+      ConsoleLog.printJsonResponse("Response21: ${response.data}", color: "yellow", tag: "Response");
+      ConsoleLog.printColor("Response1: ${response.data["errorCode"]}", color: "yellow");
+      ConsoleLog.printColor("Response_headers: ${response.headers}", color: "yellow");
+      ConsoleLog.printColor("Response_realUri: ${response.realUri}", color: "yellow");
+      ConsoleLog.printColor("Response: ${response.data}", color: "yellow");
+      ConsoleLog.printColor("Status: ${response.statusCode}", color: "yellow");
       // if(response.data != null && response.data["status"] == "error"){
       //   response.data["data"] = null;
       //   return response;

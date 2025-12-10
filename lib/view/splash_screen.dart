@@ -60,21 +60,21 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         // Get.offAll(() => MainScreen(selectedIndex: 0), transition: Transition.fadeIn);
         // Get.offAll(() => PayrupyaMainScreen(), transition: Transition.fadeIn);
         if(userRole == "1"){
-          Get.offAll(OtherUsersScreen(UserName: "Admin"), transition: Transition.fadeIn);
+          Get.offAll(()=>OtherUsersScreen(UserName: "Admin"), transition: Transition.fadeIn);
           //Admin
         }else if(userRole == "2"){
-          Get.offAll(OtherUsersScreen(UserName: "Super Distributor"), transition: Transition.fadeIn);
+          Get.offAll(()=>OtherUsersScreen(UserName: "Super Distributor"), transition: Transition.fadeIn);
           //SuperDistributor
         }else if(userRole == "3"){
-          Get.offAll(OtherUsersScreen(UserName: "Distributor"), transition: Transition.fadeIn);
+          Get.offAll(()=>OtherUsersScreen(UserName: "Distributor"), transition: Transition.fadeIn);
           //Distributor
         }else if(userRole == "4"){
           // Get.offAll(OtherUsersScreen(UserName: "Retailer"), transition: Transition.fadeIn);
-          Get.offAll(PayrupyaMainScreen(), transition: Transition.fadeIn);
+          Get.offAll(()=> PayrupyaMainScreen(), transition: Transition.fadeIn);
           // OtherUsersScreen(UserName: "Retailer",);
           //Retailor
         }else{
-          Get.offAll(OtherUsersScreen(UserName: "Other"), transition: Transition.fadeIn);
+          Get.offAll(() => OtherUsersScreen(UserName: "Other"), transition: Transition.fadeIn);
           //Other
         }
       } else {

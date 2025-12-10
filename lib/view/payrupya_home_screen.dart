@@ -57,9 +57,9 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(Duration.zero, () {
-      dmtController.getAllowedServiceByType(context);
-    });
+    // Future.delayed(Duration.zero, () {
+    //   dmtController.getAllowedServiceByType(context);
+    // });
     _initialize();
   }
 

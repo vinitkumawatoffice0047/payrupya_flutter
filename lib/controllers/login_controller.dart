@@ -226,7 +226,7 @@ class LoginController extends GetxController {
         "",
       );
 
-      CustomLoading().hide;
+      CustomLoading().hide(context);
       ConsoleLog.printColor("LOGIN RESPONSE: $response");
 
       if (response == null) {
