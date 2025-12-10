@@ -1890,25 +1890,26 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
               GlobalUtils.CustomButton(
                 text: "VERIFY",
                 onPressed: () async {
-                  final otp = otpKey.currentState?.currentOtp ?? '';
+                  dmtController.checkSender(context, dmtController.senderMobileController.value.text.trim());
+                  // final otp = otpKey.currentState?.currentOtp ?? '';
+                  //
+                  // if (otp.length < 6) {
+                  //   Fluttertoast.showToast(
+                  //     msg: "Please enter complete 6-digit OTP",
+                  //     backgroundColor: Colors.red,
+                  //   );
+                  //   return;
+                  // }
+                  //
+                  // // Verify OTP
+                  // await dmtController.verifySenderOtp(context, otp);
 
-                  if (otp.length < 6) {
-                    Fluttertoast.showToast(
-                      msg: "Please enter complete 6-digit OTP",
-                      backgroundColor: Colors.red,
-                    );
-                    return;
-                  }
-
-                  // Verify OTP
-                  await dmtController.verifySenderOtp(context, otp);
-
-                  if (dmtController.isSenderVerified.value) {
-                    setState(() => showOtpDialog = false);
-
-                    // Navigate to wallet
-                    Get.to(() => WalletScreen(showBackButton: true));
-                  }
+                  // if (dmtController.isSenderVerified.value) {
+                  //   setState(() => showOtpDialog = false);
+                  //
+                  //   // Navigate to wallet
+                  //   Get.to(() => WalletScreen(showBackButton: true));
+                  // }
                 },
                 textStyle: GoogleFonts.albertSans(
                   fontSize: 16,

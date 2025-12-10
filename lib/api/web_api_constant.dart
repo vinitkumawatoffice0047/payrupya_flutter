@@ -22,7 +22,7 @@ class WebApiConstant{
   // static const String API_URL_CHANGE_ADDRESS = "${BASE_URL}/user/change-address";
 
   // DMT/Wallet APIs
-  static const String API_URL_CHECK_SENDER = "${BASE_URL}Action/process_remit_action_new";
+  static const String API_URL_CHECK_SENDER = "${BASE_URL}Action/process_remit_action";
   static const String API_URL_ADD_SENDER = "${BASE_URL}Action/process_remit_action_new";
   static const String API_URL_VERIFY_SENDER_OTP = "${BASE_URL}Action/process_remit_action_new";
   static const String API_URL_GET_BENEFICIARY_LIST = "${BASE_URL}Fetch/getBeneList";

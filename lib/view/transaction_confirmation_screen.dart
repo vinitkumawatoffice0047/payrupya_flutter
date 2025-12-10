@@ -90,7 +90,7 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Enter Taxation PIN',
+                              'Enter Transaction PIN',
                               style: GoogleFonts.albertSans(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -107,7 +107,7 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
                             SizedBox(height: 8),
                             buildTextField(
                               controller: taxPinController,
-                              hint: 'Enter Taxation PIN',
+                              hint: 'Enter Transaction PIN',
                               keyboardType: TextInputType.number,
                             ),
                             SizedBox(height: 24),

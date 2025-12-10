@@ -405,7 +405,7 @@ class DmtWalletController extends GetxController {
         "city": selectedCity.value,
         "pincode": selectedPincode.value,
         "service": serviceCode.value,
-        "request_type": "REGISTER REMITTER",
+        "request_type": "REMITTER REGISTRATION",
       };
 
       ConsoleLog.printColor("ADD SENDER REQ: $body");
@@ -497,10 +497,10 @@ class DmtWalletController extends GetxController {
         if (data['Resp_code'] == 'RCS') {
           isSenderVerified.value = true;
           ConsoleLog.printSuccess("Sender OTP verified successfully");
-          Fluttertoast.showToast(msg: "Sender verified successfully");
+          // Fluttertoast.showToast(msg: "Sender verified successfully");
           
           // Refresh sender details
-          await checkSender(context, senderMobileController.value.text.trim());
+          // await checkSender(context, senderMobileController.value.text.trim());
           
         } else {
           CustomDialog.error(
