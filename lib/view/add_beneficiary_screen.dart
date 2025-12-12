@@ -488,6 +488,7 @@ class AddBeneficiaryScreen extends StatefulWidget {
 
 class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
   final DmtWalletController dmtController = Get.put(DmtWalletController());
+  final ValueNotifier<int> charCountNotifier = ValueNotifier<int>(0);
 
   @override
   void initState() {
@@ -498,6 +499,12 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
         dmtController.getAllBanks(context);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    charCountNotifier.dispose(); // Memory leak se bachne ke liye dispose karein
+    super.dispose();
   }
 
   @override
@@ -641,6 +648,9 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
               buildLabelText('Account Number *'),
               SizedBox(height: 8),
               GlobalUtils.CustomTextField(
+                onChanged: (value) {
+                  charCountNotifier.value = value.length;
+                },
                 label: "Account Number",
                 showLabel: false,
                 controller: dmtController.beneAccountController.value,
@@ -651,6 +661,31 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
                 borderColor: Color(0xffE2E5EC),
                 borderRadius: 16,
                 keyboardType: TextInputType.number,
+                suffixIcon: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  margin: EdgeInsets.only(right: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ValueListenableBuilder<int>(
+                        valueListenable: charCountNotifier,
+                        builder: (context, count, child) {
+                          return Padding(
+                            padding: const EdgeInsets.all(15.0),
+                            child: Text(
+                              '$count',
+                              style: GoogleFonts.albertSans(
+                                color: Color(0xFF0054D3),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
                 placeholderStyle: GoogleFonts.albertSans(
                   fontSize: GlobalUtils.screenWidth * (14 / 393),
                   color: Color(0xFF6B707E),
@@ -692,19 +727,39 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
                     String account = dmtController.beneAccountController.value.text.trim();
                     String ifsc = dmtController.beneIfscController.value.text.trim();
 
-                    if (account.isEmpty || ifsc.isEmpty) {
-                      Fluttertoast.showToast(
-                        msg: "Please enter account number and IFSC",
-                        backgroundColor: Colors.red,
-                      );
+                    if (account.isEmpty) {
+                      Fluttertoast.showToast(msg: "Account number required!");
+                      return;
+                    }
+                    if (!dmtController.isValidAccountNumber(account)) {
+                      Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
                       return;
                     }
 
-                    if (dmtController.selectedBankId.value.isEmpty) {
-                      Fluttertoast.showToast(
-                        msg: "Please select bank first",
-                        backgroundColor: Colors.red,
-                      );
+                    if (ifsc.isEmpty) {
+                      Fluttertoast.showToast(msg: "IFSC code required!");
+                      return;
+                    }
+                    if (!dmtController.isValidIFSC(ifsc)) {
+                      Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
+                      return;
+                    }
+
+                    if(dmtController.beneNameController.value.text.trim().isEmpty){
+                      Fluttertoast.showToast(msg: "Please enter beneficiary name!");
+                      return;
+                    }
+
+                    // if (account.isEmpty || ifsc.isEmpty) {
+                    //   Fluttertoast.showToast(
+                    //     msg: "Please enter account number and IFSC",
+                    //     backgroundColor: Colors.red,
+                    //   );
+                    //   return;
+                    // }
+
+                    if (dmtController.selectedBank.value.isEmpty || dmtController.selectedBank.value == "Select Bank") {
+                      Fluttertoast.showToast(msg: "Please select bank first", backgroundColor: Colors.red);
                       return;
                     }
 
@@ -767,6 +822,55 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
                 borderColor: Color(0xffE2E5EC),
                 borderRadius: 16,
                 isName: true,
+                suffixIcon: TextButton(
+                  onPressed: (){
+                    String account = dmtController.beneAccountController.value.text.trim();
+                    String ifsc = dmtController.beneIfscController.value.text.trim();
+                    if (account.isEmpty) {
+                      Fluttertoast.showToast(msg: "Account number required!");
+                      return;
+                    }
+                    if (!dmtController.isValidAccountNumber(account)) {
+                      Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
+                      return;
+                    }
+                    if (ifsc.isEmpty) {
+                      Fluttertoast.showToast(msg: "IFSC code required!");
+                      return;
+                    }
+                    if (!dmtController.isValidIFSC(ifsc)) {
+                      Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
+                      return;
+                    }
+                    if (dmtController.selectedBank.value.isEmpty || dmtController.selectedBank.value == "Select Bank") {
+                      Fluttertoast.showToast(msg: "Please select bank first", backgroundColor: Colors.red);
+                      return;
+                    }
+                    // dmtController.getBeneficiaryName(context);
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    margin: EdgeInsets.only(right: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Get Name',
+                          style: GoogleFonts.albertSans(
+                            color: Color(0xFF0054D3),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                onSubmitted: (value){
+                  if(value.isNotEmpty){
+                    dmtController.currentSender.value?.name = value;
+                  }
+                },
                 placeholderStyle: GoogleFonts.albertSans(
                   fontSize: GlobalUtils.screenWidth * (14 / 393),
                   color: Color(0xFF6B707E),
@@ -796,6 +900,11 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
                 borderColor: Color(0xffE2E5EC),
                 borderRadius: 16,
                 isMobileNumber: true,
+                onSubmitted: (value) {
+                  if (value.isNotEmpty && !value.startsWith('+91')) {
+                    dmtController.currentSender.value?.mobile = value;
+                  }
+                },
                 placeholderStyle: GoogleFonts.albertSans(
                   fontSize: GlobalUtils.screenWidth * (14 / 393),
                   color: Color(0xFF6B707E),
@@ -835,20 +944,37 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
         GlobalUtils.CustomButton(
           text: "Add Beneficiary",
           onPressed: () async {
-            if (dmtController.selectedBank.value.isEmpty) {
+            if (dmtController.selectedBank.value.isEmpty || dmtController.selectedBank.value == "Select Bank") {
               Fluttertoast.showToast(msg: "Please select bank");
               return;
             }
 
             if (dmtController.beneAccountController.value.text.trim().isEmpty) {
-              Fluttertoast.showToast(msg: "Please enter account number");
+              Fluttertoast.showToast(msg: "Account number required!");
+              return;
+            }
+            if (!dmtController.isValidAccountNumber(dmtController.beneAccountController.value.text.trim())) {
+              Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
               return;
             }
 
             if (dmtController.beneIfscController.value.text.trim().isEmpty) {
-              Fluttertoast.showToast(msg: "Please enter IFSC code");
+              Fluttertoast.showToast(msg: "IFSC code required!");
               return;
             }
+            if (!dmtController.isValidIFSC(dmtController.beneIfscController.value.text.trim())) {
+              Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
+              return;
+            }
+            // if (dmtController.beneAccountController.value.text.trim().isEmpty) {
+            //   Fluttertoast.showToast(msg: "Please enter account number");
+            //   return;
+            // }
+            //
+            // if (dmtController.beneIfscController.value.text.trim().isEmpty) {
+            //   Fluttertoast.showToast(msg: "Please enter IFSC code");
+            //   return;
+            // }
 
             if (dmtController.beneNameController.value.text.trim().isEmpty) {
               Fluttertoast.showToast(msg: "Please enter beneficiary name");

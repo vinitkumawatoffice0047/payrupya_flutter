@@ -840,11 +840,15 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
                   color: Color(0xFFF0F4F8),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: widget.beneficiary.logo != null &&
+                child: /*widget.beneficiary.logo != null &&
                     widget.beneficiary.logo!.isNotEmpty
-                    ? ClipRRect(
+                    ?*/ ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
+                  child: Icon(
+                    Icons.account_balance,
+                    color: Color(0xFF4A90E2),
+                    size: 28,
+                  ),/*Image.network(
                     widget.beneficiary.logo!,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stack) {
@@ -854,13 +858,13 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
                         size: 28,
                       );
                     },
-                  ),
+                  ),*/
                 )
-                    : Icon(
+                    /*: Icon(
                   Icons.account_balance,
                   color: Color(0xFF4A90E2),
                   size: 28,
-                ),
+                ),*/
               ),
               SizedBox(width: 12),
               Expanded(
@@ -871,7 +875,7 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
                       children: [
                         Flexible(
                           child: Text(
-                            widget.beneficiary.beneName ?? "Unknown",
+                            widget.beneficiary.name ?? "Unknown",
                             style: GoogleFonts.albertSans(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -922,7 +926,7 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
                       ),
                     ),
                     Text(
-                      widget.beneficiary.accountNumber ?? "N/A",
+                      widget.beneficiary.accountNo ?? "N/A",
                       style: GoogleFonts.albertSans(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -1401,7 +1405,7 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
                           style: GoogleFonts.albertSans(fontSize: 13),
                         ),
                         Text(
-                          widget.beneficiary.beneName ?? "Unknown",
+                          widget.beneficiary.name ?? "Unknown",
                           style: GoogleFonts.albertSans(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
@@ -1455,7 +1459,7 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
                 Navigator.pop(context);
 
                 // Transfer money
-                await dmtController.transferMoney(context, widget.beneficiary);
+                // await dmtController.transferMoney(context, widget.beneficiary);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF0054D3),

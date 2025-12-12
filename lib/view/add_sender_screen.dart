@@ -1073,6 +1073,7 @@ import '../controllers/dmt_wallet_controller.dart';
 import '../controllers/login_controller.dart';
 import '../controllers/signup_controller.dart';
 import '../utils/ConsoleLog.dart';
+import '../utils/custom_loading.dart';
 import '../utils/global_utils.dart';
 import '../utils/otp_input_fields.dart';
 import 'wallet_screen.dart';
@@ -1094,7 +1095,9 @@ class AddSenderScreen extends StatefulWidget {
 class _AddSenderScreenState extends State<AddSenderScreen> {
   bool verifyByMobile = true;
   bool isMobileNumberAlreadyRegistered = false;
-  bool showOtpDialog = false;
+  // bool showOtpDialog = false;
+  bool showOtpField = false;
+  bool isOtpSent = false;
 
   final DmtWalletController dmtController = Get.put(DmtWalletController());
   final SignupController signupController = Get.put(SignupController());
@@ -1147,8 +1150,12 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
       if (dmtController.serviceCode.value.isEmpty) {
         ConsoleLog.printWarning("Service code empty, loading from API...");
 
+        await CustomLoading().show(context);
+
         // 3. Load service code
         await dmtController.getAllowedServiceByType(context);
+
+        await CustomLoading().hide(context);
 
         // Wait for service to load
         await Future.delayed(Duration(milliseconds: 1000));
@@ -1205,7 +1212,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
               ],
             ),
           ),
-          if (showOtpDialog) _buildOtpDialog(),
+          // if (showOtpDialog) _buildOtpDialog(),
         ],
       ),
     );
@@ -1345,9 +1352,16 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                       setState(() {
                         isMobileNumberAlreadyRegistered = true;
                       });
-                    } else {
+                    } else if(dmtController.senderName.value.isEmpty){
+                      setState(() {
+                        isMobileNumberAlreadyRegistered = false;
+                      });
+                    }
+                    if(dmtController.checkSenderRespCode.value == "RCS") {
                       // Sender exists, navigate to wallet
-                      Get.to(() => WalletScreen(showBackButton: true));
+                      // Get.to(() => WalletScreen(showBackButton: true));
+                      // await Future.delayed(Duration(seconds: 5));
+                      await Get.to(() => WalletScreen());
                     }
                   },
                   child: Text(
@@ -1361,7 +1375,17 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                 ),
               ),
 
-              if (isMobileNumberAlreadyRegistered && !dmtController.isSenderVerified.value) ...[
+              if (isMobileNumberAlreadyRegistered && !dmtController.isSenderVerified.value && dmtController.checkSenderRespCode.value.isNotEmpty && dmtController.checkSenderRespCode.value == "RNF") ...[
+                SizedBox(height: 16),
+                buildLabelText('OTP Verification'),
+                SizedBox(height: 8),
+
+                OtpInputFields(
+                  key: otpKey,
+                  length: 6,
+                ),
+                //final otp = otpKey.currentState?.currentOtp ?? '';
+
                 SizedBox(height: 16),
 
                 // Name Field
@@ -1587,21 +1611,60 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
           text: "Continue",
           onPressed: () async {
             if (!dmtController.isSenderVerified.value && isMobileNumberAlreadyRegistered) {
+              final otp = otpKey.currentState?.currentOtp ?? '';
+              if(otp.isEmpty){
+                Fluttertoast.showToast(msg: "Please enter OTP");
+                return;
+              }
+              if(dmtController.senderMobileController.value.text.isEmpty && dmtController.senderMobileController.value.text.length < 10){
+                Fluttertoast.showToast(msg: "Please enter mobile number");
+                return;
+              }
+              if(dmtController.senderNameController.value.text.isEmpty){
+                Fluttertoast.showToast(msg: "Please enter name");
+                return;
+              }
+              if(dmtController.selectedState.value.isEmpty){
+                Fluttertoast.showToast(msg: "Please select state");
+                return;
+              }
+              if(dmtController.selectedPincode.value.isEmpty){
+                Fluttertoast.showToast(msg: "Please select pincode");
+                return;
+              }
+              if(dmtController.senderAddressController.value.text.isEmpty) {
+                Fluttertoast.showToast(msg: "Please enter address");
+                return;
+              }
+              if(
+              otp.isNotEmpty &&
+              dmtController.senderMobileController.value.text.isNotEmpty &&
+              dmtController.senderNameController.value.text.isNotEmpty &&
+              dmtController.selectedState.value.isNotEmpty &&
+              dmtController.selectedCity.value.isNotEmpty &&
+              dmtController.selectedPincode.value.isNotEmpty &&
+              dmtController.senderAddressController.value.text.isNotEmpty
+              ){
               // Add new sender
-              await dmtController.addSender(context);
+              await dmtController.addSender(context, otp);
+              }
 
-              // Show OTP dialog
-              setState(() => showOtpDialog = true);
-              Future.delayed(const Duration(milliseconds: 100), () {
-                if (showOtpDialog && mounted) {
-                  otpKey.currentState?.clear();
-                  otpKey.currentState?.focusFirst();
-                }
-              });
-            } else {
+              // // Show OTP dialog
+              // setState(() => showOtpDialog = true);
+              // Future.delayed(const Duration(milliseconds: 100), () {
+              //   if (showOtpDialog && mounted) {
+              //     otpKey.currentState?.clear();
+              //     otpKey.currentState?.focusFirst();
+              //   }
+              // });
+            } else{
+              Fluttertoast.showToast(msg: "Please Verify Mobile Number!");
+              return null;
+            }/*else {
               // Navigate to wallet
-              Get.to(() => WalletScreen(showBackButton: true));
-            }
+              // Get.to(() => WalletScreen(showBackButton: true));
+              Get.to(() => WalletScreen());
+            }*/
           },
           textStyle: GoogleFonts.albertSans(
             fontSize: 16,
@@ -1826,7 +1889,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                   ),
                   GestureDetector(
                     onTap: () {
-                      setState(() => showOtpDialog = false);
+                      // setState(() => showOtpDialog = false);
                     },
                     child: Icon(Icons.close, color: Colors.grey[600]),
                   ),
@@ -1866,8 +1929,9 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                   ),
                   GestureDetector(
                     onTap: () async {
+                      final otp = otpKey.currentState?.currentOtp ?? '';
                       // Resend OTP
-                      await dmtController.addSender(context);
+                      await dmtController.addSender(context, otp);
 
                       otpKey.currentState?.clear();
                       otpKey.currentState?.focusFirst();
@@ -1937,5 +2001,9 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
   @override
   void dispose() {
     super.dispose();
+    dmtController.dispose();
+    signupController.dispose();
+    loginController.dispose();
+    otpKey.currentState?.dispose();
   }
 }

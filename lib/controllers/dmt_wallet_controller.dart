@@ -32,6 +32,7 @@ class DmtWalletController extends GetxController {
 
   RxString userAuthToken = "".obs;
   RxString userSignature = "".obs;
+  RxString checkSenderRespCode = "".obs;
 
   @override
   void onInit() {
@@ -40,12 +41,10 @@ class DmtWalletController extends GetxController {
     // getAllowedServiceByType(Get.context!);
   }
 
-  // Load both token and signature properly
+    // Load both token and signature properly
   Future<void> loadAuthCredentials() async {
     try {
-      // Use the correct method to get auth credentials
       Map<String, String> authData = await AppSharedPreferences.getLoginAuth();
-
       userAuthToken.value = authData["token"] ?? "";
       userSignature.value = authData["signature"] ?? "";
 
@@ -79,6 +78,7 @@ class DmtWalletController extends GetxController {
   Rx<TextEditingController> senderNameController = TextEditingController().obs;
   Rx<TextEditingController> senderAddressController = TextEditingController().obs;
   Rx<TextEditingController> senderPincodeController = TextEditingController().obs;
+  Rx<TextEditingController> senderOtpController = TextEditingController().obs;
   
   Rx<TextEditingController> beneNameController = TextEditingController().obs;
   Rx<TextEditingController> beneAccountController = TextEditingController().obs;
@@ -86,7 +86,10 @@ class DmtWalletController extends GetxController {
   Rx<TextEditingController> beneMobileController = TextEditingController().obs;
   
   Rx<TextEditingController> transferAmountController = TextEditingController().obs;
+  Rx<TextEditingController> transferModeController = TextEditingController().obs;
   Rx<TextEditingController> tpinController = TextEditingController().obs;
+
+  Rx<TextEditingController> deleteOtpController = TextEditingController().obs;
 
   // Observable variables
   RxString selectedState = ''.obs;
@@ -95,15 +98,22 @@ class DmtWalletController extends GetxController {
   RxString selectedBank = ''.obs;
   RxString selectedBankId = ''.obs;
   RxString selectedIfsc = ''.obs;
+  RxString selectedTransferMode = 'IMPS'.obs;
   
   RxString referenceId = ''.obs;
+  RxString identifier = ''.obs;
   RxBool isSenderVerified = false.obs;
   RxBool isMobileVerified = false.obs;
   RxBool isAccountVerified = false.obs;
   
   // Sender Data
   Rx<SenderData?> currentSender = Rx<SenderData?>(null);
-  
+  RxString senderId = ''.obs;
+  RxString senderName = ''.obs;
+  RxString senderMobileNo = ''.obs;
+  RxString consumedLimit = '0'.obs;
+  RxString availableLimit = '0'.obs;
+
   // Beneficiary List
   RxList<BeneficiaryData> beneficiaryList = <BeneficiaryData>[].obs;
   RxList<BeneficiaryData> filteredBeneficiaryList = <BeneficiaryData>[].obs;
@@ -115,6 +125,10 @@ class DmtWalletController extends GetxController {
   RxString searchQuery = ''.obs;
   RxString serviceCode = ''.obs;
   RxBool isServiceLoaded = false.obs;
+
+  // Transfer Confirmation Data
+  Rx<Map<String, dynamic>?> confirmationData = Rx<Map<String, dynamic>?>(null);
+  RxBool showConfirmation = false.obs;
 
   String generateRequestId() {
     return GlobalUtils.generateRandomId(6);
@@ -206,7 +220,6 @@ class DmtWalletController extends GetxController {
       // );
 
       if (response != null && response.statusCode == 200) {
-        CustomLoading().hide(context);
         ConsoleLog.printColor("GET ALLOWED SERVICE RESP: ${response.data}");
 
         GetAllowedServiceByTypeResponseModel apiResponse =
@@ -226,15 +239,18 @@ class DmtWalletController extends GetxController {
           if (dmtService.serviceCode != null && dmtService.serviceCode!.isNotEmpty) {
             serviceCode.value = dmtService.serviceCode!;
             ConsoleLog.printSuccess("✅ Service Code Loaded: ${serviceCode.value}");
+            CustomLoading().hide(context);
           } else if (apiResponse.data![0].serviceCode != null) {
             // Fallback to first service
             serviceCode.value = apiResponse.data![0].serviceCode!;
             ConsoleLog.printSuccess("✅ Using first service: ${serviceCode.value}");
+            CustomLoading().hide(context);
           } else {
             // Default fallback
             // serviceCode.value = "DMTRZP";
             // await getAllowedServiceByType(context);
             ConsoleLog.printWarning("⚠️ Using default service code: DMTRZP");
+            CustomLoading().hide(context);
           }
 
           isServiceLoaded.value = true;
@@ -250,6 +266,7 @@ class DmtWalletController extends GetxController {
           // serviceCode.value = "DMTRZP";
           // await getAllowedServiceByType(context);
           // isServiceLoaded.value = true;
+          CustomLoading().hide(context);
         }
       } else {
         ConsoleLog.printError("❌ API Error: ${response?.statusCode}");
@@ -323,11 +340,20 @@ class DmtWalletController extends GetxController {
         CheckSenderResponseModel checkSenderResponse =
             CheckSenderResponseModel.fromJson(response.data);
 
+        checkSenderRespCode.value = checkSenderResponse.respCode ?? "";
+
         if (checkSenderResponse.respCode == "RCS") {
           // Sender exists
           currentSender.value = checkSenderResponse.data;
           isSenderVerified.value = true;
-          
+
+          senderId.value = checkSenderResponse.data?.senderdetail?.senderid ?? '';
+          senderName.value = checkSenderResponse.data?.senderdetail?.sendername ?? '';
+          senderMobileNo.value = checkSenderResponse.data?.senderdetail?.sendermobile ?? '';
+          consumedLimit.value = (checkSenderResponse.data?.senderdetail?.consumed_limit ?? '0').toString();
+          double? availLimit = checkSenderResponse.data?.senderdetail?.availabel_limit;
+          availableLimit.value = (availLimit?.toString() ?? '0');
+
           ConsoleLog.printSuccess("Sender found: ${currentSender.value?.name}");
           Fluttertoast.showToast(msg: "Sender verified successfully");
           
@@ -338,7 +364,10 @@ class DmtWalletController extends GetxController {
           // Sender not found - need to register
           currentSender.value = checkSenderResponse.data;
           isSenderVerified.value = false;
-          
+
+          // Store identifier from response (needed for registration)
+          identifier.value = checkSenderResponse.data?.identifier ?? '';
+
           ConsoleLog.printWarning("Sender not found");
           Fluttertoast.showToast(msg: "Please register sender first");
           
@@ -369,9 +398,9 @@ class DmtWalletController extends GetxController {
   }
 
   // ============================================
-  // 2. ADD SENDER (REGISTER REMITTER)
+  // 2. ADD SENDER (REGISTER REMITTER) - ✅ COMPLETELY FIXED
   // ============================================
-  Future<void> addSender(BuildContext context) async {
+  Future<void> addSender(BuildContext context, String otp) async {
     try {
       if (!await isTokenValid()) {
         await refreshToken(context);
@@ -381,9 +410,20 @@ class DmtWalletController extends GetxController {
       String mobile = senderMobileController.value.text.trim();
       String name = senderNameController.value.text.trim();
       String address = senderAddressController.value.text.trim();
+      String pincode = senderPincodeController.value.text.trim();
 
       if (mobile.isEmpty || name.isEmpty || address.isEmpty) {
         Fluttertoast.showToast(msg: "Please fill all required fields");
+        return;
+      }
+
+      if (otp.isEmpty || otp.length != 6) {
+        Fluttertoast.showToast(msg: "Please enter 6-digit OTP");
+        return;
+      }
+
+      if (identifier.value.isEmpty) {
+        Fluttertoast.showToast(msg: "Identifier not found. Please check sender first.");
         return;
       }
 
@@ -399,13 +439,15 @@ class DmtWalletController extends GetxController {
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
         "sender": mobile,
-        "name": name,
-        "address": address,
-        "state": selectedState.value,
-        "city": selectedCity.value,
-        "pincode": selectedPincode.value,
         "service": serviceCode.value,
         "request_type": "REMITTER REGISTRATION",
+        "identifier": identifier.value,
+        "sender_otp": otp,
+        "sender_name": name,
+        "sender_address": address,
+        "sender_pincode": pincode,
+        "sender_city": selectedCity.value,
+        "sender_state": selectedState.value,
       };
 
       ConsoleLog.printColor("ADD SENDER REQ: $body");
@@ -423,24 +465,27 @@ class DmtWalletController extends GetxController {
 
       if (response != null && response.statusCode == 200) {
         CustomLoading().hide(context);
-        AddSenderResponseModel addSenderResponse = 
-            AddSenderResponseModel.fromJson(response.data);
+        var data = response.data;
 
-        if (addSenderResponse.respCode == "RCS") {
-          referenceId.value = addSenderResponse.data?.referenceid ?? "";
-          
-          ConsoleLog.printSuccess("Sender registered, OTP sent");
-          Fluttertoast.showToast(msg: "OTP sent successfully");
-          
-          // Navigate to OTP screen or show OTP dialog
-          
+        if (data['Resp_code'] == 'RCS') {
+          isSenderVerified.value = true;
+
+          ConsoleLog.printSuccess("Sender registered successfully");
+          Fluttertoast.showToast(msg: "Sender registered successfully");
+
+          // Clear form
+          senderOtpController.value.clear();
+
+          // Refresh sender details
+          await checkSender(context, mobile);
+
         } else {
           CustomDialog.error(
             context: context,
-            message: addSenderResponse.respDesc ?? "Failed to add sender",
+            message: data['Resp_desc'] ?? "Failed to add sender",
           );
         }
-      }else if (response?.statusCode == 401) {
+      } else if (response?.statusCode == 401) {
         await refreshToken(context);
       }
     } catch (e) {
@@ -449,72 +494,208 @@ class DmtWalletController extends GetxController {
       CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
+  // // ============================================
+  // // 2. ADD SENDER (REGISTER REMITTER)
+  // // ============================================
+  // Future<void> addSender(BuildContext context) async {
+  //   try {
+  //     if (!await isTokenValid()) {
+  //       await refreshToken(context);
+  //       return;
+  //     }
+  //
+  //     String mobile = senderMobileController.value.text.trim();
+  //     String name = senderNameController.value.text.trim();
+  //     String address = senderAddressController.value.text.trim();
+  //
+  //     if (mobile.isEmpty || name.isEmpty || address.isEmpty) {
+  //       Fluttertoast.showToast(msg: "Please fill all required fields");
+  //       return;
+  //     }
+  //
+  //     if (selectedState.value.isEmpty || selectedCity.value.isEmpty || selectedPincode.value.isEmpty) {
+  //       Fluttertoast.showToast(msg: "Please select state, city and pincode");
+  //       return;
+  //     }
+  //
+  //     CustomLoading().show(context);
+  //
+  //     Map<String, dynamic> body = {
+  //       "request_id": generateRequestId(),
+  //       "lat": loginController.latitude.value.toString(),
+  //       "long": loginController.longitude.value.toString(),
+  //       "sender": mobile,
+  //       "name": name,
+  //       "address": address,
+  //       "state": selectedState.value,
+  //       "city": selectedCity.value,
+  //       "pincode": selectedPincode.value,
+  //       "service": serviceCode.value,
+  //       "request_type": "REMITTER REGISTRATION",
+  //     };
+  //
+  //     ConsoleLog.printColor("ADD SENDER REQ: $body");
+  //
+  //     var response = await ApiProvider().requestPostForApi(
+  //       context,
+  //       WebApiConstant.API_URL_ADD_SENDER,
+  //       body,
+  //       userAuthToken.value,
+  //       userSignature.value,
+  //     );
+  //
+  //     CustomLoading().hide(context);
+  //     ConsoleLog.printColor("ADD SENDER RESPONSE: ${response?.data}");
+  //
+  //     if (response != null && response.statusCode == 200) {
+  //       CustomLoading().hide(context);
+  //       AddSenderResponseModel addSenderResponse =
+  //           AddSenderResponseModel.fromJson(response.data);
+  //
+  //       if (addSenderResponse.respCode == "RCS") {
+  //         referenceId.value = addSenderResponse.data?.referenceid ?? "";
+  //
+  //         ConsoleLog.printSuccess("Sender registered, OTP sent");
+  //         Fluttertoast.showToast(msg: "OTP sent successfully");
+  //
+  //         // Navigate to OTP screen or show OTP dialog
+  //
+  //       } else {
+  //         CustomDialog.error(
+  //           context: context,
+  //           message: addSenderResponse.respDesc ?? "Failed to add sender",
+  //         );
+  //       }
+  //     }else if (response?.statusCode == 401) {
+  //       await refreshToken(context);
+  //     }
+  //   } catch (e) {
+  //     CustomLoading().hide(context);
+  //     ConsoleLog.printError("ADD SENDER ERROR: $e");
+  //     CustomDialog.error(context: context, message: "Technical issue!");
+  //   }
+  // }
 
-  // ============================================
-  // 3. VERIFY SENDER OTP
-  // ============================================
-  Future<void> verifySenderOtp(BuildContext context, String otp) async {
-    try {
-      if (otp.isEmpty || otp.length != 6) {
-        Fluttertoast.showToast(msg: "Please enter 6-digit OTP");
-        return;
-      }
+  // // ============================================
+  // // 3. VERIFY SENDER OTP
+  // // ============================================
+  // Future<void> verifySenderOtp(BuildContext context, String otp) async {
+  //   try {
+  //     if (otp.isEmpty || otp.length != 6) {
+  //       Fluttertoast.showToast(msg: "Please enter 6-digit OTP");
+  //       return;
+  //     }
+  //
+  //     if (referenceId.value.isEmpty) {
+  //       Fluttertoast.showToast(msg: "Reference ID not found");
+  //       return;
+  //     }
+  //
+  //     CustomLoading().show(context);
+  //
+  //     Map<String, dynamic> body = {
+  //       "request_id": generateRequestId(),
+  //       "lat": loginController.latitude.value.toString(),
+  //       "long": loginController.longitude.value.toString(),
+  //       "sender": senderMobileController.value.text.trim(),
+  //       "otp": otp,
+  //       "referenceid": referenceId.value,
+  //       "service": serviceCode.value,
+  //       "request_type": "VERIFY OTP",
+  //     };
+  //
+  //     ConsoleLog.printColor("VERIFY SENDER OTP REQ: $body");
+  //
+  //     var response = await ApiProvider().requestPostForApi(
+  //       context,
+  //       WebApiConstant.API_URL_VERIFY_SENDER_OTP,
+  //       body,
+  //       userAuthToken.value,
+  //       userSignature.value,
+  //     );
+  //
+  //     CustomLoading().hide(context);
+  //
+  //     if (response != null && response.statusCode == 200) {
+  //       CustomLoading().hide(context);
+  //       var data = response.data;
+  //
+  //       if (data['Resp_code'] == 'RCS') {
+  //         isSenderVerified.value = true;
+  //         ConsoleLog.printSuccess("Sender OTP verified successfully");
+  //         // Fluttertoast.showToast(msg: "Sender verified successfully");
+  //
+  //         // Refresh sender details
+  //         // await checkSender(context, senderMobileController.value.text.trim());
+  //
+  //       } else {
+  //         CustomDialog.error(
+  //           context: context,
+  //           message: data['Resp_desc'] ?? "Invalid OTP",
+  //         );
+  //       }
+  //     }
+  //   } catch (e) {
+  //     CustomLoading().hide(context);
+  //     ConsoleLog.printError("VERIFY SENDER OTP ERROR: $e");
+  //     CustomDialog.error(context: context, message: "Technical issue!");
+  //   }
+  // }
 
-      if (referenceId.value.isEmpty) {
-        Fluttertoast.showToast(msg: "Reference ID not found");
-        return;
-      }
-
-      CustomLoading().show(context);
-
-      Map<String, dynamic> body = {
-        "request_id": generateRequestId(),
-        "lat": loginController.latitude.value.toString(),
-        "long": loginController.longitude.value.toString(),
-        "sender": senderMobileController.value.text.trim(),
-        "otp": otp,
-        "referenceid": referenceId.value,
-        "service": serviceCode.value,
-        "request_type": "VERIFY OTP",
-      };
-
-      ConsoleLog.printColor("VERIFY SENDER OTP REQ: $body");
-
-      var response = await ApiProvider().requestPostForApi(
-        context,
-        WebApiConstant.API_URL_VERIFY_SENDER_OTP,
-        body,
-        userAuthToken.value,
-        userSignature.value,
-      );
-
-      CustomLoading().hide(context);
-
-      if (response != null && response.statusCode == 200) {
-        CustomLoading().hide(context);
-        var data = response.data;
-        
-        if (data['Resp_code'] == 'RCS') {
-          isSenderVerified.value = true;
-          ConsoleLog.printSuccess("Sender OTP verified successfully");
-          // Fluttertoast.showToast(msg: "Sender verified successfully");
-          
-          // Refresh sender details
-          // await checkSender(context, senderMobileController.value.text.trim());
-          
-        } else {
-          CustomDialog.error(
-            context: context,
-            message: data['Resp_desc'] ?? "Invalid OTP",
-          );
-        }
-      }
-    } catch (e) {
-      CustomLoading().hide(context);
-      ConsoleLog.printError("VERIFY SENDER OTP ERROR: $e");
-      CustomDialog.error(context: context, message: "Technical issue!");
-    }
-  }
+  // // ============================================
+  // // 4. GET BENEFICIARY LIST
+  // // ============================================
+  // Future<void> getBeneficiaryList(BuildContext context, String senderMobile) async {
+  //   try {
+  //     if (!await isTokenValid()) {
+  //       await refreshToken(context);
+  //       return;
+  //     }
+  //
+  //     Map<String, dynamic> body = {
+  //       "request_id": generateRequestId(),
+  //       "lat": loginController.latitude.value.toString(),
+  //       "long": loginController.longitude.value.toString(),
+  //       "sender": senderMobile,
+  //       "service": serviceCode.value,
+  //       "start": "0",
+  //       "limit": "100",
+  //       "searchby": "",
+  //     };
+  //
+  //     ConsoleLog.printColor("GET BENEFICIARY LIST REQ: $body");
+  //
+  //     var response = await ApiProvider().requestPostForApi(
+  //       context,
+  //       WebApiConstant.API_URL_GET_BENEFICIARY_LIST,
+  //       body,
+  //       userAuthToken.value,
+  //       userSignature.value,
+  //     );
+  //
+  //     CustomLoading().hide(context);
+  //
+  //     if (response != null && response.statusCode == 200) {
+  //       GetBeneficiaryListResponseModel beneListResponse =
+  //           GetBeneficiaryListResponseModel.fromJson(response.data);
+  //
+  //       if (beneListResponse.respCode == "RCS" && beneListResponse.data != null) {
+  //         beneficiaryList.value = beneListResponse.data!;
+  //         filteredBeneficiaryList.value = beneListResponse.data!;
+  //
+  //         ConsoleLog.printSuccess("Beneficiaries loaded: ${beneficiaryList.length}");
+  //
+  //       } else {
+  //         beneficiaryList.clear();
+  //         filteredBeneficiaryList.clear();
+  //       }
+  //     }else if (response?.statusCode == 401) {
+  //       await refreshToken(context);
+  //     }
+  //   } catch (e) {
+  //     ConsoleLog.printError("GET BENEFICIARY LIST ERROR: $e");
+  //   }
+  // }
 
   // ============================================
   // 4. GET BENEFICIARY LIST
@@ -531,10 +712,6 @@ class DmtWalletController extends GetxController {
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
         "sender": senderMobile,
-        "service": serviceCode.value,
-        "start": "0",
-        "limit": "100",
-        "searchby": "",
       };
 
       ConsoleLog.printColor("GET BENEFICIARY LIST REQ: $body");
@@ -550,15 +727,15 @@ class DmtWalletController extends GetxController {
       CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
-        GetBeneficiaryListResponseModel beneListResponse = 
-            GetBeneficiaryListResponseModel.fromJson(response.data);
+        GetBeneficiaryListResponseModel beneListResponse =
+        GetBeneficiaryListResponseModel.fromJson(response.data);
 
         if (beneListResponse.respCode == "RCS" && beneListResponse.data != null) {
           beneficiaryList.value = beneListResponse.data!;
           filteredBeneficiaryList.value = beneListResponse.data!;
-          
+
           ConsoleLog.printSuccess("Beneficiaries loaded: ${beneficiaryList.length}");
-          
+
         } else {
           beneficiaryList.clear();
           filteredBeneficiaryList.clear();
@@ -571,15 +748,239 @@ class DmtWalletController extends GetxController {
     }
   }
 
+  /// Bank account number:
+  /// - Sirf digits allowed
+  /// - Length: 9 se 18 digits (India me common range)
+  bool isValidAccountNumber(String? accountNumber) {
+    if (accountNumber == null) return false;
+
+    final trimmed = accountNumber.trim();
+
+    // Regex: 9–18 digits
+    final regExp = RegExp(r'^[0-9]{9,18}$');
+    return regExp.hasMatch(trimmed);
+  }
+
+  /// IFSC code validation (Indian):
+  /// - 4 capital letters (bank code)
+  /// - 1 zero (0)
+  /// - 6 alphanumeric (branch code)
+  /// Example: SBIN0001234
+  bool isValidIFSC(String? ifsc) {
+    if (ifsc == null) return false;
+
+    final trimmed = ifsc.trim().toUpperCase();
+
+    // Regex: 4 letters + 0 + 6 alphanumeric
+    final regExp = RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$');
+    return regExp.hasMatch(trimmed);
+  }
+
   // ============================================
-  // 5. ADD BENEFICIARY
+  // 5. VERIFY ACCOUNT (INITIATE BENEVALIDATION)
+  // ============================================
+  Future<void> verifyAccount(BuildContext context) async {
+    try {
+      String accountNumber = beneAccountController.value.text.trim();
+      String ifsc = beneIfscController.value.text.trim();
+      String beneName = beneNameController.value.text.trim();
+      // String beneName = selectedBank.value.trim();
+
+      // if(selectedBank.value.isEmpty || selectedBank.value == "Select Bank"){
+      //   Fluttertoast.showToast(msg: "Please select bank");
+      //   return;
+      // }
+      //
+      // if (accountNumber.trim().isEmpty) {
+      //   Fluttertoast.showToast(msg: "Account number required!");
+      //   return;
+      // }
+      // if (!isValidAccountNumber(accountNumber)) {
+      //   Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
+      //   return;
+      // }
+      //
+      // if (ifsc.trim().isEmpty) {
+      //   Fluttertoast.showToast(msg: "IFSC code required!");
+      //   return;
+      // }
+      // if (!isValidIFSC(ifsc)) {
+      //   Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
+      //   return;
+      // }
+
+      // if (accountNumber.isEmpty || ifsc.isEmpty) {
+      //   Fluttertoast.showToast(msg: "Please enter account number and IFSC");
+      //   return;
+      // }
+
+      ConsoleLog.printColor(
+          "========>>>>>> Selected Bank: ${selectedBank.value}, \nIFSC: $ifsc, \nAccount: $accountNumber, \nName: $beneName, \nSender: ${currentSender.value?.mobile}, \nSender ID: ${senderId.value}, \nSender Name: ${currentSender.value?.name}"
+      );
+      if (senderId.value.isEmpty || currentSender.value?.mobile == null) {
+        Fluttertoast.showToast(msg: "Sender details not found");
+        return;
+      }
+
+      CustomLoading().show(context);
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+        "senderid": senderId.value,
+        "sender": currentSender.value!.mobile,
+        "request_type": "INITIATE BENEVALIDATION",
+        "service": serviceCode.value,
+        "account": accountNumber,
+        "banksel": selectedBank.value,
+        "bankifsc": ifsc,
+        "benename": beneName.isNotEmpty ? beneName : "",
+      };
+
+      ConsoleLog.printColor("VERIFY ACCOUNT REQ: $body");
+
+      var response = await ApiProvider().requestPostForApi(
+        context,
+        WebApiConstant.API_URL_ADD_SENDER, // ✅ Uses process_remit_action_new
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      CustomLoading().hide(context);
+
+      if (response != null && response.statusCode == 200) {
+        CustomLoading().hide(context);
+        var data = response.data;
+
+        if (data['Resp_code'] == 'RCS') {
+          if (data['data']?['txn_status'] == 'SUCCESS') {
+            isAccountVerified.value = true;
+
+            // Auto-fill beneficiary name
+            if (data['data']?['benename'] != null) {
+              beneNameController.value.text = data['data']['benename'];
+            }
+
+            ConsoleLog.printSuccess("Account verified: ${data['data']?['benename']}");
+            Fluttertoast.showToast(msg: "Account verified successfully");
+
+          } else if (data['data']?['txn_status'] == 'PENDING') {
+            Fluttertoast.showToast(msg: "Verification pending");
+          } else if (data['data']?['txn_status'] == 'FAILED') {
+            isAccountVerified.value = false;
+            CustomDialog.error(
+              context: context,
+              message: data['Resp_desc'] ?? "Verification failed",
+            );
+          }
+        } else {
+          isAccountVerified.value = false;
+          CustomDialog.error(
+            context: context,
+            message: data['Resp_desc'] ?? "Account verification failed",
+          );
+        }
+      }
+    } catch (e) {
+      CustomLoading().hide(context);
+      ConsoleLog.printError("VERIFY ACCOUNT ERROR: $e");
+      CustomDialog.error(context: context, message: "Technical issue!");
+    }
+  }
+
+  // // ============================================
+  // // 6. ADD BENEFICIARY
+  // // ============================================
+  // Future<void> addBeneficiary(BuildContext context) async {
+  //   try {
+  //     String beneName = beneNameController.value.text.trim();
+  //     String accountNumber = beneAccountController.value.text.trim();
+  //     String ifsc = beneIfscController.value.text.trim();
+  //     String mobile = beneMobileController.value.text.trim();
+  //
+  //     if (beneName.isEmpty || accountNumber.isEmpty || ifsc.isEmpty) {
+  //       Fluttertoast.showToast(msg: "Please fill all required fields");
+  //       return;
+  //     }
+  //
+  //     if (!isAccountVerified.value) {
+  //       Fluttertoast.showToast(msg: "Please verify account first");
+  //       return;
+  //     }
+  //
+  //     CustomLoading().show(context);
+  //
+  //     Map<String, dynamic> body = {
+  //       "request_id": generateRequestId(),
+  //       "lat": loginController.latitude.value.toString(),
+  //       "long": loginController.longitude.value.toString(),
+  //       "sender": currentSender.value?.mobile ?? "",
+  //       "bene_name": beneName,
+  //       "account_number": accountNumber,
+  //       "ifsc": ifsc,
+  //       "mobile": mobile,
+  //       "bank_id": selectedBankId.value,
+  //       "service": serviceCode.value,
+  //       "request_type": "ADD BENEFICIARY",
+  //     };
+  //
+  //     ConsoleLog.printColor("ADD BENEFICIARY REQ: $body");
+  //
+  //     var response = await ApiProvider().requestPostForApi(
+  //       context,
+  //       WebApiConstant.API_URL_ADD_BENEFICIARY,
+  //       body,
+  //       userAuthToken.value,
+  //       userSignature.value,
+  //     );
+  //
+  //     CustomLoading().hide(context);
+  //
+  //     if (response != null && response.statusCode == 200) {
+  //       CustomLoading().hide(context);
+  //       AddBeneficiaryResponseModel addBeneResponse = 
+  //           AddBeneficiaryResponseModel.fromJson(response.data);
+  //
+  //       if (addBeneResponse.respCode == "RCS") {
+  //         ConsoleLog.printSuccess("Beneficiary added successfully");
+  //         Fluttertoast.showToast(msg: "Beneficiary added successfully");
+  //        
+  //         // Refresh beneficiary list
+  //         await getBeneficiaryList(context, currentSender.value?.mobile ?? "");
+  //        
+  //         // Clear form
+  //         beneNameController.value.clear();
+  //         beneAccountController.value.clear();
+  //         beneIfscController.value.clear();
+  //         beneMobileController.value.clear();
+  //         isAccountVerified.value = false;
+  //        
+  //         Get.back();
+  //        
+  //       } else {
+  //         CustomDialog.error(
+  //           context: context,
+  //           message: addBeneResponse.respDesc ?? "Failed to add beneficiary",
+  //         );
+  //       }
+  //     }
+  //   } catch (e) {
+  //     CustomLoading().hide(context);
+  //     ConsoleLog.printError("ADD BENEFICIARY ERROR: $e");
+  //     CustomDialog.error(context: context, message: "Technical issue!");
+  //   }
+  // }
+
+  // ============================================
+  // 6. ADD BENEFICIARY
   // ============================================
   Future<void> addBeneficiary(BuildContext context) async {
     try {
       String beneName = beneNameController.value.text.trim();
       String accountNumber = beneAccountController.value.text.trim();
       String ifsc = beneIfscController.value.text.trim();
-      String mobile = beneMobileController.value.text.trim();
 
       if (beneName.isEmpty || accountNumber.isEmpty || ifsc.isEmpty) {
         Fluttertoast.showToast(msg: "Please fill all required fields");
@@ -591,20 +992,29 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      if (senderId.value.isEmpty || currentSender.value?.mobile == null) {
+        Fluttertoast.showToast(msg: "Sender details not found");
+        return;
+      }
 
+      CustomLoading().show(context);
+      
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
-        "sender": currentSender.value?.mobile ?? "",
-        "bene_name": beneName,
-        "account_number": accountNumber,
-        "ifsc": ifsc,
-        "mobile": mobile,
-        "bank_id": selectedBankId.value,
+        "senderid": senderId.value,                           
+        "sender": currentSender.value!.mobile,                
+        "senderdata": {                                       
+          "sendermobile": currentSender.value!.mobile,
+        },
+        "request_type": "ADD BENEDATA",                       
         "service": serviceCode.value,
-        "request_type": "ADD BENEFICIARY",
+        "account": accountNumber,                             
+        "banksel": selectedBank.value,                        
+        "bankifsc": ifsc,                                     
+        "benename": beneName,                                 
+        "is_verified": isAccountVerified.value ? '1' : '0',   
       };
 
       ConsoleLog.printColor("ADD BENEFICIARY REQ: $body");
@@ -621,25 +1031,25 @@ class DmtWalletController extends GetxController {
 
       if (response != null && response.statusCode == 200) {
         CustomLoading().hide(context);
-        AddBeneficiaryResponseModel addBeneResponse = 
-            AddBeneficiaryResponseModel.fromJson(response.data);
+        AddBeneficiaryResponseModel addBeneResponse =
+        AddBeneficiaryResponseModel.fromJson(response.data);
 
         if (addBeneResponse.respCode == "RCS") {
           ConsoleLog.printSuccess("Beneficiary added successfully");
           Fluttertoast.showToast(msg: "Beneficiary added successfully");
-          
+
           // Refresh beneficiary list
           await getBeneficiaryList(context, currentSender.value?.mobile ?? "");
-          
+
           // Clear form
           beneNameController.value.clear();
           beneAccountController.value.clear();
           beneIfscController.value.clear();
           beneMobileController.value.clear();
           isAccountVerified.value = false;
-          
+
           Get.back();
-          
+
         } else {
           CustomDialog.error(
             context: context,
@@ -654,24 +1064,86 @@ class DmtWalletController extends GetxController {
     }
   }
 
+  // // ============================================
+  // // 6. DELETE BENEFICIARY
+  // // ============================================
+  // Future<void> deleteBeneficiary(BuildContext context, String beneId) async {
+  //   try {
+  //     CustomLoading().show(context);
+  //
+  //     Map<String, dynamic> body = {
+  //       "request_id": generateRequestId(),
+  //       "lat": loginController.latitude.value.toString(),
+  //       "long": loginController.longitude.value.toString(),
+  //       "sender": currentSender.value?.mobile ?? "",
+  //       "bene_id": beneId,
+  //       "service": serviceCode.value,
+  //       "request_type": "DELETE BENEFICIARY",
+  //     };
+  //
+  //     ConsoleLog.printColor("DELETE BENEFICIARY REQ: $body");
+  //
+  //     var response = await ApiProvider().requestPostForApi(
+  //       context,
+  //       WebApiConstant.API_URL_DELETE_BENEFICIARY,
+  //       body,
+  //       userAuthToken.value,
+  //       userSignature.value,
+  //     );
+  //
+  //     CustomLoading().hide(context);
+  //
+  //     if (response != null && response.statusCode == 200) {
+  //       CustomLoading().hide(context);
+  //       DeleteBeneficiaryResponseModel deleteResponse =
+  //           DeleteBeneficiaryResponseModel.fromJson(response.data);
+  //
+  //       if (deleteResponse.respCode == "RCS" && deleteResponse.data?.deleted == true) {
+  //         ConsoleLog.printSuccess("Beneficiary deleted successfully");
+  //         Fluttertoast.showToast(msg: "Beneficiary deleted successfully");
+  //
+  //         // Remove from list
+  //         beneficiaryList.removeWhere((bene) => bene.beneId == beneId);
+  //         filteredBeneficiaryList.removeWhere((bene) => bene.beneId == beneId);
+  //
+  //       } else {
+  //         CustomDialog.error(
+  //           context: context,
+  //           message: deleteResponse.respDesc ?? "Failed to delete beneficiary",
+  //         );
+  //       }
+  //     }
+  //   } catch (e) {
+  //     CustomLoading().hide(context);
+  //     ConsoleLog.printError("DELETE BENEFICIARY ERROR: $e");
+  //     CustomDialog.error(context: context, message: "Technical issue!");
+  //   }
+  // }
+
   // ============================================
-  // 6. DELETE BENEFICIARY
+  // 7. DELETE BENEFICIARY - ✅ COMPLETELY REWRITTEN (2-STEP PROCESS)
   // ============================================
-  Future<void> deleteBeneficiary(BuildContext context, String beneId) async {
+
+  // Step 1: Request OTP for deletion
+  Future<void> deleteBeneficiaryRequestOtp(BuildContext context, String beneId) async {
     try {
+      if (currentSender.value?.mobile == null) {
+        Fluttertoast.showToast(msg: "Sender details not found");
+        return;
+      }
+
       CustomLoading().show(context);
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
-        "sender": currentSender.value?.mobile ?? "",
-        "bene_id": beneId,
-        "service": serviceCode.value,
-        "request_type": "DELETE BENEFICIARY",
+        "sender": currentSender.value!.mobile,
+        "beneid": beneId,
+        "request_type": "VERIFY",                             // ✅ FIXED
       };
 
-      ConsoleLog.printColor("DELETE BENEFICIARY REQ: $body");
+      ConsoleLog.printColor("DELETE BENE REQUEST OTP: $body");
 
       var response = await ApiProvider().requestPostForApi(
         context,
@@ -684,42 +1156,39 @@ class DmtWalletController extends GetxController {
       CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
-        CustomLoading().hide(context);
-        DeleteBeneficiaryResponseModel deleteResponse = 
-            DeleteBeneficiaryResponseModel.fromJson(response.data);
+        var data = response.data;
 
-        if (deleteResponse.respCode == "RCS" && deleteResponse.data?.deleted == true) {
-          ConsoleLog.printSuccess("Beneficiary deleted successfully");
-          Fluttertoast.showToast(msg: "Beneficiary deleted successfully");
-          
-          // Remove from list
-          beneficiaryList.removeWhere((bene) => bene.beneId == beneId);
-          filteredBeneficiaryList.removeWhere((bene) => bene.beneId == beneId);
-          
+        if (data['Resp_code'] == 'VRF') {
+          // OTP sent successfully
+          ConsoleLog.printSuccess("OTP sent for beneficiary deletion");
+
+          // Show OTP dialog
+          showDeleteOtpDialog(context, beneId);
+
         } else {
           CustomDialog.error(
             context: context,
-            message: deleteResponse.respDesc ?? "Failed to delete beneficiary",
+            message: data['Resp_desc'] ?? "Failed to send OTP",
           );
         }
       }
     } catch (e) {
       CustomLoading().hide(context);
-      ConsoleLog.printError("DELETE BENEFICIARY ERROR: $e");
+      ConsoleLog.printError("DELETE BENEFICIARY REQUEST OTP ERROR: $e");
       CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
 
-  // ============================================
-  // 7. VERIFY ACCOUNT
-  // ============================================
-  Future<void> verifyAccount(BuildContext context) async {
+  // Step 2: Validate OTP and delete beneficiary
+  Future<void> deleteBeneficiaryValidate(BuildContext context, String beneId, String otp) async {
     try {
-      String accountNumber = beneAccountController.value.text.trim();
-      String ifsc = beneIfscController.value.text.trim();
+      if (otp.isEmpty) {
+        Fluttertoast.showToast(msg: "Please enter OTP");
+        return;
+      }
 
-      if (accountNumber.isEmpty || ifsc.isEmpty) {
-        Fluttertoast.showToast(msg: "Please enter account number and IFSC");
+      if (currentSender.value?.mobile == null) {
+        Fluttertoast.showToast(msg: "Sender details not found");
         return;
       }
 
@@ -729,16 +1198,17 @@ class DmtWalletController extends GetxController {
         "request_id": generateRequestId(),
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
-        "account_number": accountNumber,
-        "ifsc": ifsc,
-        "bank_id": selectedBankId.value,
+        "sender": currentSender.value!.mobile,
+        "beneid": beneId,
+        "otp": otp,
+        "request_type": "VALIDATE",
       };
 
-      ConsoleLog.printColor("VERIFY ACCOUNT REQ: $body");
+      ConsoleLog.printColor("DELETE BENE VALIDATE: $body");
 
       var response = await ApiProvider().requestPostForApi(
         context,
-        WebApiConstant.API_URL_VERIFY_ACCOUNT,
+        WebApiConstant.API_URL_DELETE_BENEFICIARY,
         body,
         userAuthToken.value,
         userSignature.value,
@@ -747,43 +1217,228 @@ class DmtWalletController extends GetxController {
       CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
-        CustomLoading().hide(context);
-        VerifyAccountResponseModel verifyResponse = 
-            VerifyAccountResponseModel.fromJson(response.data);
+        DeleteBeneficiaryResponseModel deleteResponse =
+        DeleteBeneficiaryResponseModel.fromJson(response.data);
 
-        if (verifyResponse.respCode == "RCS" && verifyResponse.data?.verified == true) {
-          isAccountVerified.value = true;
-          
-          // Auto-fill beneficiary name
-          if (verifyResponse.data?.beneName != null) {
-            beneNameController.value.text = verifyResponse.data!.beneName!;
-          }
-          
-          ConsoleLog.printSuccess("Account verified: ${verifyResponse.data?.beneName}");
-          Fluttertoast.showToast(msg: "Account verified successfully");
-          
+        if (deleteResponse.respCode == "RCS") {
+          ConsoleLog.printSuccess("Beneficiary deleted successfully");
+          Fluttertoast.showToast(msg: "Beneficiary deleted successfully");
+
+          // Remove from list
+          beneficiaryList.removeWhere((bene) => bene.beneId == beneId);
+          filteredBeneficiaryList.removeWhere((bene) => bene.beneId == beneId);
+
+          Get.back(); // Close OTP dialog
+
         } else {
-          isAccountVerified.value = false;
           CustomDialog.error(
             context: context,
-            message: verifyResponse.respDesc ?? "Account verification failed",
+            message: deleteResponse.respDesc ?? "Failed to delete beneficiary",
           );
         }
       }
     } catch (e) {
       CustomLoading().hide(context);
-      ConsoleLog.printError("VERIFY ACCOUNT ERROR: $e");
+      ConsoleLog.printError("DELETE BENEFICIARY VALIDATE ERROR: $e");
       CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
 
+  // Show OTP dialog for deletion
+  void showDeleteOtpDialog(BuildContext context, String beneId) {
+    deleteOtpController.value.clear();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Enter OTP'),
+          content: TextField(
+            controller: deleteOtpController.value,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            decoration: InputDecoration(
+              hintText: 'Enter 6-digit OTP',
+              counterText: '',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                deleteBeneficiaryValidate(
+                    context,
+                    beneId,
+                    deleteOtpController.value.text.trim()
+                );
+              },
+              child: Text('Submit'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // // ============================================
+  // // 7. VERIFY ACCOUNT
+  // // ============================================
+  // Future<void> verifyAccount(BuildContext context) async {
+  //   try {
+  //     String accountNumber = beneAccountController.value.text.trim();
+  //     String ifsc = beneIfscController.value.text.trim();
+  //
+  //     if (accountNumber.isEmpty || ifsc.isEmpty) {
+  //       Fluttertoast.showToast(msg: "Please enter account number and IFSC");
+  //       return;
+  //     }
+  //
+  //     CustomLoading().show(context);
+  //
+  //     Map<String, dynamic> body = {
+  //       "request_id": generateRequestId(),
+  //       "lat": loginController.latitude.value.toString(),
+  //       "long": loginController.longitude.value.toString(),
+  //       "account_number": accountNumber,
+  //       "ifsc": ifsc,
+  //       "bank_id": selectedBankId.value,
+  //     };
+  //
+  //     ConsoleLog.printColor("VERIFY ACCOUNT REQ: $body");
+  //
+  //     var response = await ApiProvider().requestPostForApi(
+  //       context,
+  //       WebApiConstant.API_URL_VERIFY_ACCOUNT,
+  //       body,
+  //       userAuthToken.value,
+  //       userSignature.value,
+  //     );
+  //
+  //     CustomLoading().hide(context);
+  //
+  //     if (response != null && response.statusCode == 200) {
+  //       CustomLoading().hide(context);
+  //       VerifyAccountResponseModel verifyResponse =
+  //           VerifyAccountResponseModel.fromJson(response.data);
+  //
+  //       if (verifyResponse.respCode == "RCS" && verifyResponse.data?.verified == true) {
+  //         isAccountVerified.value = true;
+  //
+  //         // Auto-fill beneficiary name
+  //         if (verifyResponse.data?.beneName != null) {
+  //           beneNameController.value.text = verifyResponse.data!.beneName!;
+  //         }
+  //
+  //         ConsoleLog.printSuccess("Account verified: ${verifyResponse.data?.beneName}");
+  //         Fluttertoast.showToast(msg: "Account verified successfully");
+  //
+  //       } else {
+  //         isAccountVerified.value = false;
+  //         CustomDialog.error(
+  //           context: context,
+  //           message: verifyResponse.respDesc ?? "Account verification failed",
+  //         );
+  //       }
+  //     }
+  //   } catch (e) {
+  //     CustomLoading().hide(context);
+  //     ConsoleLog.printError("VERIFY ACCOUNT ERROR: $e");
+  //     CustomDialog.error(context: context, message: "Technical issue!");
+  //   }
+  // }
+
+  // // ============================================
+  // // 8. TRANSFER MONEY
+  // // ============================================
+  // Future<void> transferMoney(BuildContext context, BeneficiaryData beneficiary) async {
+  //   try {
+  //     String amount = transferAmountController.value.text.trim();
+  //     String tpin = tpinController.value.text.trim();
+  //
+  //     if (amount.isEmpty) {
+  //       Fluttertoast.showToast(msg: "Please enter amount");
+  //       return;
+  //     }
+  //
+  //     double amountValue = double.tryParse(amount) ?? 0;
+  //     if (amountValue <= 0) {
+  //       Fluttertoast.showToast(msg: "Please enter valid amount");
+  //       return;
+  //     }
+  //
+  //     if (tpin.isEmpty) {
+  //       Fluttertoast.showToast(msg: "Please enter TPIN");
+  //       return;
+  //     }
+  //
+  //     CustomLoading().show(context);
+  //
+  //     Map<String, dynamic> body = {
+  //       "request_id": generateRequestId(),
+  //       "lat": loginController.latitude.value.toString(),
+  //       "long": loginController.longitude.value.toString(),
+  //       "sender": currentSender.value?.mobile ?? "",
+  //       "bene_id": beneficiary.beneId,
+  //       "amount": amount,
+  //       "tpin": tpin,
+  //       "service": serviceCode.value,
+  //       "request_type": "TRANSFER",
+  //     };
+  //
+  //     ConsoleLog.printColor("TRANSFER MONEY REQ: $body");
+  //
+  //     var response = await ApiProvider().requestPostForApi(
+  //       context,
+  //       WebApiConstant.API_URL_TRANSFER_MONEY,
+  //       body,
+  //       userAuthToken.value,
+  //       userSignature.value,
+  //     );
+  //
+  //     CustomLoading().hide(context);
+  //
+  //     if (response != null && response.statusCode == 200) {
+  //       CustomLoading().hide(context);
+  //       TransferMoneyResponseModel transferResponse =
+  //           TransferMoneyResponseModel.fromJson(response.data);
+  //
+  //       if (transferResponse.respCode == "RCS") {
+  //         ConsoleLog.printSuccess("Transfer successful: ${transferResponse.data?.txnId}");
+  //
+  //         // Show success dialog
+  //         showSuccessDialog(context, transferResponse.data);
+  //
+  //         // Clear form
+  //         transferAmountController.value.clear();
+  //         tpinController.value.clear();
+  //
+  //       } else {
+  //         CustomDialog.error(
+  //           context: context,
+  //           message: transferResponse.respDesc ?? "Transfer failed",
+  //         );
+  //       }
+  //     }
+  //   } catch (e) {
+  //     CustomLoading().hide(context);
+  //     ConsoleLog.printError("TRANSFER MONEY ERROR: $e");
+  //     CustomDialog.error(context: context, message: "Technical issue!");
+  //   }
+  // }
+
   // ============================================
-  // 8. TRANSFER MONEY
+  // 8. TRANSFER MONEY - ✅ COMPLETELY REWRITTEN (2-STEP PROCESS)
   // ============================================
-  Future<void> transferMoney(BuildContext context, BeneficiaryData beneficiary) async {
+
+  // Step 1: Confirm transaction and get charges
+  Future<void> confirmTransfer(BuildContext context, BeneficiaryData beneficiary) async {
     try {
       String amount = transferAmountController.value.text.trim();
-      String tpin = tpinController.value.text.trim();
+      String mode = selectedTransferMode.value; // IMPS or NEFT
 
       if (amount.isEmpty) {
         Fluttertoast.showToast(msg: "Please enter amount");
@@ -796,8 +1451,243 @@ class DmtWalletController extends GetxController {
         return;
       }
 
+      if (senderId.value.isEmpty || currentSender.value?.mobile == null) {
+        Fluttertoast.showToast(msg: "Sender details not found");
+        return;
+      }
+
+      CustomLoading().show(context);
+
+      // ✅ Step 1: CONFIRM - Get charges
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+        "senderid": senderId.value,
+        "sender": currentSender.value!.mobile,
+        "service": serviceCode.value,
+        "request_type": "CONFIRM",
+        "amount": amount,
+        "cnfamount": amount,
+        "mode": mode,                                         // (IMPS/NEFT)
+        "sendername": senderName.value,
+        "beneid": beneficiary.beneId,
+        "benename": beneficiary.name,
+        "account": beneficiary.accountNo,
+        "banksel": beneficiary.bankName,
+        "bankifsc": beneficiary.ifsc,
+      };
+
+      ConsoleLog.printColor("CONFIRM TRANSFER REQ: $body");
+
+      var response = await ApiProvider().requestPostForApi(
+        context,
+        WebApiConstant.API_URL_ADD_SENDER, // Uses process_remit_action_new
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      CustomLoading().hide(context);
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+
+        if (data['Resp_code'] == 'RCS') {
+          // Store confirmation data
+          confirmationData.value = {
+            'body': body,
+            'charges': data['data'],
+            'beneficiary': beneficiary,
+          };
+
+          showConfirmation.value = true;
+
+          ConsoleLog.printSuccess("Transfer charges fetched");
+
+          // Show confirmation dialog
+          showTransferConfirmationDialog(context, beneficiary, data['data']);
+
+        } else {
+          CustomDialog.error(
+            context: context,
+            message: data['Resp_desc'] ?? "Failed to confirm transfer",
+          );
+        }
+      }
+    } catch (e) {
+      CustomLoading().hide(context);
+      ConsoleLog.printError("CONFIRM TRANSFER ERROR: $e");
+      CustomDialog.error(context: context, message: "Technical issue!");
+    }
+  }
+
+  // Step 2: Initiate transaction with TPIN
+  Future<void> initiateTransfer(BuildContext context) async {
+    try {
+      String tpin = tpinController.value.text.trim();
+
       if (tpin.isEmpty) {
         Fluttertoast.showToast(msg: "Please enter TPIN");
+        return;
+      }
+
+      if (confirmationData.value == null) {
+        Fluttertoast.showToast(msg: "Confirmation data not found");
+        return;
+      }
+
+      CustomLoading().show(context);
+
+      // ✅ Step 2: INITIATE TXN
+      Map<String, dynamic> body = Map.from(confirmationData.value!['body']);
+      body['request_id'] = generateRequestId();
+      body['request_type'] = 'INITIATE TXN';                  // ✅ FIXED
+      body['txnpin'] = tpin;                                   // ✅ FIXED
+
+      ConsoleLog.printColor("INITIATE TRANSFER REQ: $body");
+
+      var response = await ApiProvider().requestPostForApi(
+        context,
+        WebApiConstant.API_URL_ADD_SENDER, // Uses process_remit_action_new
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      CustomLoading().hide(context);
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+
+        if (data['Resp_code'] == 'RCS') {
+          ConsoleLog.printSuccess("Transfer successful: ${data['data']?['txn_id']}");
+
+          // Show success dialog
+          showTransferSuccessDialog(context, data['data']);
+
+          // Clear form
+          transferAmountController.value.clear();
+          tpinController.value.clear();
+          confirmationData.value = null;
+          showConfirmation.value = false;
+
+        } else {
+          CustomDialog.error(
+            context: context,
+            message: data['Resp_desc'] ?? "Transfer failed",
+          );
+        }
+      }
+    } catch (e) {
+      CustomLoading().hide(context);
+      ConsoleLog.printError("INITIATE TRANSFER ERROR: $e");
+      CustomDialog.error(context: context, message: "Technical issue!");
+    }
+  }
+
+  // Show confirmation dialog with charges
+  void showTransferConfirmationDialog(BuildContext context, BeneficiaryData beneficiary, Map<String, dynamic> charges) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Confirm Transfer'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Beneficiary: ${beneficiary.name}'),
+              Text('Account: ${beneficiary.accountNo}'),
+              Text('Bank: ${beneficiary.bankName}'),
+              SizedBox(height: 16),
+              Text('Amount: ₹${transferAmountController.value.text}'),
+              Text('Charges: ₹${charges['charges'] ?? 0}'),
+              Text('Total: ₹${(double.parse(transferAmountController.value.text) + (charges['charges'] ?? 0))}'),
+              SizedBox(height: 16),
+              TextField(
+                controller: tpinController.value,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 4,
+                decoration: InputDecoration(
+                  labelText: 'Enter TPIN',
+                  counterText: '',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                confirmationData.value = null;
+                showConfirmation.value = false;
+                Get.back();
+              },
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Get.back();
+                initiateTransfer(context);
+              },
+              child: Text('Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Show success dialog
+  void showTransferSuccessDialog(BuildContext context, Map<String, dynamic>? data) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Icon(Icons.check_circle, color: Colors.green, size: 60),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Transfer Successful!',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              SizedBox(height: 16),
+              Text('Amount: ₹${data?['amount'] ?? transferAmountController.value.text}'),
+              Text('UTR: ${data?['utr'] ?? "N/A"}'),
+              Text('Transaction ID: ${data?['txn_id'] ?? "N/A"}'),
+              if (data?['txn_desc'] != null)
+                Text('Status: ${data!['txn_desc']}'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Get.back();
+                Get.back(); // Go back to beneficiary list
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ============================================
+  // 9. SEARCH TRANSACTION - ✅ NEW
+  // ============================================
+  Future<void> searchTransaction(BuildContext context, String txnId) async {
+    try {
+      if (txnId.isEmpty) {
+        Fluttertoast.showToast(msg: "Please enter transaction ID");
+        return;
+      }
+
+      if (senderId.value.isEmpty || currentSender.value?.mobile == null) {
+        Fluttertoast.showToast(msg: "Sender details not found");
         return;
       }
 
@@ -807,19 +1697,18 @@ class DmtWalletController extends GetxController {
         "request_id": generateRequestId(),
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
-        "sender": currentSender.value?.mobile ?? "",
-        "bene_id": beneficiary.beneId,
-        "amount": amount,
-        "tpin": tpin,
+        "senderid": senderId.value,
+        "sender": currentSender.value!.mobile,
+        "request_type": "SEARCH TXN",
         "service": serviceCode.value,
-        "request_type": "TRANSFER",
+        "txnid": txnId,
       };
 
-      ConsoleLog.printColor("TRANSFER MONEY REQ: $body");
+      ConsoleLog.printColor("SEARCH TXN REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
         context,
-        WebApiConstant.API_URL_TRANSFER_MONEY,
+        "${WebApiConstant.BASE_URL}Fetch/search_txn",
         body,
         userAuthToken.value,
         userSignature.value,
@@ -828,36 +1717,93 @@ class DmtWalletController extends GetxController {
       CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
-        CustomLoading().hide(context);
-        TransferMoneyResponseModel transferResponse = 
-            TransferMoneyResponseModel.fromJson(response.data);
+        var data = response.data;
 
-        if (transferResponse.respCode == "RCS") {
-          ConsoleLog.printSuccess("Transfer successful: ${transferResponse.data?.txnId}");
-          
-          // Show success dialog
-          showSuccessDialog(context, transferResponse.data);
-          
-          // Clear form
-          transferAmountController.value.clear();
-          tpinController.value.clear();
-          
+        if (data['Resp_code'] == 'RCS') {
+          // Show transaction details
+          showTransactionDetailsDialog(context, data['data']);
         } else {
           CustomDialog.error(
             context: context,
-            message: transferResponse.respDesc ?? "Transfer failed",
+            message: data['Resp_desc'] ?? "Transaction not found",
           );
         }
       }
     } catch (e) {
       CustomLoading().hide(context);
-      ConsoleLog.printError("TRANSFER MONEY ERROR: $e");
+      ConsoleLog.printError("SEARCH TRANSACTION ERROR: $e");
       CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
 
+  void showTransactionDetailsDialog(BuildContext context, Map<String, dynamic> txnData) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Transaction Details'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Transaction ID: ${txnData['txn_id']}'),
+              Text('Amount: ₹${txnData['amount']}'),
+              Text('Status: ${txnData['status']}'),
+              Text('UTR: ${txnData['utr'] ?? "N/A"}'),
+              Text('Date: ${txnData['created_at']}'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // // ============================================
+  // // 9. GET ALL BANKS LIST
+  // // ============================================
+  // Future<void> getAllBanks(BuildContext context) async {
+  //   try {
+  //     if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
+  //       ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
+  //       ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
+  //       return;
+  //     }
+  //     Map<String, dynamic> body = {
+  //       "request_id": generateRequestId(),
+  //       "lat": loginController.latitude.value.toString(),
+  //       "long": loginController.longitude.value.toString(),
+  //     };
+  //
+  //     var response = await ApiProvider().requestPostForApi(
+  //       context,
+  //       WebApiConstant.API_URL_GET_ALL_BANKS,
+  //       body,
+  //       userAuthToken.value,
+  //       userSignature.value,
+  //     );
+  //
+  //     if (response != null && response.statusCode == 200) {
+  //       GetAllBanksResponseModel banksResponse =
+  //           GetAllBanksResponseModel.fromJson(response.data);
+  //
+  //       if (banksResponse.respCode == "RCS" && banksResponse.data != null) {
+  //         banksList.value = banksResponse.data!;
+  //         ConsoleLog.printSuccess("Banks loaded: ${banksList.length}");
+  //       }
+  //     }
+  //   } catch (e) {
+  //     ConsoleLog.printError("GET ALL BANKS ERROR: $e");
+  //   }
+  // }
+
   // ============================================
-  // 9. GET ALL BANKS LIST
+  // 10. GET ALL BANKS LIST - ✅ CORRECT
   // ============================================
   Future<void> getAllBanks(BuildContext context) async {
     try {
@@ -881,8 +1827,8 @@ class DmtWalletController extends GetxController {
       );
 
       if (response != null && response.statusCode == 200) {
-        GetAllBanksResponseModel banksResponse = 
-            GetAllBanksResponseModel.fromJson(response.data);
+        GetAllBanksResponseModel banksResponse =
+        GetAllBanksResponseModel.fromJson(response.data);
 
         if (banksResponse.respCode == "RCS" && banksResponse.data != null) {
           banksList.value = banksResponse.data!;
@@ -894,20 +1840,67 @@ class DmtWalletController extends GetxController {
     }
   }
 
+
+  // // ============================================
+  // // 10. SEARCH BENEFICIARIES
+  // // ============================================
+  // void searchBeneficiaries(String query) {
+  //   searchQuery.value = query.toLowerCase();
+  //
+  //   if (query.isEmpty) {
+  //     filteredBeneficiaryList.value = beneficiaryList;
+  //   } else {
+  //     filteredBeneficiaryList.value = beneficiaryList.where((bene) {
+  //       return (bene.beneName?.toLowerCase().contains(query) ?? false) ||
+  //              (bene.accountNumber?.contains(query) ?? false) ||
+  //              (bene.bankName?.toLowerCase().contains(query) ?? false);
+  //     }).toList();
+  //   }
+  // }
+
   // ============================================
-  // 10. SEARCH BENEFICIARIES
+  // 11. SEARCH BENEFICIARIES - ✅ CORRECT
   // ============================================
   void searchBeneficiaries(String query) {
     searchQuery.value = query.toLowerCase();
-    
+
     if (query.isEmpty) {
       filteredBeneficiaryList.value = beneficiaryList;
     } else {
       filteredBeneficiaryList.value = beneficiaryList.where((bene) {
-        return (bene.beneName?.toLowerCase().contains(query) ?? false) ||
-               (bene.accountNumber?.contains(query) ?? false) ||
-               (bene.bankName?.toLowerCase().contains(query) ?? false);
+        return (bene.name?.toLowerCase().contains(query) ?? false) ||
+            (bene.accountNo?.contains(query) ?? false) ||
+            (bene.bankName?.toLowerCase().contains(query) ?? false);
       }).toList();
+    }
+  }
+
+  // ============================================
+  // 11. GET ALL BENEFICIARY DETAILS
+  // ============================================
+
+  Future<void> getAllBeneficiaryDetails(
+      BuildContext context,
+      {int start = 0, int limit = 100, String searchBy = ""}
+      ) async {
+    Map<String, dynamic> body = {
+      "request_id": generateRequestId(),
+      "lat": loginController.latitude.value.toString(),
+      "long": loginController.longitude.value.toString(),
+      "start": start.toString(),
+      "limit": limit.toString(),
+      "searchby": searchBy,
+    };
+
+    var response = await ApiProvider().requestPostForApi(
+      context,
+      WebApiConstant.API_URL_GET_ALL_BENEFICIARY_DETAILS,
+      body,
+      userAuthToken.value,
+      userSignature.value,
+    );
+
+    if (response != null && response.statusCode == 200) {
     }
   }
 
@@ -953,12 +1946,15 @@ class DmtWalletController extends GetxController {
     senderNameController.value.dispose();
     senderAddressController.value.dispose();
     senderPincodeController.value.dispose();
+    senderOtpController.value.dispose();
     beneNameController.value.dispose();
     beneAccountController.value.dispose();
     beneIfscController.value.dispose();
     beneMobileController.value.dispose();
     transferAmountController.value.dispose();
+    transferModeController.value.dispose();
     tpinController.value.dispose();
+    deleteOtpController.value.dispose();
     super.onClose();
   }
 }

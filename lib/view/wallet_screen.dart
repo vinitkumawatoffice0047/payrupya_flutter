@@ -737,8 +737,8 @@ import 'add_beneficiary_screen.dart';
 import 'transfer_money_screen.dart';
 
 class WalletScreen extends StatefulWidget {
-  final bool showBackButton;
-  const WalletScreen({super.key, this.showBackButton = true});
+  // final bool showBackButton;
+  const WalletScreen({super.key/*, this.showBackButton = true*/});
 
   @override
   State<WalletScreen> createState() => _WalletScreenState();
@@ -747,18 +747,24 @@ class WalletScreen extends StatefulWidget {
 class _WalletScreenState extends State<WalletScreen> {
   final DmtWalletController dmtController = Get.put(DmtWalletController());
   final TextEditingController searchController = TextEditingController();
+  final TextEditingController mobileController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
 
-    // Fetch beneficiary list if sender is verified
-    if (dmtController.currentSender.value != null) {
-      dmtController.getBeneficiaryList(
-        context,
-        dmtController.currentSender.value!.mobile ?? "",
-      );
-    }
+    // Load service type on init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      dmtController.getAllowedServiceByType(context);
+      dmtController.getAllBanks(context);
+      // // Fetch beneficiary list if sender is verified
+      // if (dmtController.currentSender.value != null) {
+      //   dmtController.getBeneficiaryList(
+      //     context,
+      //     dmtController.currentSender.value!.mobile ?? "",
+      //   );
+      // }
+    });
   }
 
   @override
@@ -778,9 +784,9 @@ class _WalletScreenState extends State<WalletScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              if (!widget.showBackButton) ...[
-                SizedBox(height: GlobalUtils.screenHeight * (12 / 393)),
-              ],
+              // if (!widget.showBackButton) ...[
+              //   SizedBox(height: GlobalUtils.screenHeight * (12 / 393)),
+              // ],
               buildCustomAppBar(),
               Expanded(
                 child: SingleChildScrollView(
@@ -836,7 +842,7 @@ class _WalletScreenState extends State<WalletScreen> {
       ),
       child: Row(
         children: [
-          if (widget.showBackButton) ...[
+          // if (widget.showBackButton) ...[
             GestureDetector(
               onTap: () => Get.back(),
               child: Container(
@@ -850,7 +856,7 @@ class _WalletScreenState extends State<WalletScreen> {
               ),
             ),
             SizedBox(width: GlobalUtils.screenWidth * (14 / 393)),
-          ],
+          // ],
           Text(
             "Payrupya Wallet",
             style: GoogleFonts.albertSans(
@@ -884,8 +890,11 @@ class _WalletScreenState extends State<WalletScreen> {
       );
     }
 
-    double consumedLimit = double.tryParse(sender.consumedLimit ?? "0") ?? 0;
-    double monthlyLimit = double.tryParse(sender.monthlyLimit ?? "80000") ?? 80000;
+    // double consumedLimit = 15000; //for testing
+    double consumedLimit = double.tryParse(sender.senderdetail?.consumed_limit.toString() ?? "0") ?? 0;
+    double monthlyLimit = sender.senderdetail?.availabel_limit ?? 0;
+    // double? consumedLimit = double.tryParse(dmtController.consumedLimit.value);
+    // double? monthlyLimit = double.tryParse(dmtController.availableLimit.value);
     double progressPercentage = monthlyLimit > 0 ? (consumedLimit / monthlyLimit) : 0;
 
     return Container(
@@ -909,12 +918,15 @@ class _WalletScreenState extends State<WalletScreen> {
             children: [
               Row(
                 children: [
-                  Text(
-                    sender.name ?? "Unknown",
-                    style: GoogleFonts.albertSans(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xff1B1C1C),
+                  Obx(()=> Text(
+                      // sender.name ?? "Unknown",
+                      dmtController.senderName.value ?? "Unknown",
+                      style: GoogleFonts.albertSans(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        // color: Color(0xff1B1C1C),
+                        color: Colors.black,
+                      ),
                     ),
                   ),
                   SizedBox(width: 8),
@@ -924,7 +936,8 @@ class _WalletScreenState extends State<WalletScreen> {
               ),
               GestureDetector(
                 onTap: () {
-                  Get.to(() => AddSenderScreen());
+                  Get.back();
+                  // Get.to(() => AddSenderScreen());
                 },
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -954,7 +967,7 @@ class _WalletScreenState extends State<WalletScreen> {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              '+91 ${sender.mobile}',
+              '+91 ${dmtController.senderMobileNo.value}',
               style: TextStyle(fontSize: 14, color: Color(0xff1B1C1C)),
             ),
           ),
@@ -1194,7 +1207,11 @@ class _WalletScreenState extends State<WalletScreen> {
         children: [
           // Bank Logo
           Container(
-            child: beneficiary.logo != null && beneficiary.logo!.isNotEmpty
+            child: Icon(
+              Icons.account_balance,
+              size: 28,
+              color: Color(0xFF4A90E2),
+            ),/*beneficiary.logo != null && beneficiary.logo!.isNotEmpty
                 ? Image.network(
               beneficiary.logo!,
               width: 36,
@@ -1207,7 +1224,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 );
               },
             )
-                : Icon(Icons.account_balance, size: 28, color: Color(0xFF4A90E2)),
+                : Icon(Icons.account_balance, size: 28, color: Color(0xFF4A90E2)),*/
           ),
           SizedBox(width: 12),
 
@@ -1220,7 +1237,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   children: [
                     Flexible(
                       child: Text(
-                        beneficiary.bankName ?? "Unknown Bank",
+                        beneficiary.name ?? "Unknown Bank",
                         style: GoogleFonts.albertSans(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
@@ -1230,12 +1247,12 @@ class _WalletScreenState extends State<WalletScreen> {
                       ),
                     ),
                     SizedBox(width: 3),
-                    if (beneficiary.isVerified == true)
+                    if (beneficiary.isVerified == "1")//1 ka mtlb verified aur 0 ka mtlb unverified
                       Icon(Icons.verified, color: Color(0xff009C46), size: 16),
                   ],
                 ),
                 Text(
-                  beneficiary.beneName ?? "Unknown",
+                  beneficiary.name ?? "Unknown",
                   style: GoogleFonts.albertSans(
                     fontSize: 12,
                     color: Color(0xff6B707E),
@@ -1351,7 +1368,10 @@ class _WalletScreenState extends State<WalletScreen> {
                             child: GestureDetector(
                               onTap: () async {
                                 Get.back();
-                                await dmtController.deleteBeneficiary(context, beneId);
+                                // await dmtController.deleteBeneficiary(context, beneId);
+                                Future.delayed(Duration.zero, () {
+                                  dmtController.deleteBeneficiaryRequestOtp(context, beneId ?? '');
+                                });
                               },
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: 14),
