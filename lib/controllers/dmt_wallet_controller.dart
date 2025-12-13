@@ -310,7 +310,6 @@ class DmtWalletController extends GetxController {
   // ============================================
   Future<void> checkSender(BuildContext context, String mobile) async {
     try {
-
       // ✅ Validate token first
       if (!await isTokenValid()) {
         await refreshToken(context);
@@ -320,6 +319,30 @@ class DmtWalletController extends GetxController {
       if (mobile.isEmpty || mobile.length != 10) {
         Fluttertoast.showToast(msg: "Please enter valid 10-digit mobile number");
         return;
+      }
+
+      // Wait for service code if empty
+      if (serviceCode.value.isEmpty) {
+        ConsoleLog.printWarning("Service code not loaded, waiting...");
+        Fluttertoast.showToast(
+          msg: "Please wait, initializing services...",
+          backgroundColor: Colors.orange,
+        );
+
+        // Wait up to 5 seconds
+        int waitCount = 0;
+        while (serviceCode.value.isEmpty && waitCount < 10) {
+          await Future.delayed(Duration(milliseconds: 500));
+          waitCount++;
+        }
+
+        if (serviceCode.value.isEmpty) {
+          Fluttertoast.showToast(
+            msg: "Service not ready. Please try again.",
+            backgroundColor: Colors.red,
+          );
+          return;
+        }
       }
 
       // Check Internet

@@ -1263,7 +1263,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
   }
 
   Widget buildSenderForm() {
-    return Obx(() => Column(
+    return Column(
       children: [
         // Show loading indicator
         if (_isLoading) ...[
@@ -1730,7 +1730,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
         ),
         SizedBox(height: 16),
       ],
-    ));
+    );
   }
 
   // Helper Methods...
