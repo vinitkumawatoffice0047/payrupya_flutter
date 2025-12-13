@@ -777,6 +777,115 @@ class DmtWalletController extends GetxController {
   }
 
   // ============================================
+// NEW: GET BENEFICIARY NAME FROM ACCOUNT
+// ============================================
+  Future<void> getBeneficiaryName(BuildContext context) async {
+    try {
+      String accountNumber = beneAccountController.value.text.trim();
+      String ifsc = beneIfscController.value.text.trim();
+      String beneName = beneNameController.value.text.trim();
+
+      // Validation
+      if (accountNumber.isEmpty) {
+        Fluttertoast.showToast(msg: "Account number required!");
+        return;
+      }
+      if (!isValidAccountNumber(accountNumber)) {
+        Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
+        return;
+      }
+
+      if (ifsc.isEmpty) {
+        Fluttertoast.showToast(msg: "IFSC code required!");
+        return;
+      }
+      if (!isValidIFSC(ifsc)) {
+        Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
+        return;
+      }
+
+      if (selectedBank.value.isEmpty || selectedBank.value == "Select Bank") {
+        Fluttertoast.showToast(msg: "Please select bank first", backgroundColor: Colors.red);
+        return;
+      }
+
+      ConsoleLog.printColor("===>>> senderId.value.isEmpty: ${senderId.value.isEmpty}, senderMobileNo.value.isEmpty: ${senderMobileNo.value.isEmpty}\n");
+
+      if (senderId.value.isEmpty || senderMobileNo.value.isEmpty) {
+        Fluttertoast.showToast(msg: "Sender details not found");
+        return;
+      }
+
+      CustomLoading().show(context);
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+        "senderid": senderId.value,
+        "sender": senderMobileNo.value,
+        "request_type": "INITIATE BENEVALIDATION",
+        "service": serviceCode.value,
+        "account": accountNumber,
+        "banksel": selectedBank.value,
+        "bankifsc": ifsc,
+        "benename": beneName.isNotEmpty ? beneName : "",
+      };
+
+      ConsoleLog.printColor("GET BENEFICIARY NAME REQ: $body");
+
+      var response = await ApiProvider().requestPostForApi(
+        context,
+        WebApiConstant.API_URL_ADD_SENDER,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      CustomLoading().hide(context);
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+
+        if (data['Resp_code'] == 'RCS') {
+          if (data['data']?['txn_status'] == 'SUCCESS') {
+            isAccountVerified.value = true;
+
+            // Auto-fill beneficiary name
+            if (data['data']?['benename'] != null &&
+                data['data']['benename'].toString().isNotEmpty) {
+              String fetchedName = data['data']['benename'].toString();
+              beneNameController.value.text = fetchedName;
+
+              ConsoleLog.printSuccess("✅ Beneficiary name fetched: $fetchedName");
+              Fluttertoast.showToast(
+                msg: "Name fetched: $fetchedName",
+                backgroundColor: Colors.green,
+                toastLength: Toast.LENGTH_LONG,
+              );
+            }
+          } else if (data['data']?['txn_status'] == 'FAILED') {
+            isAccountVerified.value = false;
+            CustomDialog.error(
+              context: context,
+              message: data['Resp_desc'] ?? "Failed to fetch name",
+            );
+          }
+        } else {
+          CustomDialog.error(
+            context: context,
+            message: data['Resp_desc'] ?? "Unable to fetch beneficiary name",
+          );
+        }
+      }
+    } catch (e) {
+      CustomLoading().hide(context);
+      ConsoleLog.printError("GET BENEFICIARY NAME ERROR: $e");
+      CustomDialog.error(context: context, message: "Technical issue!");
+    }
+  }
+
+  // ============================================
   // 5. VERIFY ACCOUNT (INITIATE BENEVALIDATION)
   // ============================================
   Future<void> verifyAccount(BuildContext context) async {
@@ -992,7 +1101,9 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      if (senderId.value.isEmpty || currentSender.value?.mobile == null) {
+      ConsoleLog.printColor('======>>>>> senderId.value.isEmpty: ${senderId.value.isEmpty}, senderId.value: ${senderId.value} \n senderMobileNo.value: ${senderMobileNo.value}');
+
+      if (senderId.value.isEmpty || senderMobileNo.value.isEmpty) {
         Fluttertoast.showToast(msg: "Sender details not found");
         return;
       }
@@ -1004,9 +1115,9 @@ class DmtWalletController extends GetxController {
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
         "senderid": senderId.value,                           
-        "sender": currentSender.value!.mobile,                
+        "sender": senderMobileNo.value,
         "senderdata": {                                       
-          "sendermobile": currentSender.value!.mobile,
+          "sendermobile": senderMobileNo.value,
         },
         "request_type": "ADD BENEDATA",                       
         "service": serviceCode.value,
@@ -1039,9 +1150,10 @@ class DmtWalletController extends GetxController {
           Fluttertoast.showToast(msg: "Beneficiary added successfully");
 
           // Refresh beneficiary list
-          await getBeneficiaryList(context, currentSender.value?.mobile ?? "");
+          await getBeneficiaryList(context, senderMobileNo.value);
 
           // Clear form
+          selectedBank.value = "Select Bank";
           beneNameController.value.clear();
           beneAccountController.value.clear();
           beneIfscController.value.clear();

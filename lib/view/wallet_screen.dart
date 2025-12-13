@@ -1017,7 +1017,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       ),
                       SizedBox(width: 6),
                       Text(
-                        'Consumed Unit',
+                        'Consumed Limit',
                         style: GoogleFonts.albertSans(
                           fontSize: 12,
                           color: Color(0xff707070),

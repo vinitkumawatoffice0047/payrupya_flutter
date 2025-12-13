@@ -489,10 +489,19 @@ class AddBeneficiaryScreen extends StatefulWidget {
 class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
   final DmtWalletController dmtController = Get.put(DmtWalletController());
   final ValueNotifier<int> charCountNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<bool> isLoadingName = ValueNotifier<bool>(false);
 
   @override
   void initState() {
     super.initState();
+    // Clear form
+    dmtController.selectedBank.value = "Select Bank";
+    dmtController.beneIfscController.value.clear();
+    dmtController.beneMobileController.value.clear();
+    dmtController.beneAccountController.value.clear();
+    dmtController.beneNameController.value.clear();
+    dmtController.isAccountVerified.value = false;
+
     // Fetch banks list
     Future.delayed(Duration(milliseconds: 300), () {
       if (mounted) {
@@ -503,7 +512,8 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
 
   @override
   void dispose() {
-    charCountNotifier.dispose(); // Memory leak se bachne ke liye dispose karein
+    charCountNotifier.dispose();
+    isLoadingName.dispose();
     super.dispose();
   }
 
@@ -598,7 +608,7 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
               SizedBox(height: 20),
 
               // Bank Selection
-              buildLabelText('Select Bank *'),
+              buildLabelText('Bank Name'),
               SizedBox(height: 8),
               GestureDetector(
                 onTap: () {
@@ -644,8 +654,97 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
               ),
               SizedBox(height: 16),
 
+              // IFSC Code
+              SizedBox(child: Row(
+                children: [
+                  buildLabelText('IFSC'),
+                  Text("*", style: TextStyle(color: Colors.red, fontSize: 12,),),
+                ],
+              )),
+              SizedBox(height: 8),
+              GlobalUtils.CustomTextField(
+                label: "IFSC Code",
+                showLabel: false,
+                controller: dmtController.beneIfscController.value,
+                placeholder: "IFSC Code",
+                height: GlobalUtils.screenWidth * (60 / 393),
+                width: GlobalUtils.screenWidth * 0.9,
+                backgroundColor: Colors.white,
+                borderColor: Color(0xffE2E5EC),
+                borderRadius: 16,
+                placeholderStyle: GoogleFonts.albertSans(
+                  fontSize: GlobalUtils.screenWidth * (14 / 393),
+                  color: Color(0xFF6B707E),
+                ),
+                inputTextStyle: GoogleFonts.albertSans(
+                  fontSize: GlobalUtils.screenWidth * (14 / 393),
+                  color: Color(0xFF1B1C1C),
+                ),
+                prefixIcon: Icon(Icons.code,
+                    color: Color(0xFF6B707E), size: 20),
+                /*suffixIcon: TextButton(
+                  onPressed: () async {
+                    String account = dmtController.beneAccountController.value.text.trim();
+                    String ifsc = dmtController.beneIfscController.value.text.trim();
+
+                    if (account.isEmpty) {
+                      Fluttertoast.showToast(msg: "Account number required!");
+                      return;
+                    }
+                    if (!dmtController.isValidAccountNumber(account)) {
+                      Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
+                      return;
+                    }
+                    if (ifsc.isEmpty) {
+                      Fluttertoast.showToast(msg: "IFSC code required!");
+                      return;
+                    }
+                    if (!dmtController.isValidIFSC(ifsc)) {
+                      Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
+                      return;
+                    }
+                    if(dmtController.beneNameController.value.text.trim().isEmpty){
+                      Fluttertoast.showToast(msg: "Please enter beneficiary name!");
+                      return;
+                    }
+                    if (dmtController.selectedBank.value.isEmpty || dmtController.selectedBank.value == "Select Bank") {
+                      Fluttertoast.showToast(msg: "Please select bank first", backgroundColor: Colors.red);
+                      return;
+                    }
+
+                    // Verify account
+                    await dmtController.verifyAccount(context);
+                  },
+                  child: dmtController.isAccountVerified.value ?
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                      Image.asset("assets/images/verified_icon.png",
+                      height: 20,
+                      ),
+                      SizedBox(width: 2,),
+                      Text("Verified", style: GoogleFonts.albertSans(
+                        fontSize: GlobalUtils.screenWidth * (14 / 393),
+                        color: Color(0xFF0054D3),
+                        fontWeight: FontWeight.w500,
+                      ),),
+                      SizedBox(width: 12,),
+                    ],) :
+                    Text(
+                      "Verify",
+                      style: GoogleFonts.albertSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF0054D3),
+                      ),
+                    ),
+                ),*/
+              ),
+
+              SizedBox(height: 16),
+
               // Account Number
-              buildLabelText('Account Number *'),
+              buildLabelText('Account Number'),
               SizedBox(height: 8),
               GlobalUtils.CustomTextField(
                 onChanged: (value) {
@@ -654,7 +753,7 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
                 label: "Account Number",
                 showLabel: false,
                 controller: dmtController.beneAccountController.value,
-                placeholder: "Enter Account Number",
+                placeholder: "Account Number",
                 height: GlobalUtils.screenWidth * (60 / 393),
                 width: GlobalUtils.screenWidth * 0.9,
                 backgroundColor: Colors.white,
@@ -697,85 +796,7 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
                 prefixIcon: Icon(Icons.account_balance_wallet,
                     color: Color(0xFF6B707E), size: 20),
               ),
-              SizedBox(height: 16),
 
-              // IFSC Code
-              buildLabelText('IFSC Code *'),
-              SizedBox(height: 8),
-              GlobalUtils.CustomTextField(
-                label: "IFSC Code",
-                showLabel: false,
-                controller: dmtController.beneIfscController.value,
-                placeholder: "Enter IFSC Code",
-                height: GlobalUtils.screenWidth * (60 / 393),
-                width: GlobalUtils.screenWidth * 0.9,
-                backgroundColor: Colors.white,
-                borderColor: Color(0xffE2E5EC),
-                borderRadius: 16,
-                placeholderStyle: GoogleFonts.albertSans(
-                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  color: Color(0xFF6B707E),
-                ),
-                inputTextStyle: GoogleFonts.albertSans(
-                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  color: Color(0xFF1B1C1C),
-                ),
-                prefixIcon: Icon(Icons.code,
-                    color: Color(0xFF6B707E), size: 20),
-                suffixIcon: TextButton(
-                  onPressed: () async {
-                    String account = dmtController.beneAccountController.value.text.trim();
-                    String ifsc = dmtController.beneIfscController.value.text.trim();
-
-                    if (account.isEmpty) {
-                      Fluttertoast.showToast(msg: "Account number required!");
-                      return;
-                    }
-                    if (!dmtController.isValidAccountNumber(account)) {
-                      Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
-                      return;
-                    }
-
-                    if (ifsc.isEmpty) {
-                      Fluttertoast.showToast(msg: "IFSC code required!");
-                      return;
-                    }
-                    if (!dmtController.isValidIFSC(ifsc)) {
-                      Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
-                      return;
-                    }
-
-                    if(dmtController.beneNameController.value.text.trim().isEmpty){
-                      Fluttertoast.showToast(msg: "Please enter beneficiary name!");
-                      return;
-                    }
-
-                    // if (account.isEmpty || ifsc.isEmpty) {
-                    //   Fluttertoast.showToast(
-                    //     msg: "Please enter account number and IFSC",
-                    //     backgroundColor: Colors.red,
-                    //   );
-                    //   return;
-                    // }
-
-                    if (dmtController.selectedBank.value.isEmpty || dmtController.selectedBank.value == "Select Bank") {
-                      Fluttertoast.showToast(msg: "Please select bank first", backgroundColor: Colors.red);
-                      return;
-                    }
-
-                    // Verify account
-                    await dmtController.verifyAccount(context);
-                  },
-                  child: Text(
-                    "Verify",
-                    style: GoogleFonts.albertSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF0054D3),
-                    ),
-                  ),
-                ),
-              ),
               SizedBox(height: 16),
 
               // Account verification status
@@ -809,68 +830,84 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
               ],
 
               // Beneficiary Name
-              buildLabelText('Beneficiary Name *'),
+              buildLabelText('Account Holder Name'),
               SizedBox(height: 8),
               GlobalUtils.CustomTextField(
-                label: "Beneficiary Name",
+                label: "Account Holder Name",
                 showLabel: false,
                 controller: dmtController.beneNameController.value,
-                placeholder: "Enter Beneficiary Name",
+                placeholder: "Account Holder Name",
                 height: GlobalUtils.screenWidth * (60 / 393),
                 width: GlobalUtils.screenWidth * 0.9,
                 backgroundColor: Colors.white,
                 borderColor: Color(0xffE2E5EC),
                 borderRadius: 16,
                 isName: true,
-                suffixIcon: TextButton(
-                  onPressed: (){
-                    String account = dmtController.beneAccountController.value.text.trim();
-                    String ifsc = dmtController.beneIfscController.value.text.trim();
-                    if (account.isEmpty) {
-                      Fluttertoast.showToast(msg: "Account number required!");
-                      return;
-                    }
-                    if (!dmtController.isValidAccountNumber(account)) {
-                      Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
-                      return;
-                    }
-                    if (ifsc.isEmpty) {
-                      Fluttertoast.showToast(msg: "IFSC code required!");
-                      return;
-                    }
-                    if (!dmtController.isValidIFSC(ifsc)) {
-                      Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
-                      return;
-                    }
-                    if (dmtController.selectedBank.value.isEmpty || dmtController.selectedBank.value == "Select Bank") {
-                      Fluttertoast.showToast(msg: "Please select bank first", backgroundColor: Colors.red);
-                      return;
-                    }
-                    // dmtController.getBeneficiaryName(context);
-                  },
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    margin: EdgeInsets.only(right: 8),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Get Name',
-                          style: GoogleFonts.albertSans(
-                            color: Color(0xFF0054D3),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
+                suffixIcon: ValueListenableBuilder<bool>(
+                  valueListenable: isLoadingName,
+                  builder: (context, loading, child) {
+                    return TextButton(
+                      onPressed: loading ? null : () async{
+                        String account = dmtController.beneAccountController.value.text.trim();
+                        String ifsc = dmtController.beneIfscController.value.text.trim();
+                        if (account.isEmpty) {
+                          Fluttertoast.showToast(msg: "Account number required!");
+                          return;
+                        }
+                        if (!dmtController.isValidAccountNumber(account)) {
+                          Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
+                          return;
+                        }
+                        if (ifsc.isEmpty) {
+                          Fluttertoast.showToast(msg: "IFSC code required!");
+                          return;
+                        }
+                        if (!dmtController.isValidIFSC(ifsc)) {
+                          Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
+                          return;
+                        }
+                        if (dmtController.selectedBank.value.isEmpty || dmtController.selectedBank.value == "Select Bank") {
+                          Fluttertoast.showToast(msg: "Please select bank first", backgroundColor: Colors.red);
+                          return;
+                        }
+                        isLoadingName.value = true;
+                        await dmtController.getBeneficiaryName(context);
+                        isLoadingName.value = false;
+                        // dmtController.getBeneficiaryName(context);
+                      },
+                      child: loading
+                          ? SizedBox(  // ✅ Show loading indicator
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0054D3)),
                         ),
-                      ],
-                    ),
-                  ),
+                      )
+                          : Container(  // ✅ Show "Get Name" text
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Get Name',
+                              style: GoogleFonts.albertSans(
+                                color: Color(0xFF0054D3),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                onSubmitted: (value){
-                  if(value.isNotEmpty){
-                    dmtController.currentSender.value?.name = value;
-                  }
-                },
+                // onSubmitted: (value){
+                //   if(value.isNotEmpty){
+                //     dmtController.currentSender.value?.name = value;
+                //   }
+                // },
                 placeholderStyle: GoogleFonts.albertSans(
                   fontSize: GlobalUtils.screenWidth * (14 / 393),
                   color: Color(0xFF6B707E),
@@ -884,57 +921,57 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
                 enabled: !dmtController.isAccountVerified.value,
                 readOnly: dmtController.isAccountVerified.value,
               ),
-              SizedBox(height: 16),
-
-              // Mobile Number (Optional)
-              buildLabelText('Mobile Number (Optional)'),
-              SizedBox(height: 8),
-              GlobalUtils.CustomTextField(
-                label: "Mobile Number",
-                showLabel: false,
-                controller: dmtController.beneMobileController.value,
-                placeholder: "Enter Mobile Number",
-                height: GlobalUtils.screenWidth * (60 / 393),
-                width: GlobalUtils.screenWidth * 0.9,
-                backgroundColor: Colors.white,
-                borderColor: Color(0xffE2E5EC),
-                borderRadius: 16,
-                isMobileNumber: true,
-                onSubmitted: (value) {
-                  if (value.isNotEmpty && !value.startsWith('+91')) {
-                    dmtController.currentSender.value?.mobile = value;
-                  }
-                },
-                placeholderStyle: GoogleFonts.albertSans(
-                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  color: Color(0xFF6B707E),
-                ),
-                inputTextStyle: GoogleFonts.albertSans(
-                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  color: Color(0xFF1B1C1C),
-                ),
-                prefixIcon: Icon(Icons.phone,
-                    color: Color(0xFF6B707E), size: 20),
-              ),
-              SizedBox(height: 8),
-
-              // Info text
-              Row(
-                children: [
-                  Icon(Icons.info_outline,
-                      size: 16, color: Color(0xFF6B707E)),
-                  SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Make sure all details are correct before adding',
-                      style: GoogleFonts.albertSans(
-                        fontSize: 12,
-                        color: Color(0xFF6B707E),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              // SizedBox(height: 16),
+              //
+              // // Mobile Number (Optional)
+              // buildLabelText('Mobile Number (Optional)'),
+              // SizedBox(height: 8),
+              // GlobalUtils.CustomTextField(
+              //   label: "Mobile Number",
+              //   showLabel: false,
+              //   controller: dmtController.beneMobileController.value,
+              //   placeholder: "Mobile Number",
+              //   height: GlobalUtils.screenWidth * (60 / 393),
+              //   width: GlobalUtils.screenWidth * 0.9,
+              //   backgroundColor: Colors.white,
+              //   borderColor: Color(0xffE2E5EC),
+              //   borderRadius: 16,
+              //   isMobileNumber: true,
+              //   onSubmitted: (value) {
+              //     if (value.isNotEmpty && !value.startsWith('+91')) {
+              //       dmtController.currentSender.value?.mobile = value;
+              //     }
+              //   },
+              //   placeholderStyle: GoogleFonts.albertSans(
+              //     fontSize: GlobalUtils.screenWidth * (14 / 393),
+              //     color: Color(0xFF6B707E),
+              //   ),
+              //   inputTextStyle: GoogleFonts.albertSans(
+              //     fontSize: GlobalUtils.screenWidth * (14 / 393),
+              //     color: Color(0xFF1B1C1C),
+              //   ),
+              //   prefixIcon: Icon(Icons.phone,
+              //       color: Color(0xFF6B707E), size: 20),
+              // ),
+              // SizedBox(height: 8),
+              //
+              // // Info text
+              // Row(
+              //   children: [
+              //     Icon(Icons.info_outline,
+              //         size: 16, color: Color(0xFF6B707E)),
+              //     SizedBox(width: 6),
+              //     Expanded(
+              //       child: Text(
+              //         'Make sure all details are correct before adding',
+              //         style: GoogleFonts.albertSans(
+              //           fontSize: 12,
+              //           color: Color(0xFF6B707E),
+              //         ),
+              //       ),
+              //     ),
+              //   ],
+              // ),
             ],
           ),
         ),
@@ -942,7 +979,7 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
 
         // Add Beneficiary Button
         GlobalUtils.CustomButton(
-          text: "Add Beneficiary",
+          text: "Save",
           onPressed: () async {
             if (dmtController.selectedBank.value.isEmpty || dmtController.selectedBank.value == "Select Bank") {
               Fluttertoast.showToast(msg: "Please select bank");
