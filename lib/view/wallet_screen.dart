@@ -731,6 +731,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controllers/dmt_wallet_controller.dart';
+import '../models/get_beneficiary_list_response_model.dart';
 import '../utils/global_utils.dart';
 import 'add_sender_screen.dart';
 import 'add_beneficiary_screen.dart';
@@ -769,64 +770,71 @@ class _WalletScreenState extends State<WalletScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        height: GlobalUtils.getScreenHeight(),
-        width: GlobalUtils.getScreenWidth(),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: GlobalUtils.getBackgroundColor()
+    return GestureDetector(
+      // for manage multiple text field keyboard and cursor
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      behavior: HitTestBehavior.translucent,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          height: GlobalUtils.getScreenHeight(),
+          width: GlobalUtils.getScreenWidth(),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: GlobalUtils.getBackgroundColor()
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // if (!widget.showBackButton) ...[
-              //   SizedBox(height: GlobalUtils.screenHeight * (12 / 393)),
-              // ],
-              buildCustomAppBar(),
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: BouncingScrollPhysics(),
-                  child: Obx(() => Column(
-                    children: [
-                      buildSenderCard(GlobalUtils.screenWidth),
-                      SizedBox(height: 20),
-                      buildBeneficiarySection(GlobalUtils.screenWidth),
-                      SizedBox(height: 16),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // if (!widget.showBackButton) ...[
+                //   SizedBox(height: GlobalUtils.screenHeight * (12 / 393)),
+                // ],
+                buildCustomAppBar(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: BouncingScrollPhysics(),
+                    child: Obx(() => Column(
+                      children: [
+                        buildSenderCard(GlobalUtils.screenWidth),
+                        SizedBox(height: 20),
+                        buildBeneficiarySection(GlobalUtils.screenWidth),
+                        SizedBox(height: 16),
 
-                      // Add Beneficiary Button
-                      GlobalUtils.CustomButton(
-                        text: "Add Beneficiary",
-                        onPressed: () {
-                          Get.to(() => AddBeneficiaryScreen());
-                        },
-                        textStyle: GoogleFonts.albertSans(
-                          fontSize: GlobalUtils.screenWidth * (16 / 393),
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
+                        // Add Beneficiary Button
+                        GlobalUtils.CustomButton(
+                          text: "Add Beneficiary",
+                          onPressed: () {
+                            Get.to(() => AddBeneficiaryScreen());
+                          },
+                          textStyle: GoogleFonts.albertSans(
+                            fontSize: GlobalUtils.screenWidth * (16 / 393),
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          icon: Icon(Icons.add, color: Colors.white, size: 20),
+                          width: GlobalUtils.screenWidth * 0.9,
+                          height: GlobalUtils.screenWidth * (60 / 393),
+                          backgroundGradient: GlobalUtils.blueBtnGradientColor,
+                          borderColor: Color(0xFF71A9FF),
+                          showShadow: false,
+                          textColor: Colors.white,
+                          animation: ButtonAnimation.fade,
+                          animationDuration: const Duration(milliseconds: 150),
+                          buttonType: ButtonType.elevated,
+                          borderRadius: 16,
                         ),
-                        icon: Icon(Icons.add, color: Colors.white, size: 20),
-                        width: GlobalUtils.screenWidth * 0.9,
-                        height: GlobalUtils.screenWidth * (60 / 393),
-                        backgroundGradient: GlobalUtils.blueBtnGradientColor,
-                        borderColor: Color(0xFF71A9FF),
-                        showShadow: false,
-                        textColor: Colors.white,
-                        animation: ButtonAnimation.fade,
-                        animationDuration: const Duration(milliseconds: 150),
-                        buttonType: ButtonType.elevated,
-                        borderRadius: 16,
-                      ),
-                      SizedBox(height: 16),
-                    ],
-                  )),
+                        SizedBox(height: 16),
+                      ],
+                    )),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1113,25 +1121,30 @@ class _WalletScreenState extends State<WalletScreen> {
                     color: Color(0xff1B1C1C),
                   ),
                 ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(color: Colors.grey[200]!),
-                  ),
-                  child: Row(
-                    children: [
-                      Image.asset("assets/icons/sort_icon.png", height: 16, width: 16),
-                      SizedBox(width: 4),
-                      Text(
-                        'Sort',
-                        style: GoogleFonts.albertSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: Color(0xff1B1C1C),
+                GestureDetector(
+                  onTap: () {
+                    dmtController.showSortOptionsDialog(context);
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(100),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Image.asset("assets/icons/sort_icon.png", height: 16, width: 16),
+                        SizedBox(width: 4),
+                        Text(
+                          'Sort',
+                          style: GoogleFonts.albertSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xff1B1C1C),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -1147,6 +1160,11 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
             child: TextField(
               controller: searchController,
+              style: GoogleFonts.albertSans(
+                fontSize: 14,
+                color: Color(0xff1B1C1C),
+              ),
+              cursorColor: Colors.black54,
               decoration: InputDecoration(
                 hintText: 'Search Bank or Account or Name',
                 hintStyle: GoogleFonts.albertSans(
@@ -1155,11 +1173,23 @@ class _WalletScreenState extends State<WalletScreen> {
                   fontWeight: FontWeight.w400,
                 ),
                 prefixIcon: Image.asset("assets/icons/search_icon.png", scale: 3),
+                // Clear button when text is present
+                suffixIcon: searchController.text.isNotEmpty
+                    ? IconButton(
+                  icon: Icon(Icons.clear, color: Colors.grey[600]),
+                  onPressed: () {
+                    searchController.clear();
+                    dmtController.searchBeneficiaries('');
+                    setState(() {});
+                  },
+                )
+                    : null,
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
               onChanged: (value) {
                 dmtController.searchBeneficiaries(value);
+                setState(() {});
               },
             ),
           ),
@@ -1170,29 +1200,56 @@ class _WalletScreenState extends State<WalletScreen> {
             if (dmtController.filteredBeneficiaryList.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.all(20.0),
-                child: Text(
-                  'No beneficiaries found',
-                  style: GoogleFonts.albertSans(
-                    fontSize: 14,
-                    color: Color(0xff6B707E),
-                  ),
+                child: Column(
+                  children: [
+                    Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
+                    SizedBox(height: 12),
+                    Text(
+                      searchController.text.isNotEmpty
+                          ? 'No beneficiaries found matching "${searchController.text}"'
+                          : 'No beneficiaries found',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.albertSans(
+                        fontSize: 14,
+                        color: Color(0xff6B707E),
+                      ),
+                    ),
+                  ],
                 ),
               );
             }
 
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: dmtController.filteredBeneficiaryList.length,
-              itemBuilder: (context, index) {
-                return buildBeneficiaryCard(
-                  dmtController.filteredBeneficiaryList[index],
-                  screenWidth,
-                );
-              },
-              separatorBuilder: (context, index) {
-                return Container(height: 1, color: Colors.grey.shade300);
-              },
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Results count
+                if (searchController.text.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8, left: 4),
+                    child: Text(
+                      '${dmtController.filteredBeneficiaryList.length} result(s) found',
+                      style: GoogleFonts.albertSans(
+                        fontSize: 12,
+                        color: Color(0xff6B707E),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: dmtController.filteredBeneficiaryList.length,
+                  itemBuilder: (context, index) {
+                    return buildBeneficiaryCard(
+                      dmtController.filteredBeneficiaryList[index],
+                      screenWidth,
+                    );
+                  },
+                  separatorBuilder: (context, index) {
+                    return Container(height: 1, color: Colors.grey.shade300);
+                  },
+                ),
+              ],
             );
           }),
         ],
@@ -1200,7 +1257,7 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  Widget buildBeneficiaryCard(dynamic beneficiary, double screenWidth) {
+  Widget buildBeneficiaryCard(BeneficiaryData beneficiary, double screenWidth) {
     return Container(
       margin: EdgeInsets.symmetric(vertical: 12),
       child: Row(
@@ -1237,7 +1294,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   children: [
                     Flexible(
                       child: Text(
-                        beneficiary.name ?? "Unknown Bank",
+                        beneficiary.bankName ?? "Unknown Bank",
                         style: GoogleFonts.albertSans(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
@@ -1247,12 +1304,33 @@ class _WalletScreenState extends State<WalletScreen> {
                       ),
                     ),
                     SizedBox(width: 3),
-                    if (beneficiary.isVerified == "1")//1 ka mtlb verified aur 0 ka mtlb unverified
+                    if (beneficiary.isVerified == "1")...[//1 ka mtlb verified aur 0 ka mtlb unverified
                       Icon(Icons.verified, color: Color(0xff009C46), size: 16),
+                    ]else...[
+                      Icon(Icons.error, color: Colors.red, size: 16),
+                    ]
                   ],
                 ),
                 Text(
                   beneficiary.name ?? "Unknown",
+                  style: GoogleFonts.albertSans(
+                    fontSize: 12,
+                    color: Color(0xff6B707E),
+                    fontWeight: FontWeight.w400,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  beneficiary.accountNo ?? "",
+                  style: GoogleFonts.albertSans(
+                    fontSize: 12,
+                    color: Color(0xff6B707E),
+                    fontWeight: FontWeight.w400,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  beneficiary.ifsc ?? "",
                   style: GoogleFonts.albertSans(
                     fontSize: 12,
                     color: Color(0xff6B707E),

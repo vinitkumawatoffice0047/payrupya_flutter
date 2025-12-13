@@ -519,20 +519,27 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFF0F4F8),
-      body: SafeArea(
-        child: Column(
-          children: [
-            buildCustomAppBar(),
-            Expanded(
-              child: SingleChildScrollView(
-                physics: BouncingScrollPhysics(),
-                padding: EdgeInsets.all(10),
-                child: buildBeneficiaryForm(),
+    return GestureDetector(
+      // for manage multiple text field keyboard and cursor
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      behavior: HitTestBehavior.translucent,
+      child: Scaffold(
+        backgroundColor: Color(0xFFF0F4F8),
+        body: SafeArea(
+          child: Column(
+            children: [
+              buildCustomAppBar(),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: BouncingScrollPhysics(),
+                  padding: EdgeInsets.all(10),
+                  child: buildBeneficiaryForm(),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

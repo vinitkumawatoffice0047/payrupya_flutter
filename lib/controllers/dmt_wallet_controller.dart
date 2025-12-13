@@ -27,6 +27,17 @@ import '../view/login_screen.dart';
 import '../view/onboarding_screen.dart';
 import 'login_controller.dart';
 
+// ============================================
+// SORT OPTIONS ENUM
+// ============================================
+enum BeneficiarySortOption {
+  nameAsc,      // A to Z
+  nameDesc,     // Z to A
+  bankAsc,      // Bank A to Z
+  bankDesc,     // Bank Z to A
+  recent,       // Recently Added (if having any timestamp)
+}
+
 class DmtWalletController extends GetxController {
   LoginController loginController = Get.put(LoginController());
 
@@ -38,6 +49,13 @@ class DmtWalletController extends GetxController {
   void onInit() {
     super.onInit();
     loadAuthCredentials();
+
+    // LOAD SERVICE ON INIT
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (Get.context != null) {
+        await getAllowedServiceByType(Get.context!);
+      }
+    });
     // getAllowedServiceByType(Get.context!);
   }
 
@@ -86,6 +104,7 @@ class DmtWalletController extends GetxController {
   Rx<TextEditingController> beneMobileController = TextEditingController().obs;
   
   Rx<TextEditingController> transferAmountController = TextEditingController().obs;
+  Rx<TextEditingController> transferConfirmAmountController = TextEditingController().obs;
   Rx<TextEditingController> transferModeController = TextEditingController().obs;
   Rx<TextEditingController> tpinController = TextEditingController().obs;
 
@@ -123,6 +142,9 @@ class DmtWalletController extends GetxController {
   
   // Search
   RxString searchQuery = ''.obs;
+  Rx<BeneficiarySortOption> currentSortOption = BeneficiarySortOption.nameAsc.obs;
+  RxString currentSortLabel = 'Name A-Z'.obs;
+
   RxString serviceCode = ''.obs;
   RxBool isServiceLoaded = false.obs;
 
@@ -733,6 +755,9 @@ class DmtWalletController extends GetxController {
         if (beneListResponse.respCode == "RCS" && beneListResponse.data != null) {
           beneficiaryList.value = beneListResponse.data!;
           filteredBeneficiaryList.value = beneListResponse.data!;
+
+          // Current sort after loading
+          applySortOption(currentSortOption.value);
 
           ConsoleLog.printSuccess("Beneficiaries loaded: ${beneficiaryList.length}");
 
@@ -1550,6 +1575,7 @@ class DmtWalletController extends GetxController {
   Future<void> confirmTransfer(BuildContext context, BeneficiaryData beneficiary) async {
     try {
       String amount = transferAmountController.value.text.trim();
+      String confirmAmount = transferConfirmAmountController.value.text.trim();
       String mode = selectedTransferMode.value; // IMPS or NEFT
 
       if (amount.isEmpty) {
@@ -1563,7 +1589,19 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      if (senderId.value.isEmpty || currentSender.value?.mobile == null) {
+      if (confirmAmount.isEmpty) {
+        Fluttertoast.showToast(msg: "Please confirm amount");
+        return;
+      }
+
+      double confirmAmountValue = double.tryParse(confirmAmount) ?? 0;
+      if (confirmAmountValue <= 0) {
+        Fluttertoast.showToast(msg: "Please enter valid amount");
+        return;
+      }
+
+      // if (senderId.value.isEmpty || currentSender.value?.mobile == null) {
+      if (senderId.value.isEmpty || senderMobileNo.isEmpty) {
         Fluttertoast.showToast(msg: "Sender details not found");
         return;
       }
@@ -1576,11 +1614,11 @@ class DmtWalletController extends GetxController {
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
         "senderid": senderId.value,
-        "sender": currentSender.value!.mobile,
+        "sender": /*currentSender.value!.mobile*/senderMobileNo,
         "service": serviceCode.value,
         "request_type": "CONFIRM",
         "amount": amount,
-        "cnfamount": amount,
+        "cnfamount": confirmAmount,
         "mode": mode,                                         // (IMPS/NEFT)
         "sendername": senderName.value,
         "beneid": beneficiary.beneId,
@@ -1971,7 +2009,7 @@ class DmtWalletController extends GetxController {
   // }
 
   // ============================================
-  // 11. SEARCH BENEFICIARIES - ✅ CORRECT
+  // 11. SEARCH BENEFICIARIES
   // ============================================
   void searchBeneficiaries(String query) {
     searchQuery.value = query.toLowerCase();
@@ -1981,10 +2019,224 @@ class DmtWalletController extends GetxController {
     } else {
       filteredBeneficiaryList.value = beneficiaryList.where((bene) {
         return (bene.name?.toLowerCase().contains(query) ?? false) ||
+            (bene.name?.toUpperCase().contains(query) ?? false) ||
             (bene.accountNo?.contains(query) ?? false) ||
-            (bene.bankName?.toLowerCase().contains(query) ?? false);
+            (bene.bankName?.toLowerCase().contains(query) ?? false) ||
+            (bene.bankName?.toUpperCase().contains(query) ?? false);
       }).toList();
     }
+
+    // Current sort after search
+    applySortOption(currentSortOption.value);
+  }
+
+  // ============================================
+  // 12. SORT BENEFICIARIES - ✅ NEW FUNCTIONALITY
+  // ============================================
+  void sortBeneficiaries(BeneficiarySortOption option) {
+    currentSortOption.value = option;
+    applySortOption(option);
+
+    // Update sort label
+    switch (option) {
+      case BeneficiarySortOption.nameAsc:
+        currentSortLabel.value = 'Name A-Z';
+        break;
+      case BeneficiarySortOption.nameDesc:
+        currentSortLabel.value = 'Name Z-A';
+        break;
+      case BeneficiarySortOption.bankAsc:
+        currentSortLabel.value = 'Bank A-Z';
+        break;
+      case BeneficiarySortOption.bankDesc:
+        currentSortLabel.value = 'Bank Z-A';
+        break;
+      case BeneficiarySortOption.recent:
+        currentSortLabel.value = 'Recently Added';
+        break;
+    }
+  }
+
+  void applySortOption(BeneficiarySortOption option) {
+    List<BeneficiaryData> listToSort = List.from(filteredBeneficiaryList);
+
+    switch (option) {
+      case BeneficiarySortOption.nameAsc:
+        listToSort.sort((a, b) =>
+            (a.name ?? '').toLowerCase().compareTo((b.name ?? '').toLowerCase())
+        );
+        break;
+
+      case BeneficiarySortOption.nameDesc:
+        listToSort.sort((a, b) =>
+            (b.name ?? '').toLowerCase().compareTo((a.name ?? '').toLowerCase())
+        );
+        break;
+
+      case BeneficiarySortOption.bankAsc:
+        listToSort.sort((a, b) =>
+            (a.bankName ?? '').toLowerCase().compareTo((b.bankName ?? '').toLowerCase())
+        );
+        break;
+
+      case BeneficiarySortOption.bankDesc:
+        listToSort.sort((a, b) =>
+            (b.bankName ?? '').toLowerCase().compareTo((a.bankName ?? '').toLowerCase())
+        );
+        break;
+
+      case BeneficiarySortOption.recent:
+      // If you have createdAt or addedAt timestamp in BeneficiaryData model
+      listToSort.sort((a, b) =>
+        (b.updatedOn ?? '').compareTo(a.updatedOn ?? '')
+      );
+      // For now, reverse the list (assumes newer items are added at end)
+        listToSort = listToSort.reversed.toList();
+        break;
+    }
+
+    filteredBeneficiaryList.value = listToSort;
+  }
+
+  // ============================================
+  // 13. SHOW SORT OPTIONS DIALOG
+  // ============================================
+  void showSortOptionsDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(height: 16),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                SizedBox(height: 16),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Sort By',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xff1B1C1C),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16),
+                Obx(() => Column(
+                  children: [
+                    buildSortOption(
+                      context,
+                      'Name A-Z',
+                      Icons.sort_by_alpha,
+                      BeneficiarySortOption.nameAsc,
+                      currentSortOption.value == BeneficiarySortOption.nameAsc,
+                    ),
+                    buildSortOption(
+                      context,
+                      'Name Z-A',
+                      Icons.sort_by_alpha,
+                      BeneficiarySortOption.nameDesc,
+                      currentSortOption.value == BeneficiarySortOption.nameDesc,
+                    ),
+                    buildSortOption(
+                      context,
+                      'Bank A-Z',
+                      Icons.account_balance,
+                      BeneficiarySortOption.bankAsc,
+                      currentSortOption.value == BeneficiarySortOption.bankAsc,
+                    ),
+                    buildSortOption(
+                      context,
+                      'Bank Z-A',
+                      Icons.account_balance,
+                      BeneficiarySortOption.bankDesc,
+                      currentSortOption.value == BeneficiarySortOption.bankDesc,
+                    ),
+                    buildSortOption(
+                      context,
+                      'Recently Added',
+                      Icons.access_time,
+                      BeneficiarySortOption.recent,
+                      currentSortOption.value == BeneficiarySortOption.recent,
+                    ),
+                  ],
+                )),
+                SizedBox(height: 20),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget buildSortOption(
+      BuildContext context,
+      String label,
+      IconData icon,
+      BeneficiarySortOption option,
+      bool isSelected,
+      ) {
+    return InkWell(
+      onTap: () {
+        sortBeneficiaries(option);
+        Get.back();
+      },
+      child: Container(
+        padding: EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? Color(0xFFE3F2FD) : Colors.transparent,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Color(0xFF0054D3) : Colors.grey[600],
+              size: 22,
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: isSelected ? Color(0xFF0054D3) : Color(0xff1B1C1C),
+                ),
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: Color(0xFF0054D3),
+                size: 22,
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ============================================

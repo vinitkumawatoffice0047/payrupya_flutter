@@ -713,6 +713,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:payrupya/view/transaction_confirmation_screen.dart';
 import '../controllers/dmt_wallet_controller.dart';
 // import '../models/dmt_api_response_models.dart';
 import '../models/get_beneficiary_list_response_model.dart';
@@ -733,15 +734,93 @@ class TransferMoneyScreen extends StatefulWidget {
 class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
   final DmtWalletController dmtController = Get.put(DmtWalletController());
 
-  bool showTPINField = false;
+  // bool showTPINField = false;
   String selectedTransferMode = "IMPS";
+  // ValueNotifiers for amount in words for skip keyboard hide problem
+  final ValueNotifier<String> amountInWords = ValueNotifier<String>("");
+  final ValueNotifier<String> confirmAmountInWords = ValueNotifier<String>("");
 
   @override
   void initState() {
     super.initState();
     // Clear previous values
     dmtController.transferAmountController.value.clear();
+    dmtController.transferConfirmAmountController.value.clear();
     dmtController.tpinController.value.clear();
+
+    // Add listeners for amount fields
+    dmtController.transferAmountController.value.addListener(() {
+      amountInWords.value = convertToWords(
+          dmtController.transferAmountController.value.text.trim()
+      );
+    });
+
+    dmtController.transferConfirmAmountController.value.addListener(() {
+      confirmAmountInWords.value = convertToWords(
+          dmtController.transferConfirmAmountController.value.text.trim()
+      );
+    });
+  }
+
+  // Convert number to words
+  String convertToWords(String amount) {
+    if (amount.isEmpty) return "";
+
+    double? value = double.tryParse(amount);
+    if (value == null || value <= 0) return "";
+
+    int rupees = value.floor();
+    int paise = ((value - rupees) * 100).round();
+
+    String result = numberToWords(rupees).toUpperCase() + " RUPEES";
+
+    if (paise > 0) {
+      result += " AND " + numberToWords(paise).toUpperCase() + " PAISE";
+    }
+
+    result += " ONLY";
+
+    return result;
+  }
+
+  String numberToWords(int number) {
+    if (number == 0) return "zero";
+
+    final ones = [
+      "", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+      "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+      "seventeen", "eighteen", "nineteen"
+    ];
+
+    final tens = [
+      "", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"
+    ];
+
+    if (number < 20) {
+      return ones[number];
+    }
+
+    if (number < 100) {
+      return tens[number ~/ 10] + (number % 10 != 0 ? " " + ones[number % 10] : "");
+    }
+
+    if (number < 1000) {
+      return ones[number ~/ 100] + " hundred" +
+          (number % 100 != 0 ? " " + numberToWords(number % 100) : "");
+    }
+
+    if (number < 100000) {
+      return numberToWords(number ~/ 1000) + " thousand" +
+          (number % 1000 != 0 ? " " + numberToWords(number % 1000) : "");
+    }
+
+    if (number < 10000000) {
+      return numberToWords(number ~/ 100000) + " lakh" +
+          (number % 100000 != 0 ? " " + numberToWords(number % 100000) : "");
+    }
+
+    return numberToWords(number ~/ 10000000) + " crore" +
+        (number % 10000000 != 0 ? " " + numberToWords(number % 10000000) : "");
   }
 
   @override
@@ -991,70 +1070,72 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
           ),
           SizedBox(height: 20),
 
-          // Available Balance Info
-          Obx(() {
-            var sender = dmtController.currentSender.value;
-            if (sender != null) {
-              double availableLimit =
-                  double.tryParse(sender.availableLimit ?? "0") ?? 0;
-              return Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Color(0xFFE3F2FD),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.account_balance_wallet,
-                        color: Color(0xFF1976D2), size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Available Limit: ',
-                      style: GoogleFonts.albertSans(
-                        fontSize: 13,
-                        color: Color(0xFF1565C0),
-                      ),
-                    ),
-                    Text(
-                      '₹${availableLimit.toStringAsFixed(2)}',
-                      style: GoogleFonts.albertSans(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF0D47A1),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-            return SizedBox.shrink();
-          }),
-          SizedBox(height: 16),
+          // // Available Balance Info
+          // Obx(() {
+          //   var sender = dmtController.currentSender.value;
+          //   if (sender != null) {
+          //     double availableLimit =
+          //         double.tryParse(sender.availableLimit ?? "0") ?? 0;
+          //     return Container(
+          //       padding: EdgeInsets.all(12),
+          //       decoration: BoxDecoration(
+          //         color: Color(0xFFE3F2FD),
+          //         borderRadius: BorderRadius.circular(12),
+          //       ),
+          //       child: Row(
+          //         children: [
+          //           Icon(Icons.account_balance_wallet,
+          //               color: Color(0xFF1976D2), size: 20),
+          //           SizedBox(width: 8),
+          //           Text(
+          //             'Available Limit: ',
+          //             style: GoogleFonts.albertSans(
+          //               fontSize: 13,
+          //               color: Color(0xFF1565C0),
+          //             ),
+          //           ),
+          //           Text(
+          //             '₹${availableLimit.toStringAsFixed(2)}',
+          //             style: GoogleFonts.albertSans(
+          //               fontSize: 15,
+          //               fontWeight: FontWeight.w600,
+          //               color: Color(0xFF0D47A1),
+          //             ),
+          //           ),
+          //         ],
+          //       ),
+          //     );
+          //   }
+          //   return SizedBox.shrink();
+          // }),
+          // SizedBox(height: 16),
 
           // Transfer Mode Selection
-          buildLabelText('Transfer Mode'),
+          buildLabelText('Transfer Type'),
           SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: buildTransferModeOption("IMPS", "Instant"),
+                // child: buildTransferModeOption("IMPS", "Instant"),
+                child: buildTransferModeOption("IMPS", ""),
               ),
               SizedBox(width: 12),
               Expanded(
-                child: buildTransferModeOption("NEFT", "Within 2 hrs"),
+                // child: buildTransferModeOption("NEFT", "Within 2 hrs"),
+                child: buildTransferModeOption("NEFT", ""),
               ),
             ],
           ),
           SizedBox(height: 16),
 
           // Amount Field
-          buildLabelText('Enter Amount *'),
+          buildLabelText('Enter Amount'),
           SizedBox(height: 8),
           GlobalUtils.CustomTextField(
             label: "Amount",
             showLabel: false,
             controller: dmtController.transferAmountController.value,
-            placeholder: "Enter Amount",
+            placeholder: "Amount",
             height: GlobalUtils.screenWidth * (60 / 393),
             width: GlobalUtils.screenWidth * 0.9,
             backgroundColor: Colors.white,
@@ -1066,12 +1147,13 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
               color: Color(0xFF6B707E),
             ),
             inputTextStyle: GoogleFonts.albertSans(
-              fontSize: GlobalUtils.screenWidth * (18 / 393),
+              fontSize: GlobalUtils.screenWidth * (14 / 393),
               fontWeight: FontWeight.w600,
               color: Color(0xFF1B1C1C),
             ),
+            maxLength: 9,
             prefixIcon: Padding(
-              padding: EdgeInsets.only(left: 16, top: 14),
+              padding: EdgeInsets.only(left: 16, top: GlobalUtils.screenWidth * (9 / 393)),
               child: Text(
                 '₹',
                 style: GoogleFonts.albertSans(
@@ -1082,94 +1164,172 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
               ),
             ),
           ),
-          SizedBox(height: 8),
 
-          // Quick amount buttons
-          Row(
-            children: [
-              buildQuickAmountButton("500"),
-              SizedBox(width: 8),
-              buildQuickAmountButton("1000"),
-              SizedBox(width: 8),
-              buildQuickAmountButton("2000"),
-              SizedBox(width: 8),
-              buildQuickAmountButton("5000"),
-            ],
-          ),
-          SizedBox(height: 16),
-
-          // Show TPIN field after amount is entered
-          if (showTPINField) ...[
-            buildLabelText('Enter TPIN *'),
-            SizedBox(height: 8),
-            GlobalUtils.CustomTextField(
-              label: "TPIN",
-              showLabel: false,
-              controller: dmtController.tpinController.value,
-              placeholder: "Enter 4-digit TPIN",
-              height: GlobalUtils.screenWidth * (60 / 393),
-              width: GlobalUtils.screenWidth * 0.9,
-              backgroundColor: Colors.white,
-              borderColor: Color(0xffE2E5EC),
-              borderRadius: 16,
-              keyboardType: TextInputType.number,
-              isObscure: true,
-              maxLength: 4,
-              placeholderStyle: GoogleFonts.albertSans(
-                fontSize: GlobalUtils.screenWidth * (14 / 393),
-                color: Color(0xFF6B707E),
-              ),
-              inputTextStyle: GoogleFonts.albertSans(
-                fontSize: GlobalUtils.screenWidth * (18 / 393),
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1B1C1C),
-                letterSpacing: 8,
-              ),
-              prefixIcon: Icon(Icons.lock,
-                  color: Color(0xFF6B707E), size: 20),
-            ),
-            SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.info_outline,
-                    size: 14, color: Color(0xFF6B707E)),
-                SizedBox(width: 4),
-                Text(
-                  'Enter your transaction PIN for verification',
+          // Amount in words - Using ValueListenableBuilder
+          ValueListenableBuilder<String>(
+            valueListenable: amountInWords,
+            builder: (context, value, child) {
+              if (value.isEmpty) return SizedBox.shrink();
+              return Padding(
+                padding: EdgeInsets.only(left: 4, top: 6),
+                child: Text(
+                  value,
                   style: GoogleFonts.albertSans(
-                    fontSize: 11,
-                    color: Color(0xFF6B707E),
+                    fontSize: 10,
+                    color: Color(0xFF0054D3),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ],
+              );
+            },
+          ),
+
+          SizedBox(height: 16),
+
+          // Confirm Amount Field
+          buildLabelText('Enter Confirm Amount'),
+          SizedBox(height: 8),
+          GlobalUtils.CustomTextField(
+            label: "Confirm Amount",
+            showLabel: false,
+            controller: dmtController.transferConfirmAmountController.value,
+            placeholder: "Confirm Amount",
+            height: GlobalUtils.screenWidth * (60 / 393),
+            width: GlobalUtils.screenWidth * 0.9,
+            backgroundColor: Colors.white,
+            borderColor: Color(0xffE2E5EC),
+            borderRadius: 16,
+            keyboardType: TextInputType.number,
+            maxLength: 9,
+            placeholderStyle: GoogleFonts.albertSans(
+              fontSize: GlobalUtils.screenWidth * (14 / 393),
+              color: Color(0xFF6B707E),
             ),
-          ],
+            inputTextStyle: GoogleFonts.albertSans(
+              fontSize: GlobalUtils.screenWidth * (14 / 393),
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1B1C1C),
+            ),
+            prefixIcon: Padding(
+              padding: EdgeInsets.only(left: 16, top: GlobalUtils.screenWidth * (9 / 393)),
+              child: Text(
+                '₹',
+                style: GoogleFonts.albertSans(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1B1C1C),
+                ),
+              ),
+            ),
+          ),
+
+          // Confirm Amount in words - Using ValueListenableBuilder
+          ValueListenableBuilder<String>(
+            valueListenable: confirmAmountInWords,
+            builder: (context, value, child) {
+              if (value.isEmpty) return SizedBox.shrink();
+              return Padding(
+                padding: EdgeInsets.only(left: 4, top: 6),
+                child: Text(
+                  value,
+                  style: GoogleFonts.albertSans(
+                    fontSize: 10,
+                    color: Color(0xFF0054D3),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // SizedBox(height: 8),
+          //
+          // // Quick amount buttons
+          // Row(
+          //   children: [
+          //     buildQuickAmountButton("500"),
+          //     SizedBox(width: 8),
+          //     buildQuickAmountButton("1000"),
+          //     SizedBox(width: 8),
+          //     buildQuickAmountButton("2000"),
+          //     SizedBox(width: 8),
+          //     buildQuickAmountButton("5000"),
+          //   ],
+          // ),
+          // SizedBox(height: 16),
+
+          // // Show TPIN field after amount is entered
+          // if (showTPINField) ...[
+          //   buildLabelText('Enter TPIN *'),
+          //   SizedBox(height: 8),
+          //   GlobalUtils.CustomTextField(
+          //     label: "TPIN",
+          //     showLabel: false,
+          //     controller: dmtController.tpinController.value,
+          //     placeholder: "Enter 4-digit TPIN",
+          //     height: GlobalUtils.screenWidth * (60 / 393),
+          //     width: GlobalUtils.screenWidth * 0.9,
+          //     backgroundColor: Colors.white,
+          //     borderColor: Color(0xffE2E5EC),
+          //     borderRadius: 16,
+          //     keyboardType: TextInputType.number,
+          //     isObscure: true,
+          //     maxLength: 4,
+          //     placeholderStyle: GoogleFonts.albertSans(
+          //       fontSize: GlobalUtils.screenWidth * (14 / 393),
+          //       color: Color(0xFF6B707E),
+          //     ),
+          //     inputTextStyle: GoogleFonts.albertSans(
+          //       fontSize: GlobalUtils.screenWidth * (18 / 393),
+          //       fontWeight: FontWeight.w600,
+          //       color: Color(0xFF1B1C1C),
+          //       letterSpacing: 8,
+          //     ),
+          //     prefixIcon: Icon(Icons.lock,
+          //         color: Color(0xFF6B707E), size: 20),
+          //   ),
+          //   SizedBox(height: 8),
+          //   Row(
+          //     children: [
+          //       Icon(Icons.info_outline,
+          //           size: 14, color: Color(0xFF6B707E)),
+          //       SizedBox(width: 4),
+          //       Text(
+          //         'Enter your transaction PIN for verification',
+          //         style: GoogleFonts.albertSans(
+          //           fontSize: 11,
+          //           color: Color(0xFF6B707E),
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ],
 
           // Charges info
           SizedBox(height: 16),
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Color(0xFFFFF3E0),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline,
-                    color: Color(0xFFF57C00), size: 18),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Transfer charges may apply as per bank norms',
-                    style: GoogleFonts.albertSans(
-                      fontSize: 12,
-                      color: Color(0xFFE65100),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Container(
+          //   padding: EdgeInsets.all(12),
+          //   decoration: BoxDecoration(
+          //     color: Color(0xFFFFF3E0),
+          //     borderRadius: BorderRadius.circular(12),
+          //   ),
+          //   child: Row(
+          //     children: [
+          //       Icon(Icons.info_outline,
+          //           color: Color(0xFFF57C00), size: 18),
+          //       SizedBox(width: 8),
+          //       Expanded(
+          //         child: Text(
+          //           'Transfer charges may apply as per bank norms',
+          //           style: GoogleFonts.albertSans(
+          //             fontSize: 12,
+          //             color: Color(0xFFE65100),
+          //           ),
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
         ],
       ),
     ));
@@ -1247,28 +1407,29 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
                 ),
               ],
             ),
-            SizedBox(height: 4),
-            Text(
-              description,
-              style: GoogleFonts.albertSans(
-                fontSize: 11,
-                color: Color(0xFF6B707E),
-              ),
-            ),
+            // SizedBox(height: 4),
+            // Text(
+            //   description,
+            //   style: GoogleFonts.albertSans(
+            //     fontSize: 11,
+            //     color: Color(0xFF6B707E),
+            //   ),
+            // ),
           ],
         ),
       ),
     );
   }
 
-  Widget buildQuickAmountButton(String amount) {
+  Widget buildQuickAmountButton(String amount, String confirmAmount) {
     return Expanded(
       child: GestureDetector(
         onTap: () {
           dmtController.transferAmountController.value.text = amount;
-          setState(() {
-            showTPINField = true;
-          });
+          dmtController.transferConfirmAmountController.value.text = confirmAmount;
+          // setState(() {
+          //   showTPINField = true;
+          // });
         },
         child: Container(
           padding: EdgeInsets.symmetric(vertical: 8),
@@ -1294,12 +1455,24 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
 
   Widget buildTransferButton() {
     return GlobalUtils.CustomButton(
-      text: showTPINField ? "Confirm Transfer" : "Proceed",
+      // text: showTPINField ? "Confirm Transfer" : "Proceed",
+      text: "Transfer",
       onPressed: () async {
         String amount = dmtController.transferAmountController.value.text.trim();
+        String confirmAmount = dmtController.transferConfirmAmountController.value.text.trim();
 
         if (amount.isEmpty) {
           Fluttertoast.showToast(msg: "Please enter amount");
+          return;
+        }
+
+        if (confirmAmount.isEmpty) {
+          Fluttertoast.showToast(msg: "Please enter confirm amount");
+          return;
+        }
+
+        if (amount != confirmAmount) {
+          Fluttertoast.showToast(msg: "Confirm amount doesn't match");
           return;
         }
 
@@ -1309,22 +1482,30 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
           return;
         }
 
-        if (!showTPINField) {
-          // Show TPIN field
-          setState(() {
-            showTPINField = true;
-          });
+        double confirmAmountValue = double.tryParse(confirmAmount) ?? 0;
+        if (confirmAmountValue <= 0) {
+          Fluttertoast.showToast(msg: "Please enter valid confirm amount");
           return;
         }
 
-        String tpin = dmtController.tpinController.value.text.trim();
-        if (tpin.isEmpty || tpin.length != 4) {
-          Fluttertoast.showToast(msg: "Please enter 4-digit TPIN");
-          return;
-        }
+        // if (!showTPINField) {
+        //   // Show TPIN field
+        //   setState(() {
+        //     showTPINField = true;
+        //   });
+        //   return;
+        // }
+
+        // String tpin = dmtController.tpinController.value.text.trim();
+        // if (tpin.isEmpty || tpin.length != 4) {
+        //   Fluttertoast.showToast(msg: "Please enter 4-digit TPIN");
+        //   return;
+        // }
 
         // Show confirmation dialog
-        showConfirmationDialog(amountValue);
+        // showConfirmationDialog(amountValue);
+        dmtController.confirmTransfer(context, widget.beneficiary);
+        Get.to(TransactionConfirmationScreen());
       },
       textStyle: GoogleFonts.albertSans(
         fontSize: 16,

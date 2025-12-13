@@ -1191,29 +1191,36 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFF0F4F8),
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Column(
-              children: [
-                if (!widget.showBackButton) ...[
-                  SizedBox(height: GlobalUtils.screenHeight * (12 / 393)),
-                ],
-                buildCustomAppBar(),
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: BouncingScrollPhysics(),
-                    padding: EdgeInsets.all(10),
-                    child: buildSenderForm(),
+    return GestureDetector(
+      // for manage multiple text field keyboard and cursor
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      behavior: HitTestBehavior.translucent,
+      child: Scaffold(
+        backgroundColor: Color(0xFFF0F4F8),
+        body: Stack(
+          children: [
+            SafeArea(
+              child: Column(
+                children: [
+                  if (!widget.showBackButton) ...[
+                    SizedBox(height: GlobalUtils.screenHeight * (12 / 393)),
+                  ],
+                  buildCustomAppBar(),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: BouncingScrollPhysics(),
+                      padding: EdgeInsets.all(10),
+                      child: buildSenderForm(),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          // if (showOtpDialog) _buildOtpDialog(),
-        ],
+            // if (showOtpDialog) _buildOtpDialog(),
+          ],
+        ),
       ),
     );
   }
@@ -1258,7 +1265,32 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
   Widget buildSenderForm() {
     return Obx(() => Column(
       children: [
-        Container(
+        // Show loading indicator
+        if (_isLoading) ...[
+          Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text(
+                  "Initializing services...",
+                  style: GoogleFonts.albertSans(
+                    fontSize: 14,
+                    color: Color(0xFF6B707E),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 24),
+        ],
+        if (!_isLoading) ...[
+          Container(
           padding: EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -1333,7 +1365,9 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                 errorColor: Colors.red,
                 errorFontSize: 12,
                 suffixIcon: TextButton(
-                  onPressed: () async {
+                  onPressed: (_isLoading || dmtController.serviceCode.value.isEmpty)
+                      ? null // ✅ Disable button if service not ready
+                      : () async {
                     String mobile = dmtController.senderMobileController.value.text.trim();
 
                     if (mobile.isEmpty || mobile.length != 10) {
@@ -1364,12 +1398,23 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                       await Get.to(() => WalletScreen());
                     }
                   },
-                  child: Text(
+                  child: _isLoading
+                      ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0054D3)),
+                    ),
+                  )
+                      : Text(
                     "Verify",
                     style: GoogleFonts.albertSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF0054D3),
+                      color: (_isLoading || dmtController.serviceCode.value.isEmpty)
+                          ? Colors.grey // ✅ Grey when disabled
+                          : Color(0xFF0054D3),
                     ),
                   ),
                 ),
@@ -1604,6 +1649,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
             ],
           ),
         ),
+        ],
         SizedBox(height: 24),
 
         // Continue Button
