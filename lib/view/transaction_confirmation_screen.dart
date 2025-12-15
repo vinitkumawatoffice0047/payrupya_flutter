@@ -247,7 +247,12 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
         children: [
           /// BACK BUTTON
           GestureDetector(
-            onTap: () => Get.back(),
+            onTap: () {
+              // Clean up confirmation data when going back
+              dmtWalletController.confirmationData.value = null;
+              dmtWalletController.showConfirmation.value = false;
+              Get.back();
+            },
             child: Container(
               height: GlobalUtils.screenHeight * (22 / 393),
               width: GlobalUtils.screenWidth * (47 / 393),

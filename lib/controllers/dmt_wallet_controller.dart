@@ -1872,7 +1872,7 @@ class DmtWalletController extends GetxController {
 
           ConsoleLog.printSuccess("Transfer charges fetched");
 
-          Get.to(()=>TransactionConfirmationScreen());
+          // Get.to(()=>TransactionConfirmationScreen());
           // Show confirmation dialog
           // showTransferConfirmationDialog(transferMoneyContext, beneficiary, chargesData);
 
