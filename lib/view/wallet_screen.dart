@@ -1378,9 +1378,9 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  void showDeleteDialog(BuildContext context, String beneId) {
+  void showDeleteDialog(BuildContext dialogContext, String beneId) {
     showDialog(
-      context: context,
+      context: dialogContext,
       builder: (BuildContext context) {
         return Align(
           alignment: Alignment.center,
@@ -1421,7 +1421,7 @@ class _WalletScreenState extends State<WalletScreen> {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => Get.back(),
+                              onTap: () => Navigator.of(context).pop(),
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: 14),
                                 decoration: BoxDecoration(
@@ -1444,12 +1444,10 @@ class _WalletScreenState extends State<WalletScreen> {
                           SizedBox(width: 12),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () async {
-                                Get.back();
+                              onTap: () {
+                                Navigator.of(context).pop();
                                 // await dmtController.deleteBeneficiary(context, beneId);
-                                Future.delayed(Duration.zero, () {
-                                  dmtController.deleteBeneficiaryRequestOtp(context, beneId ?? '');
-                                });
+                                  dmtController.deleteBeneficiaryRequestOtp(dialogContext, beneId ?? '');
                               },
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: 14),

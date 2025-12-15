@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_provider.dart';
 import '../api/web_api_constant.dart';
@@ -23,6 +24,7 @@ import '../utils/app_shared_preferences.dart';
 import '../utils/connection_validator.dart';
 import '../utils/custom_loading.dart';
 import '../utils/global_utils.dart';
+import '../utils/otp_input_fields.dart';
 import '../view/login_screen.dart';
 import '../view/onboarding_screen.dart';
 import 'login_controller.dart';
@@ -1422,43 +1424,165 @@ class DmtWalletController extends GetxController {
     }
   }
 
-  // Show OTP dialog for deletion
-  void showDeleteOtpDialog(BuildContext context, String beneId) {
-    deleteOtpController.value.clear();
+  // // Show OTP dialog for deletion
+  // void showDeleteOtpDialog(BuildContext context, String beneId) {
+  //   deleteOtpController.value.clear();
+  //
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         title: Text('Enter OTP'),
+  //         content: TextField(
+  //           controller: deleteOtpController.value,
+  //           keyboardType: TextInputType.number,
+  //           maxLength: 6,
+  //           decoration: InputDecoration(
+  //             hintText: 'Enter 6-digit OTP',
+  //             counterText: '',
+  //           ),
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Get.back(),
+  //             child: Text('Cancel'),
+  //           ),
+  //           ElevatedButton(
+  //             onPressed: () {
+  //               deleteBeneficiaryValidate(
+  //                   context,
+  //                   beneId,
+  //                   deleteOtpController.value.text.trim()
+  //               );
+  //             },
+  //             child: Text('Submit'),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Enter OTP'),
-          content: TextField(
-            controller: deleteOtpController.value,
-            keyboardType: TextInputType.number,
-            maxLength: 6,
-            decoration: InputDecoration(
-              hintText: 'Enter 6-digit OTP',
-              counterText: '',
-            ),
+  final GlobalKey<OtpInputFieldsState> deleteOtpKey = GlobalKey<OtpInputFieldsState>();
+
+  Widget showDeleteOtpDialog(BuildContext context, String beneId) {
+    deleteOtpController.value.clear();
+    return Container(
+      color: Colors.black54,
+      child: Center(
+        child: Container(
+          margin: EdgeInsets.symmetric(horizontal: 10),
+          padding: EdgeInsets.symmetric(horizontal: 17, vertical: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                deleteBeneficiaryValidate(
-                    context,
-                    beneId,
-                    deleteOtpController.value.text.trim()
-                );
-              },
-              child: Text('Submit'),
-            ),
-          ],
-        );
-      },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Enter Verification Code',
+                    style: GoogleFonts.albertSans(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xff0F0F0F),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Get.back();
+                      // setState(() => showOtpDialog = false);
+                    },
+                    child: Icon(Icons.close, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16),
+              RichText(
+                text: TextSpan(
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  children: [
+                    TextSpan(text: 'We sent a verification code to '),
+                    TextSpan(
+                      text: '+91 ${senderMobileController.value.text}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 24),
+
+              // OTP Input Fields
+              OtpInputFields(
+                key: deleteOtpKey,
+                length: 6,
+              ),
+
+              SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Didn\'t receive the code? ',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                  ),
+                  GestureDetector(
+                    onTap: () async {
+                      // final otp = deleteOtpKey.currentState?.currentOtp ?? '';
+                      // Resend OTP
+                      // await addSender(context, otp);
+                      await deleteBeneficiaryRequestOtp(context, beneId ?? '');
+
+                      deleteOtpKey.currentState?.clear();
+                      deleteOtpKey.currentState?.focusFirst();
+                      Fluttertoast.showToast(msg: "OTP sent successfully");
+                    },
+                    child: Text(
+                      'Click to resend',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF2E5BFF),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 24),
+
+              // Verify Button
+              GlobalUtils.CustomButton(
+                text: "VERIFY",
+                onPressed: () async {
+                  deleteBeneficiaryValidate(context,beneId,deleteOtpController.value.text.trim());
+                },
+                textStyle: GoogleFonts.albertSans(
+                  fontSize: 16,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+                width: GlobalUtils.screenWidth * 0.9,
+                height: GlobalUtils.screenWidth * (60 / 393),
+                backgroundGradient: GlobalUtils.blueBtnGradientColor,
+                borderColor: Color(0xFF71A9FF),
+                showShadow: false,
+                textColor: Colors.white,
+                animation: ButtonAnimation.fade,
+                animationDuration: const Duration(milliseconds: 150),
+                buttonType: ButtonType.elevated,
+                borderRadius: 16,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
