@@ -1146,24 +1146,45 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
       // 1. Load auth credentials first
       await dmtController.loadAuthCredentials();
 
-      // 2. Check if service code is already loaded
+      // 2. Wait for location
+      int waitCount = 0;
+      while ((loginController.latitude.value == 0.0 ||
+          loginController.longitude.value == 0.0) &&
+          waitCount < 20) {
+        ConsoleLog.printWarning("Waiting for location in screen... ($waitCount/20)");
+        await Future.delayed(Duration(milliseconds: 500));
+        waitCount++;
+      }
+
+      if (loginController.latitude.value == 0.0 ||
+          loginController.longitude.value == 0.0) {
+        ConsoleLog.printError("❌ Location timeout");
+        Fluttertoast.showToast(
+          msg: "Unable to get location. Please enable GPS.",
+          backgroundColor: Colors.red,
+        );
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // 3. Check if service code is already loaded
       if (dmtController.serviceCode.value.isEmpty) {
         ConsoleLog.printWarning("Service code empty, loading from API...");
 
-        await CustomLoading().show(context);
-
-        // 3. Load service code
+        // 4. Load service code
         await dmtController.getAllowedServiceByType(context);
-
-        await CustomLoading().hide(context);
 
         // Wait for service to load
         await Future.delayed(Duration(milliseconds: 1000));
 
         if (dmtController.serviceCode.value.isEmpty) {
-          ConsoleLog.printWarning("Still empty, setting default...");
-          // dmtController.serviceCode.value = "DMTRZP";
-          await dmtController.getAllowedServiceByType(context);
+          ConsoleLog.printError("❌ Service code still empty after API call");
+          Fluttertoast.showToast(
+            msg: "Failed to initialize services. Please try again.",
+            backgroundColor: Colors.red,
+          );
         }
       }
 
@@ -1175,7 +1196,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
         _isLoading = false;
       });
 
-      ConsoleLog.printSuccess("✅ Services initialized. Service Code: ${dmtController.serviceCode.value}");
+      ConsoleLog.printSuccess("Services initialized. Service Code: ${dmtController.serviceCode.value}");
 
     } catch (e) {
       ConsoleLog.printError("Failed to initialize services: $e");

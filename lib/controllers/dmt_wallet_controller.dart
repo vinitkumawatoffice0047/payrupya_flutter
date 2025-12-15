@@ -51,12 +51,30 @@ class DmtWalletController extends GetxController {
     loadAuthCredentials();
 
     // LOAD SERVICE ON INIT
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (Get.context != null) {
-        await getAllowedServiceByType(Get.context!);
-      }
+    // Listen for location changes
+    ever(loginController.latitude, (_) {
+      checkAndLoadService();
+    });
+
+    ever(loginController.longitude, (_) {
+      checkAndLoadService();
     });
     // getAllowedServiceByType(Get.context!);
+  }
+
+  // Load service when location is available
+  void checkAndLoadService() {
+    if (loginController.latitude.value != 0.0 &&
+        loginController.longitude.value != 0.0 &&
+        serviceCode.value.isEmpty &&
+        !isServiceLoaded.value) {
+
+      ConsoleLog.printInfo("Location available, loading service...");
+
+      if (Get.context != null) {
+        getAllowedServiceByType(Get.context!);
+      }
+    }
   }
 
     // Load both token and signature properly
@@ -825,8 +843,8 @@ class DmtWalletController extends GetxController {
   }
 
   // ============================================
-// NEW: GET BENEFICIARY NAME FROM ACCOUNT
-// ============================================
+  // NEW: GET BENEFICIARY NAME FROM ACCOUNT
+  // ============================================
   Future<void> getBeneficiaryName(BuildContext context) async {
     try {
       String accountNumber = beneAccountController.value.text.trim();
@@ -1287,7 +1305,7 @@ class DmtWalletController extends GetxController {
   // Step 1: Request OTP for deletion
   Future<void> deleteBeneficiaryRequestOtp(BuildContext context, String beneId) async {
     try {
-      if (currentSender.value?.mobile == null) {
+      if (senderMobileNo.isEmpty) {
         Fluttertoast.showToast(msg: "Sender details not found");
         return;
       }
@@ -1298,7 +1316,7 @@ class DmtWalletController extends GetxController {
         "request_id": generateRequestId(),
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
-        "sender": currentSender.value!.mobile,
+        "sender": senderMobileNo.value,
         "beneid": beneId,
         "request_type": "VERIFY",                             // ✅ FIXED
       };
@@ -1347,7 +1365,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      if (currentSender.value?.mobile == null) {
+      if (senderMobileNo.isEmpty) {
         Fluttertoast.showToast(msg: "Sender details not found");
         return;
       }
@@ -1358,7 +1376,7 @@ class DmtWalletController extends GetxController {
         "request_id": generateRequestId(),
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
-        "sender": currentSender.value!.mobile,
+        "sender": senderMobileNo.value,
         "beneid": beneId,
         "otp": otp,
         "request_type": "VALIDATE",
@@ -1859,7 +1877,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      if (senderId.value.isEmpty || currentSender.value?.mobile == null) {
+      if (senderId.value.isEmpty || senderMobileNo.isEmpty) {
         Fluttertoast.showToast(msg: "Sender details not found");
         return;
       }
@@ -1871,7 +1889,7 @@ class DmtWalletController extends GetxController {
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
         "senderid": senderId.value,
-        "sender": currentSender.value!.mobile,
+        "sender": senderMobileNo.value,
         "request_type": "SEARCH TXN",
         "service": serviceCode.value,
         "txnid": txnId,

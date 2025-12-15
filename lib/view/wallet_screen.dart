@@ -1240,7 +1240,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   physics: NeverScrollableScrollPhysics(),
                   itemCount: dmtController.filteredBeneficiaryList.length,
                   itemBuilder: (context, index) {
-                    return buildBeneficiaryCard(
+                    return buildBeneficiaryCard(context,
                       dmtController.filteredBeneficiaryList[index],
                       screenWidth,
                     );
@@ -1257,7 +1257,7 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  Widget buildBeneficiaryCard(BeneficiaryData beneficiary, double screenWidth) {
+  Widget buildBeneficiaryCard(BuildContext context, BeneficiaryData beneficiary, double screenWidth) {
     return Container(
       margin: EdgeInsets.symmetric(vertical: 12),
       child: Row(
