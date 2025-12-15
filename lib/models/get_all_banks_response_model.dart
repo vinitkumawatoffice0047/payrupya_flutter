@@ -31,14 +31,16 @@ class BankData {
   String? bankId;
   String? bankName;
   String? ifsc;
+  String? branch;
   String? logo;
 
-  BankData({this.bankId, this.bankName, this.ifsc, this.logo});
+  BankData({this.bankId, this.bankName, this.ifsc, this.branch, this.logo});
 
   BankData.fromJson(Map<String, dynamic> json) {
     bankId = json['bank_id']?.toString();
     bankName = json['bank_name']?.toString();
-    ifsc = json['ifsc']?.toString();
+    ifsc = json['IFSC']?.toString();
+    branch = json['BRANCH']?.toString();
     logo = json['logo']?.toString();
   }
 
@@ -46,7 +48,8 @@ class BankData {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['bank_id'] = bankId;
     data['bank_name'] = bankName;
-    data['ifsc'] = ifsc;
+    data['IFSC'] = ifsc;
+    data['BRANCH'] = branch;
     data['logo'] = logo;
     return data;
   }

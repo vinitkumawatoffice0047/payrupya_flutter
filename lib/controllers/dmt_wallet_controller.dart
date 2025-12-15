@@ -162,8 +162,10 @@ class DmtWalletController extends GetxController {
   
   // Search
   RxString searchQuery = ''.obs;
-  Rx<BeneficiarySortOption> currentSortOption = BeneficiarySortOption.nameAsc.obs;
-  RxString currentSortLabel = 'Name A-Z'.obs;
+  // Rx<BeneficiarySortOption> currentSortOption = BeneficiarySortOption.nameAsc.obs;
+  Rx<BeneficiarySortOption> currentSortOption = BeneficiarySortOption.recent.obs;
+  // RxString currentSortLabel = 'Name A-Z'.obs;
+  RxString currentSortLabel = 'Recently Added'.obs;
 
   RxString serviceCode = ''.obs;
   RxBool isServiceLoaded = false.obs;
@@ -926,11 +928,12 @@ class DmtWalletController extends GetxController {
               beneNameController.value.text = fetchedName;
 
               ConsoleLog.printSuccess("✅ Beneficiary name fetched: $fetchedName");
-              Fluttertoast.showToast(
-                msg: "Name fetched: $fetchedName",
-                backgroundColor: Colors.green,
-                toastLength: Toast.LENGTH_LONG,
-              );
+              // Fluttertoast.showToast(
+              //   msg: "Name fetched: $fetchedName",
+              //   backgroundColor: Colors.green,
+              //   toastLength: Toast.LENGTH_LONG,
+              //   gravity: ToastGravity.TOP,
+              // );
             }
           } else if (data['data']?['txn_status'] == 'FAILED') {
             isAccountVerified.value = false;
@@ -1359,6 +1362,64 @@ class DmtWalletController extends GetxController {
     }
   }
 
+  // ============================================
+// Resend OTP (without opening new dialog)
+// ============================================
+  Future<void> resendDeleteBeneficiaryOtp(BuildContext context, String beneId) async {
+    try {
+      if (senderMobileNo.isEmpty) {
+        Fluttertoast.showToast(msg: "Sender details not found");
+        return;
+      }
+
+      CustomLoading().show(context);
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+        "sender": senderMobileNo.value,
+        "beneid": beneId,
+        "request_type": "VERIFY",
+      };
+
+      ConsoleLog.printColor("RESEND DELETE BENE OTP: $body");
+
+      var response = await ApiProvider().requestPostForApi(
+        context,
+        WebApiConstant.API_URL_DELETE_BENEFICIARY,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      CustomLoading().hide(context);
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+
+        if (data['Resp_code'] == 'VRF') {
+          ConsoleLog.printSuccess("OTP resent for beneficiary deletion");
+          Fluttertoast.showToast(msg: "OTP sent successfully");
+          // NO dialog opening here!
+
+        } else {
+          Fluttertoast.showToast(
+            msg: data['Resp_desc'] ?? "Failed to send OTP",
+            backgroundColor: Colors.red,
+          );
+        }
+      }
+    } catch (e) {
+      CustomLoading().hide(context);
+      ConsoleLog.printError("RESEND DELETE BENEFICIARY OTP ERROR: $e");
+      Fluttertoast.showToast(
+        msg: "Failed to resend OTP",
+        backgroundColor: Colors.red,
+      );
+    }
+  }
+
   // Step 2: Validate OTP and delete beneficiary
   Future<void> deleteBeneficiaryValidate(BuildContext context, String beneId, String otp) async {
     try {
@@ -1424,165 +1485,139 @@ class DmtWalletController extends GetxController {
     }
   }
 
-  // // Show OTP dialog for deletion
-  // void showDeleteOtpDialog(BuildContext context, String beneId) {
-  //   deleteOtpController.value.clear();
-  //
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (BuildContext context) {
-  //       return AlertDialog(
-  //         title: Text('Enter OTP'),
-  //         content: TextField(
-  //           controller: deleteOtpController.value,
-  //           keyboardType: TextInputType.number,
-  //           maxLength: 6,
-  //           decoration: InputDecoration(
-  //             hintText: 'Enter 6-digit OTP',
-  //             counterText: '',
-  //           ),
-  //         ),
-  //         actions: [
-  //           TextButton(
-  //             onPressed: () => Get.back(),
-  //             child: Text('Cancel'),
-  //           ),
-  //           ElevatedButton(
-  //             onPressed: () {
-  //               deleteBeneficiaryValidate(
-  //                   context,
-  //                   beneId,
-  //                   deleteOtpController.value.text.trim()
-  //               );
-  //             },
-  //             child: Text('Submit'),
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
-
   final GlobalKey<OtpInputFieldsState> deleteOtpKey = GlobalKey<OtpInputFieldsState>();
 
-  Widget showDeleteOtpDialog(BuildContext context, String beneId) {
+  void showDeleteOtpDialog(BuildContext context, String beneId) {
     deleteOtpController.value.clear();
-    return Container(
-      color: Colors.black54,
-      child: Center(
-        child: Container(
-          margin: EdgeInsets.symmetric(horizontal: 10),
-          padding: EdgeInsets.symmetric(horizontal: 17, vertical: 24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Enter Verification Code',
-                    style: GoogleFonts.albertSans(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xff0F0F0F),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Get.back();
-                      // setState(() => showOtpDialog = false);
-                    },
-                    child: Icon(Icons.close, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-              SizedBox(height: 16),
-              RichText(
-                text: TextSpan(
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Material(
+          type: MaterialType.transparency,
+          child: Container(
+          color: Colors.black54,
+          child: Center(
+            child: SingleChildScrollView(
+              child: Container(
+                margin: EdgeInsets.symmetric(horizontal: 10),
+                padding: EdgeInsets.symmetric(horizontal: 17, vertical: 24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextSpan(text: 'We sent a verification code to '),
-                    TextSpan(
-                      text: '+91 ${senderMobileController.value.text}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Enter Verification Code',
+                          style: GoogleFonts.albertSans(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xff0F0F0F),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Get.back();
+                            // setState(() => showOtpDialog = false);
+                          },
+                          child: Icon(Icons.close, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    RichText(
+                      text: TextSpan(
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        children: [
+                          TextSpan(text: 'We sent a verification code to '),
+                          TextSpan(
+                            text: '+91 ${senderMobileController.value.text}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    SizedBox(height: 24),
+              
+                    // OTP Input Fields
+                    OtpInputFields(
+                      key: deleteOtpKey,
+                      length: 6,
+                      onChanged: (otp) {
+                        deleteOtpController.value.text = otp;
+                      },
+                    ),
+              
+                    SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Didn\'t receive the code? ',
+                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                        ),
+                        GestureDetector(
+                          onTap: () async {
+                            await resendDeleteBeneficiaryOtp(context, beneId);
+                            deleteOtpKey.currentState?.clear();
+                            deleteOtpKey.currentState?.focusFirst();
+                            Fluttertoast.showToast(msg: "OTP sent successfully");
+                          },
+                          child: Text(
+                            'Click to resend',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF2E5BFF),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 24),
+              
+                    // Verify Button
+                    GlobalUtils.CustomButton(
+                      text: "VERIFY",
+                      onPressed: () async {
+                        String otp = deleteOtpController.value.text.trim();
+                        if (otp.isEmpty || otp.length != 6) {
+                          Fluttertoast.showToast(msg: "Please enter 6-digit OTP");
+                          return;
+                        }
+                        deleteBeneficiaryValidate(context, beneId, otp);
+                      },
+                      textStyle: GoogleFonts.albertSans(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      width: GlobalUtils.screenWidth * 0.9,
+                      height: GlobalUtils.screenWidth * (60 / 393),
+                      backgroundGradient: GlobalUtils.blueBtnGradientColor,
+                      borderColor: Color(0xFF71A9FF),
+                      showShadow: false,
+                      textColor: Colors.white,
+                      animation: ButtonAnimation.fade,
+                      animationDuration: const Duration(milliseconds: 150),
+                      buttonType: ButtonType.elevated,
+                      borderRadius: 16,
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: 24),
-
-              // OTP Input Fields
-              OtpInputFields(
-                key: deleteOtpKey,
-                length: 6,
-              ),
-
-              SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Didn\'t receive the code? ',
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                  ),
-                  GestureDetector(
-                    onTap: () async {
-                      // final otp = deleteOtpKey.currentState?.currentOtp ?? '';
-                      // Resend OTP
-                      // await addSender(context, otp);
-                      await deleteBeneficiaryRequestOtp(context, beneId ?? '');
-
-                      deleteOtpKey.currentState?.clear();
-                      deleteOtpKey.currentState?.focusFirst();
-                      Fluttertoast.showToast(msg: "OTP sent successfully");
-                    },
-                    child: Text(
-                      'Click to resend',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF2E5BFF),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 24),
-
-              // Verify Button
-              GlobalUtils.CustomButton(
-                text: "VERIFY",
-                onPressed: () async {
-                  deleteBeneficiaryValidate(context,beneId,deleteOtpController.value.text.trim());
-                },
-                textStyle: GoogleFonts.albertSans(
-                  fontSize: 16,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-                width: GlobalUtils.screenWidth * 0.9,
-                height: GlobalUtils.screenWidth * (60 / 393),
-                backgroundGradient: GlobalUtils.blueBtnGradientColor,
-                borderColor: Color(0xFF71A9FF),
-                showShadow: false,
-                textColor: Colors.white,
-                animation: ButtonAnimation.fade,
-                animationDuration: const Duration(milliseconds: 150),
-                buttonType: ButtonType.elevated,
-                borderRadius: 16,
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+                ),
+        );}
     );
   }
 
@@ -1733,7 +1768,7 @@ class DmtWalletController extends GetxController {
   // }
 
   // ============================================
-  // 8. TRANSFER MONEY - ✅ COMPLETELY REWRITTEN (2-STEP PROCESS)
+  // 8. TRANSFER MONEY - COMPLETELY REWRITTEN (2-STEP PROCESS)
   // ============================================
 
   // Step 1: Confirm transaction and get charges
@@ -1773,18 +1808,18 @@ class DmtWalletController extends GetxController {
 
       CustomLoading().show(context);
 
-      // ✅ Step 1: CONFIRM - Get charges
+      // Step 1: CONFIRM - Get charges
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
         "senderid": senderId.value,
-        "sender": /*currentSender.value!.mobile*/senderMobileNo,
+        "sender": /*currentSender.value!.mobile*/senderMobileNo.value,
         "service": serviceCode.value,
         "request_type": "CONFIRM",
         "amount": amount,
         "cnfamount": confirmAmount,
-        "mode": mode,                                         // (IMPS/NEFT)
+        "mode": mode, // (IMPS/NEFT)
         "sendername": senderName.value,
         "beneid": beneficiary.beneId,
         "benename": beneficiary.name,
@@ -1854,7 +1889,7 @@ class DmtWalletController extends GetxController {
 
       CustomLoading().show(context);
 
-      // ✅ Step 2: INITIATE TXN
+      // Step 2: INITIATE TXN
       Map<String, dynamic> body = Map.from(confirmationData.value!['body']);
       body['request_id'] = generateRequestId();
       body['request_type'] = 'INITIATE TXN';                  // ✅ FIXED

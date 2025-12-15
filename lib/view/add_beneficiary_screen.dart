@@ -476,6 +476,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:payrupya/utils/ConsoleLog.dart';
 import '../controllers/dmt_wallet_controller.dart';
 import '../utils/global_utils.dart';
 
@@ -1239,6 +1240,8 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
                               bank.bankId ?? "";
                           dmtController.selectedIfsc.value =
                               bank.ifsc ?? "";
+
+                          ConsoleLog.printColor("Selected Bank: ${bank.bankName}, IFSC: ${bank.ifsc}");
 
                           // Auto-fill IFSC if available
                           if (bank.ifsc != null && bank.ifsc!.isNotEmpty) {
