@@ -12,6 +12,7 @@ import '../api/web_api_constant.dart';
 import '../models/add_beneficiary_response_model.dart';
 import '../models/add_sender_response_model.dart';
 import '../models/check_sender_response_model.dart';
+import '../models/confirm_transfer_response_model.dart';
 import '../models/delete_beneficiary_response_model.dart';
 import '../models/get_all_banks_response_model.dart';
 import '../models/get_allowed_service_by_type_response_model.dart';
@@ -27,6 +28,7 @@ import '../utils/global_utils.dart';
 import '../utils/otp_input_fields.dart';
 import '../view/login_screen.dart';
 import '../view/onboarding_screen.dart';
+import '../view/transaction_confirmation_screen.dart';
 import 'login_controller.dart';
 
 // ============================================
@@ -126,7 +128,8 @@ class DmtWalletController extends GetxController {
   Rx<TextEditingController> transferAmountController = TextEditingController().obs;
   Rx<TextEditingController> transferConfirmAmountController = TextEditingController().obs;
   Rx<TextEditingController> transferModeController = TextEditingController().obs;
-  Rx<TextEditingController> tpinController = TextEditingController().obs;
+  Rx<TextEditingController> txnPinController = TextEditingController().obs;
+  // Rx<TextEditingController> tpinController = TextEditingController().obs;
 
   Rx<TextEditingController> deleteOtpController = TextEditingController().obs;
 
@@ -152,6 +155,7 @@ class DmtWalletController extends GetxController {
   RxString senderMobileNo = ''.obs;
   RxString consumedLimit = '0'.obs;
   RxString availableLimit = '0'.obs;
+  RxString txnPin = ''.obs;
 
   // Beneficiary List
   RxList<BeneficiaryData> beneficiaryList = <BeneficiaryData>[].obs;
@@ -420,6 +424,7 @@ class DmtWalletController extends GetxController {
           consumedLimit.value = (checkSenderResponse.data?.senderdetail?.consumed_limit ?? '0').toString();
           double? availLimit = checkSenderResponse.data?.senderdetail?.availabel_limit;
           availableLimit.value = (availLimit?.toString() ?? '0');
+          txnPin.value = checkSenderResponse.data?.txnpin ?? '';
 
           ConsoleLog.printSuccess("Sender found: ${currentSender.value?.name}");
           Fluttertoast.showToast(msg: "Sender verified successfully");
@@ -1772,7 +1777,7 @@ class DmtWalletController extends GetxController {
   // ============================================
 
   // Step 1: Confirm transaction and get charges
-  Future<void> confirmTransfer(BuildContext context, BeneficiaryData beneficiary) async {
+  Future<void> confirmTransfer(BuildContext transferMoneyContext, BeneficiaryData beneficiary) async {
     try {
       String amount = transferAmountController.value.text.trim();
       String confirmAmount = transferConfirmAmountController.value.text.trim();
@@ -1806,7 +1811,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading().show(transferMoneyContext);
 
       // Step 1: CONFIRM - Get charges
       Map<String, dynamic> body = {
@@ -1828,26 +1833,38 @@ class DmtWalletController extends GetxController {
         "bankifsc": beneficiary.ifsc,
       };
 
-      ConsoleLog.printColor("CONFIRM TRANSFER REQ: $body");
+      ConsoleLog.printColor("CONFIRM TRANSFER REQ: ${jsonEncode(body)}");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
+        transferMoneyContext,
         WebApiConstant.API_URL_ADD_SENDER, // Uses process_remit_action_new
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading().hide(transferMoneyContext);
 
       if (response != null && response.statusCode == 200) {
-        var data = response.data;
+        ConfirmTransferResponseModel confirmResponse = ConfirmTransferResponseModel.fromJson(response.data);
 
-        if (data['Resp_code'] == 'RCS') {
+        if (confirmResponse.respCode == 'RCS' && confirmResponse.data != null) {
+          var chargesData = confirmResponse.data!;
+
+          // Log parsed data
+          ConsoleLog.printSuccess("Transfer details fetched:");
+          ConsoleLog.printInfo("Beneficiary Name: ${senderName.value}");
+          ConsoleLog.printInfo("Account Number: ${beneficiary.accountNo!}");
+          ConsoleLog.printInfo("Mode: $mode");
+          ConsoleLog.printInfo("Amount: ${chargesData.trasamt!}");
+          ConsoleLog.printInfo("Charged Amount: ${chargesData.chargedamt!.toString()}");
+          ConsoleLog.printInfo("Total Charge: ${chargesData.totalcharge!.toString()}");
+          ConsoleLog.printInfo("TPIN Status: ${chargesData.txnPinStatus}");
+          ConsoleLog.printInfo("TPIN: ${txnPin.value}");
           // Store confirmation data
           confirmationData.value = {
             'body': body,
-            'charges': data['data'],
+            'charges': chargesData,  // Store model object
             'beneficiary': beneficiary,
           };
 
@@ -1855,27 +1872,33 @@ class DmtWalletController extends GetxController {
 
           ConsoleLog.printSuccess("Transfer charges fetched");
 
+          Get.to(()=>TransactionConfirmationScreen());
           // Show confirmation dialog
-          showTransferConfirmationDialog(context, beneficiary, data['data']);
+          // showTransferConfirmationDialog(transferMoneyContext, beneficiary, chargesData);
+
 
         } else {
+          showConfirmation.value = false;
+          ConsoleLog.printError("Error: ${confirmResponse.respDesc}");
           CustomDialog.error(
-            context: context,
-            message: data['Resp_desc'] ?? "Failed to confirm transfer",
+            context: transferMoneyContext,
+            message: confirmResponse.respDesc ?? "Failed to confirm transfer",
           );
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading().hide(transferMoneyContext);
+      showConfirmation.value = false;
       ConsoleLog.printError("CONFIRM TRANSFER ERROR: $e");
-      CustomDialog.error(context: context, message: "Technical issue!");
+      CustomDialog.error(context: transferMoneyContext, message: "Technical issue!");
     }
   }
 
   // Step 2: Initiate transaction with TPIN
   Future<void> initiateTransfer(BuildContext context) async {
     try {
-      String tpin = tpinController.value.text.trim();
+      // String tpin = tpinController.value.text.trim();
+      String tpin = txnPinController.value.text.trim();
 
       if (tpin.isEmpty) {
         Fluttertoast.showToast(msg: "Please enter TPIN");
@@ -1918,7 +1941,9 @@ class DmtWalletController extends GetxController {
 
           // Clear form
           transferAmountController.value.clear();
-          tpinController.value.clear();
+
+          // tpinController.value.clear();
+          txnPinController.value.clear();
           confirmationData.value = null;
           showConfirmation.value = false;
 
@@ -1937,58 +1962,59 @@ class DmtWalletController extends GetxController {
   }
 
   // Show confirmation dialog with charges
-  void showTransferConfirmationDialog(BuildContext context, BeneficiaryData beneficiary, Map<String, dynamic> charges) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Confirm Transfer'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Beneficiary: ${beneficiary.name}'),
-              Text('Account: ${beneficiary.accountNo}'),
-              Text('Bank: ${beneficiary.bankName}'),
-              SizedBox(height: 16),
-              Text('Amount: ₹${transferAmountController.value.text}'),
-              Text('Charges: ₹${charges['charges'] ?? 0}'),
-              Text('Total: ₹${(double.parse(transferAmountController.value.text) + (charges['charges'] ?? 0))}'),
-              SizedBox(height: 16),
-              TextField(
-                controller: tpinController.value,
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                maxLength: 4,
-                decoration: InputDecoration(
-                  labelText: 'Enter TPIN',
-                  counterText: '',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                confirmationData.value = null;
-                showConfirmation.value = false;
-                Get.back();
-              },
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Get.back();
-                initiateTransfer(context);
-              },
-              child: Text('Confirm'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // void showTransferConfirmationDialog(BuildContext context, BeneficiaryData beneficiary, ConfirmTransferData charges) {
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         title: Text('Confirm Transfer'),
+  //         content: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             Text('Beneficiary: ${beneficiary.name}'),
+  //             Text('Account: ${beneficiary.accountNo}'),
+  //             Text('Bank: ${beneficiary.bankName}'),
+  //             SizedBox(height: 16),
+  //             Text('Amount: ₹${charges.trasamt}'),
+  //             Text('Charged Amount: ₹${charges.chargedamt}'),
+  //             // Text('Charges: ₹${charges.totalcharge}'),
+  //             Text('Total Charge: ₹${(charges.totalcharge)}'),
+  //             SizedBox(height: 16),
+  //             TextField(
+  //               controller: tpinController.value,
+  //               keyboardType: TextInputType.number,
+  //               obscureText: true,
+  //               maxLength: 4,
+  //               decoration: InputDecoration(
+  //                 labelText: 'Enter TPIN',
+  //                 counterText: '',
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () {
+  //               confirmationData.value = null;
+  //               showConfirmation.value = false;
+  //               Get.back();
+  //             },
+  //             child: Text('Cancel'),
+  //           ),
+  //           ElevatedButton(
+  //             onPressed: () {
+  //               Get.back();
+  //               initiateTransfer(context);
+  //             },
+  //             child: Text('Confirm'),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   // Show success dialog
   void showTransferSuccessDialog(BuildContext context, Map<String, dynamic>? data) {
@@ -2190,10 +2216,9 @@ class DmtWalletController extends GetxController {
     }
   }
 
-
-  // // ============================================
-  // // 10. SEARCH BENEFICIARIES
-  // // ============================================
+  // ============================================
+  // 11. SEARCH BENEFICIARIES
+  // ============================================
   // void searchBeneficiaries(String query) {
   //   searchQuery.value = query.toLowerCase();
   //
@@ -2201,37 +2226,44 @@ class DmtWalletController extends GetxController {
   //     filteredBeneficiaryList.value = beneficiaryList;
   //   } else {
   //     filteredBeneficiaryList.value = beneficiaryList.where((bene) {
-  //       return (bene.beneName?.toLowerCase().contains(query) ?? false) ||
-  //              (bene.accountNumber?.contains(query) ?? false) ||
-  //              (bene.bankName?.toLowerCase().contains(query) ?? false);
+  //       return (bene.name?.toLowerCase().contains(query) ?? false) ||
+  //           (bene.name?.toUpperCase().contains(query) ?? false) ||
+  //           (bene.accountNo?.contains(query) ?? false) ||
+  //           (bene.bankName?.toLowerCase().contains(query) ?? false) ||
+  //           (bene.bankName?.toUpperCase().contains(query) ?? false);
   //     }).toList();
   //   }
+  //
+  //   // Current sort after search
+  //   applySortOption(currentSortOption.value);
   // }
-
-  // ============================================
-  // 11. SEARCH BENEFICIARIES
-  // ============================================
   void searchBeneficiaries(String query) {
-    searchQuery.value = query.toLowerCase();
+    // Store original query (not converted)
+    searchQuery.value = query;
 
     if (query.isEmpty) {
       filteredBeneficiaryList.value = beneficiaryList;
     } else {
+      // Convert query to lowercase ONCE for comparison
+      String lowerQuery = query.toLowerCase();
+
       filteredBeneficiaryList.value = beneficiaryList.where((bene) {
-        return (bene.name?.toLowerCase().contains(query) ?? false) ||
-            (bene.name?.toUpperCase().contains(query) ?? false) ||
-            (bene.accountNo?.contains(query) ?? false) ||
-            (bene.bankName?.toLowerCase().contains(query) ?? false) ||
-            (bene.bankName?.toUpperCase().contains(query) ?? false);
+        // Convert each field to lowercase and compare
+        bool nameMatch = (bene.name?.toLowerCase().contains(lowerQuery) ?? false);
+        bool accountMatch = (bene.accountNo?.contains(query) ?? false); // Account numbers are exact
+        bool bankMatch = (bene.bankName?.toLowerCase().contains(lowerQuery) ?? false);
+        bool ifscMatch = (bene.ifsc?.toLowerCase().contains(lowerQuery) ?? false);
+
+        return nameMatch || accountMatch || bankMatch || ifscMatch;
       }).toList();
     }
 
-    // Current sort after search
+    // Apply current sort after search
     applySortOption(currentSortOption.value);
   }
 
   // ============================================
-  // 12. SORT BENEFICIARIES - ✅ NEW FUNCTIONALITY
+  // 12. SORT BENEFICIARIES
   // ============================================
   void sortBeneficiaries(BeneficiarySortOption option) {
     currentSortOption.value = option;
@@ -2239,6 +2271,9 @@ class DmtWalletController extends GetxController {
 
     // Update sort label
     switch (option) {
+      case BeneficiarySortOption.recent:
+        currentSortLabel.value = 'Recently Added';
+        break;
       case BeneficiarySortOption.nameAsc:
         currentSortLabel.value = 'Name A-Z';
         break;
@@ -2251,9 +2286,6 @@ class DmtWalletController extends GetxController {
       case BeneficiarySortOption.bankDesc:
         currentSortLabel.value = 'Bank Z-A';
         break;
-      case BeneficiarySortOption.recent:
-        currentSortLabel.value = 'Recently Added';
-        break;
     }
   }
 
@@ -2261,6 +2293,15 @@ class DmtWalletController extends GetxController {
     List<BeneficiaryData> listToSort = List.from(filteredBeneficiaryList);
 
     switch (option) {
+      case BeneficiarySortOption.recent:
+      // If you have createdAt or addedAt timestamp in BeneficiaryData model
+        listToSort.sort((a, b) =>
+            (b.updatedOn ?? '').compareTo(a.updatedOn ?? '')
+        );
+        // For now, reverse the list (assumes newer items are added at end)
+        listToSort = listToSort.reversed.toList();
+        break;
+
       case BeneficiarySortOption.nameAsc:
         listToSort.sort((a, b) =>
             (a.name ?? '').toLowerCase().compareTo((b.name ?? '').toLowerCase())
@@ -2283,15 +2324,6 @@ class DmtWalletController extends GetxController {
         listToSort.sort((a, b) =>
             (b.bankName ?? '').toLowerCase().compareTo((a.bankName ?? '').toLowerCase())
         );
-        break;
-
-      case BeneficiarySortOption.recent:
-      // If you have createdAt or addedAt timestamp in BeneficiaryData model
-      listToSort.sort((a, b) =>
-        (b.updatedOn ?? '').compareTo(a.updatedOn ?? '')
-      );
-      // For now, reverse the list (assumes newer items are added at end)
-        listToSort = listToSort.reversed.toList();
         break;
     }
 
@@ -2348,6 +2380,13 @@ class DmtWalletController extends GetxController {
                   children: [
                     buildSortOption(
                       context,
+                      'Recently Added',
+                      Icons.access_time,
+                      BeneficiarySortOption.recent,
+                      currentSortOption.value == BeneficiarySortOption.recent,
+                    ),
+                    buildSortOption(
+                      context,
                       'Name A-Z',
                       Icons.sort_by_alpha,
                       BeneficiarySortOption.nameAsc,
@@ -2373,13 +2412,6 @@ class DmtWalletController extends GetxController {
                       Icons.account_balance,
                       BeneficiarySortOption.bankDesc,
                       currentSortOption.value == BeneficiarySortOption.bankDesc,
-                    ),
-                    buildSortOption(
-                      context,
-                      'Recently Added',
-                      Icons.access_time,
-                      BeneficiarySortOption.recent,
-                      currentSortOption.value == BeneficiarySortOption.recent,
                     ),
                   ],
                 )),
@@ -2517,7 +2549,8 @@ class DmtWalletController extends GetxController {
     beneMobileController.value.dispose();
     transferAmountController.value.dispose();
     transferModeController.value.dispose();
-    tpinController.value.dispose();
+    txnPinController.value.dispose();
+    // tpinController.value.dispose();
     deleteOtpController.value.dispose();
     super.onClose();
   }

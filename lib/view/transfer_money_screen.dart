@@ -746,7 +746,7 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
     // Clear previous values
     dmtController.transferAmountController.value.clear();
     dmtController.transferConfirmAmountController.value.clear();
-    dmtController.tpinController.value.clear();
+    // dmtController.tpinController.value.clear();
 
     // Add listeners for amount fields
     dmtController.transferAmountController.value.addListener(() {
@@ -841,7 +841,7 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
                     SizedBox(height: 16),
                     buildTransferForm(),
                     SizedBox(height: 24),
-                    buildTransferButton(),
+                    buildTransferButton(context),
                     SizedBox(height: 16),
                   ],
                 ),
@@ -1453,7 +1453,7 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
     );
   }
 
-  Widget buildTransferButton() {
+  Widget buildTransferButton(BuildContext transferMoneyContext) {
     return GlobalUtils.CustomButton(
       // text: showTPINField ? "Confirm Transfer" : "Proceed",
       text: "Transfer",
@@ -1504,8 +1504,11 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
 
         // Show confirmation dialog
         // showConfirmationDialog(amountValue);
-        dmtController.confirmTransfer(context, widget.beneficiary);
-        Get.to(TransactionConfirmationScreen());
+        dmtController.confirmTransfer(transferMoneyContext, widget.beneficiary);
+        // Only navigate if successful
+        if (dmtController.showConfirmation.value == true) {
+          Get.to(() => TransactionConfirmationScreen());
+        }
       },
       textStyle: GoogleFonts.albertSans(
         fontSize: 16,

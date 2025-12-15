@@ -728,6 +728,7 @@
 
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controllers/dmt_wallet_controller.dart';
@@ -926,20 +927,24 @@ class _WalletScreenState extends State<WalletScreen> {
             children: [
               Row(
                 children: [
-                  Obx(()=> Text(
-                      // sender.name ?? "Unknown",
-                      dmtController.senderName.value ?? "Unknown",
-                      style: GoogleFonts.albertSans(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        // color: Color(0xff1B1C1C),
-                        color: Colors.black,
+                  Obx(()=> SizedBox(
+                    width: GlobalUtils.screenWidth * 0.43,
+                    child: Text(
+                        // sender.name ?? "Unknown",
+                        dmtController.senderName.value ?? "Unknown",
+                        style: GoogleFonts.albertSans(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          // color: Color(0xff1B1C1C),
+                          color: Colors.black,
+                        ),
+                      overflow: TextOverflow.ellipsis,
                       ),
-                    ),
                   ),
-                  SizedBox(width: 8),
-                  if (sender.isVerified == true)
-                    Icon(Icons.verified, color: Color(0xff009C46), size: 20),
+                  ),
+                  // SizedBox(width: 8),
+                  // if (sender.senderdetail?.kycstatus == "1")
+                  //   Icon(Icons.verified, color: Color(0xff009C46), size: 20),//commented for future
                 ],
               ),
               GestureDetector(

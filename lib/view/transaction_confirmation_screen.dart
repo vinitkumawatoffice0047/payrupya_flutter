@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:payrupya/controllers/dmt_wallet_controller.dart';
+import 'package:payrupya/models/confirm_transfer_response_model.dart';
+import 'package:payrupya/models/get_beneficiary_list_response_model.dart';
 
 import '../utils/global_utils.dart';
 
@@ -12,11 +15,14 @@ class TransactionConfirmationScreen extends StatefulWidget {
 }
 
 class _TransactionConfirmationScreenState extends State<TransactionConfirmationScreen> {
-  final TextEditingController taxPinController = TextEditingController();
+  // final TextEditingController txnPinController = TextEditingController();
+  DmtWalletController dmtWalletController = Get.put(DmtWalletController());
+  BeneficiaryData beneficiary = BeneficiaryData();
+  ConfirmTransferData chargesData = ConfirmTransferData();
 
-  String senderName = "Sohel Khan";
-  String senderMobile = "+91 9999887777";
-  bool isVerified = true;
+  String senderName = "Unknown";
+  String senderMobile = "";
+  bool isVerified = false;
 
   @override
   Widget build(BuildContext context) {
@@ -65,12 +71,12 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
                                 SizedBox(height: 10),
                                 Image.asset("assets/images/dashed_line.png"),
                                 SizedBox(height: 10),
-                                buildConfirmRow('Beneficiary Name', 'Sohel Khan'),
-                                buildConfirmRow('Account Number', '1111-1111-1111-111'),
-                                buildConfirmRow('Mode', 'IMPS'),
-                                buildConfirmRow('Amount', '₹6'),
-                                buildConfirmRow('Charged Amount', '₹6'),
-                                buildConfirmRow('Total Charged', '₹6'),
+                                buildConfirmRow('Beneficiary Name', dmtWalletController.senderName.value),
+                                buildConfirmRow('Account Number', beneficiary.accountNo!),
+                                buildConfirmRow('Mode', dmtWalletController.selectedTransferMode.value),
+                                buildConfirmRow('Amount', chargesData.trasamt!),
+                                buildConfirmRow('Charged Amount', chargesData.chargedamt!.toString()),
+                                buildConfirmRow('Total Charge', chargesData.totalcharge!.toString()),
                                 SizedBox(height: 10),
                               ],
                             ),
@@ -104,12 +110,38 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
                                 Text("*", style: GoogleFonts.albertSans(color: Colors.red),)
                               ],
                             ),
+                            if(chargesData.txnPinStatus == "1")...[
                             SizedBox(height: 8),
-                            buildTextField(
-                              controller: taxPinController,
-                              hint: 'Enter Transaction PIN',
-                              keyboardType: TextInputType.number,
+                            // buildTextField(
+                            //   controller: taxPinController,
+                            //   hint: 'Enter Transaction PIN',
+                            //   keyboardType: TextInputType.number,
+                            // ),
+                            Obx(()=>
+                               GlobalUtils.CustomTextField(
+                                label: "Enter Transaction PIN",
+                                showLabel: false,
+                                controller: dmtWalletController.txnPinController.value,
+                                placeholder: "Enter Transaction PIN",
+                                height: GlobalUtils.screenWidth * (60 / 393),
+                                width: GlobalUtils.screenWidth * 0.9,
+                                backgroundColor: Colors.white,
+                                borderColor: Color(0xffE2E5EC),
+                                borderRadius: 16,
+                                keyboardType: TextInputType.number,
+                                maxLength: 9,
+                                placeholderStyle: GoogleFonts.albertSans(
+                                  fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                  color: Color(0xFF6B707E),
+                                ),
+                                inputTextStyle: GoogleFonts.albertSans(
+                                  fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1B1C1C),
+                                ),
+                              ),
                             ),
+                            ],
                             SizedBox(height: 24),
                           ],
                         ),
@@ -157,6 +189,10 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
                         text: "Process",
                         onPressed: () {
                           Get.back();
+                          if(chargesData.txnPinStatus != "1"){
+                            dmtWalletController.txnPinController.value.text = dmtWalletController.txnPin.value;
+                          }
+                          dmtWalletController.initiateTransfer(context);
                         },
                         textStyle: GoogleFonts.albertSans(
                           fontSize: GlobalUtils.screenWidth * (16 / 393),
@@ -328,9 +364,9 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
     );
   }
 
-  @override
-  void dispose() {
-    taxPinController.dispose();
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   txnPinController.dispose();
+  //   super.dispose();
+  // }
 }
