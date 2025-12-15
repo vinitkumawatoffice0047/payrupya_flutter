@@ -1504,14 +1504,14 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
 
         // Show confirmation dialog
         // showConfirmationDialog(amountValue);
-        dmtController.confirmTransfer(transferMoneyContext, widget.beneficiary);
-        // Only navigate if successful
-        if (dmtController.showConfirmation.value == true) {
+        dmtController.confirmTransfer(context, widget.beneficiary);
+        // Check if confirmation data is available
+        if (dmtController.confirmationData.value != null) {
           // Navigate to confirmation screen
           final result = await Get.to(() => TransactionConfirmationScreen());
 
           // If user comes back, clear confirmation data
-          if (result == null) {
+          if (result == null || result == false) {
             dmtController.confirmationData.value = null;
             dmtController.showConfirmation.value = false;
           }
