@@ -2294,12 +2294,9 @@ class DmtWalletController extends GetxController {
 
     switch (option) {
       case BeneficiarySortOption.recent:
-      // If you have createdAt or addedAt timestamp in BeneficiaryData model
         listToSort.sort((a, b) =>
             (b.updatedOn ?? '').compareTo(a.updatedOn ?? '')
         );
-        // For now, reverse the list (assumes newer items are added at end)
-        listToSort = listToSort.reversed.toList();
         break;
 
       case BeneficiarySortOption.nameAsc:

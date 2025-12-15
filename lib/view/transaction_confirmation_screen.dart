@@ -17,8 +17,8 @@ class TransactionConfirmationScreen extends StatefulWidget {
 class _TransactionConfirmationScreenState extends State<TransactionConfirmationScreen> {
   // final TextEditingController txnPinController = TextEditingController();
   DmtWalletController dmtWalletController = Get.put(DmtWalletController());
-  BeneficiaryData beneficiary = BeneficiaryData();
-  ConfirmTransferData chargesData = ConfirmTransferData();
+  // BeneficiaryData beneficiary = BeneficiaryData();
+  // ConfirmTransferData chargesData = ConfirmTransferData();
 
   String senderName = "Unknown";
   String senderMobile = "";
@@ -26,197 +26,217 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        height: GlobalUtils.getScreenHeight(),
-        width: GlobalUtils.getScreenWidth(),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: GlobalUtils.getBackgroundColor()
+    return Obx((){
+      // Get data from controller's confirmationData
+      final confirmData = dmtWalletController.confirmationData.value;
+
+      // Check if data exists
+      if (confirmData == null) {
+        return Scaffold(
+          body: Center(
+            child: Text('No confirmation data available'),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              buildHeader(context),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      Container(
-                        margin: EdgeInsets.symmetric(horizontal: 10),
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
+        );
+      }
+
+      // Extract beneficiary and charges data
+      final BeneficiaryData beneficiary = confirmData['beneficiary'] as BeneficiaryData;
+      final ConfirmTransferData charges = confirmData['charges'] as ConfirmTransferData;
+
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          height: GlobalUtils.getScreenHeight(),
+          width: GlobalUtils.getScreenWidth(),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: GlobalUtils.getBackgroundColor()
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                buildHeader(context),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        Container(
+                          margin: EdgeInsets.symmetric(horizontal: 10),
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(height: 10),
+                                  Text(
+                                    'Transaction Confirmation :',
+                                    style: GoogleFonts.albertSans(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  SizedBox(height: 10),
+                                  Image.asset("assets/images/dashed_line.png"),
+                                  SizedBox(height: 10),
+                                  buildConfirmRow('Beneficiary Name', beneficiary.name ?? ''),
+                                  buildConfirmRow('Account Number', beneficiary.accountNo ?? ''),
+                                  buildConfirmRow('Mode', dmtWalletController.selectedTransferMode.value),
+                                  buildConfirmRow('Amount', charges.trasamt ?? 0.toString()),
+                                  buildConfirmRow('Charged Amount', charges.chargedamt.toString()),
+                                  buildConfirmRow('Total Charge', charges.totalcharge.toString()),
+                                  SizedBox(height: 10),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Column(
-                              children: [
-                                SizedBox(height: 10),
-                                Text(
-                                  'Transaction Confirmation :',
-                                  style: GoogleFonts.albertSans(
-                                    fontSize: 18,
+                        SizedBox(height: 10),
+                        Container(
+                          margin: EdgeInsets.symmetric(horizontal: 10),
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Enter Transaction PIN',
+                                style: GoogleFonts.albertSans(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  buildLabelText('TXN Pin '),
+                                  Text("*", style: GoogleFonts.albertSans(color: Colors.red),)
+                                ],
+                              ),
+                              if(charges.txnPinStatus == "1")...[
+                              SizedBox(height: 8),
+                              // buildTextField(
+                              //   controller: taxPinController,
+                              //   hint: 'Enter Transaction PIN',
+                              //   keyboardType: TextInputType.number,
+                              // ),
+                              Obx(()=>
+                                 GlobalUtils.CustomTextField(
+                                  label: "Enter Transaction PIN",
+                                  showLabel: false,
+                                  controller: dmtWalletController.txnPinController.value,
+                                  placeholder: "Enter Transaction PIN",
+                                  height: GlobalUtils.screenWidth * (60 / 393),
+                                  width: GlobalUtils.screenWidth * 0.9,
+                                  backgroundColor: Colors.white,
+                                  borderColor: Color(0xffE2E5EC),
+                                  borderRadius: 16,
+                                  keyboardType: TextInputType.number,
+                                  maxLength: 9,
+                                  placeholderStyle: GoogleFonts.albertSans(
+                                    fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                    color: Color(0xFF6B707E),
+                                  ),
+                                  inputTextStyle: GoogleFonts.albertSans(
+                                    fontSize: GlobalUtils.screenWidth * (14 / 393),
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
+                                    color: Color(0xFF1B1C1C),
                                   ),
                                 ),
-                                SizedBox(height: 10),
-                                Image.asset("assets/images/dashed_line.png"),
-                                SizedBox(height: 10),
-                                buildConfirmRow('Beneficiary Name', dmtWalletController.senderName.value),
-                                buildConfirmRow('Account Number', beneficiary.accountNo!),
-                                buildConfirmRow('Mode', dmtWalletController.selectedTransferMode.value),
-                                buildConfirmRow('Amount', chargesData.trasamt!),
-                                buildConfirmRow('Charged Amount', chargesData.chargedamt!.toString()),
-                                buildConfirmRow('Total Charge', chargesData.totalcharge!.toString()),
-                                SizedBox(height: 10),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      Container(
-                        margin: EdgeInsets.symmetric(horizontal: 10),
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Enter Transaction PIN',
-                              style: GoogleFonts.albertSans(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
                               ),
-                            ),
-                            SizedBox(height: 12),
-                            Row(
-                              children: [
-                                buildLabelText('TXN Pin '),
-                                Text("*", style: GoogleFonts.albertSans(color: Colors.red),)
                               ],
-                            ),
-                            if(chargesData.txnPinStatus == "1")...[
-                            SizedBox(height: 8),
-                            // buildTextField(
-                            //   controller: taxPinController,
-                            //   hint: 'Enter Transaction PIN',
-                            //   keyboardType: TextInputType.number,
-                            // ),
-                            Obx(()=>
-                               GlobalUtils.CustomTextField(
-                                label: "Enter Transaction PIN",
-                                showLabel: false,
-                                controller: dmtWalletController.txnPinController.value,
-                                placeholder: "Enter Transaction PIN",
-                                height: GlobalUtils.screenWidth * (60 / 393),
-                                width: GlobalUtils.screenWidth * 0.9,
-                                backgroundColor: Colors.white,
-                                borderColor: Color(0xffE2E5EC),
-                                borderRadius: 16,
-                                keyboardType: TextInputType.number,
-                                maxLength: 9,
-                                placeholderStyle: GoogleFonts.albertSans(
-                                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                  color: Color(0xFF6B707E),
-                                ),
-                                inputTextStyle: GoogleFonts.albertSans(
-                                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF1B1C1C),
-                                ),
-                              ),
-                            ),
+                              SizedBox(height: 24),
                             ],
-                            SizedBox(height: 24),
-                          ],
+                          ),
+                        ),
+                        SizedBox(height: 20,),
+                      ],
+                    ),
+                  ),
+                ),
+                Container(
+                  width: double.infinity,
+                  height: 60,
+                  margin: EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            Get.back();
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Color(0xffE2E5EC),
+                                width: 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Cancel',
+                                style: GoogleFonts.albertSans(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xff1B1C1C),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      SizedBox(height: 20,),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: GlobalUtils.CustomButton(
+                          text: "Process",
+                          onPressed: () {
+                            Get.back();
+                            if(charges.txnPinStatus != "1"){
+                              dmtWalletController.txnPinController.value.text = dmtWalletController.txnPin.value;
+                            }
+                            dmtWalletController.initiateTransfer(context);
+                          },
+                          textStyle: GoogleFonts.albertSans(
+                            fontSize: GlobalUtils.screenWidth * (16 / 393),
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          backgroundGradient: GlobalUtils.blueBtnGradientColor,
+                          borderColor: Color(0xFF71A9FF),
+                          showShadow: false,
+                          textColor: Colors.white,
+                          animation: ButtonAnimation.fade,
+                          animationDuration: const Duration(milliseconds: 150),
+                          buttonType: ButtonType.elevated,
+                          borderRadius: 16,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
-              Container(
-                width: double.infinity,
-                height: 60,
-                margin: EdgeInsets.symmetric(horizontal: 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          Get.back();
-                        },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Color(0xffE2E5EC),
-                              width: 1,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              'Cancel',
-                              style: GoogleFonts.albertSans(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xff1B1C1C),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: GlobalUtils.CustomButton(
-                        text: "Process",
-                        onPressed: () {
-                          Get.back();
-                          if(chargesData.txnPinStatus != "1"){
-                            dmtWalletController.txnPinController.value.text = dmtWalletController.txnPin.value;
-                          }
-                          dmtWalletController.initiateTransfer(context);
-                        },
-                        textStyle: GoogleFonts.albertSans(
-                          fontSize: GlobalUtils.screenWidth * (16 / 393),
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        backgroundGradient: GlobalUtils.blueBtnGradientColor,
-                        borderColor: Color(0xFF71A9FF),
-                        showShadow: false,
-                        textColor: Colors.white,
-                        animation: ButtonAnimation.fade,
-                        animationDuration: const Duration(milliseconds: 150),
-                        buttonType: ButtonType.elevated,
-                        borderRadius: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 24),
-            ],
+                SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
-      ),
+      );
+    }
     );
   }
 
@@ -298,12 +318,16 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
               fontWeight: FontWeight.w400,
             ),
           ),
-          Text(
-            value,
-            style: GoogleFonts.albertSans(
-              fontSize: 14,
-              color: Color(0xff1B1C1C),
-              fontWeight: FontWeight.w400,
+          SizedBox(
+            width: 160,
+            child: Text(
+              value,
+              style: GoogleFonts.albertSans(
+                fontSize: 14,
+                color: Color(0xff1B1C1C),
+                fontWeight: FontWeight.w400,
+              ),
+              textAlign: TextAlign.right,
             ),
           ),
         ],
