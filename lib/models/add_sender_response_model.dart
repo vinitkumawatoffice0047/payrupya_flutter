@@ -1,48 +1,75 @@
 class AddSenderResponseModel {
   String? respCode;
   String? respDesc;
+  String? requestId;
   AddSenderData? data;
 
-  AddSenderResponseModel({this.respCode, this.respDesc, this.data});
+  AddSenderResponseModel({
+    this.respCode,
+    this.respDesc,
+    this.requestId,
+    this.data,
+  });
 
-  AddSenderResponseModel.fromJson(Map<String, dynamic> json) {
-    respCode = json['Resp_code'];
-    respDesc = json['Resp_desc'];
-    data = json['data'] != null ? AddSenderData.fromJson(json['data']) : null;
+  factory AddSenderResponseModel.fromJson(Map<String, dynamic> json) {
+    return AddSenderResponseModel(
+      respCode: json['Resp_code'] as String?,
+      respDesc: json['Resp_desc'] as String?,
+      requestId: json['request_id'] as String?,
+      data: json['data'] != null && json['data'] is Map
+          ? AddSenderData.fromJson(json['data'] as Map<String, dynamic>)
+          : null,
+    );
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['Resp_code'] = respCode;
-    data['Resp_desc'] = respDesc;
-    if (this.data != null) {
-      data['data'] = this.data!.toJson();
-    }
-    return data;
+    return {
+      'Resp_code': respCode,
+      'Resp_desc': respDesc,
+      'request_id': requestId,
+      'data': data?.toJson(),
+    };
   }
 }
 
 class AddSenderData {
-  String? mobile;
-  String? otp;
-  String? referenceid;
-  String? message;
+  SenderIdData? senderid;
 
-  AddSenderData({this.mobile, this.otp, this.referenceid, this.message});
+  AddSenderData({
+    this.senderid,
+  });
 
-  AddSenderData.fromJson(Map<String, dynamic> json) {
-    mobile = json['mobile']?.toString();
-    otp = json['otp']?.toString();
-    referenceid = json['referenceid']?.toString();
-    message = json['message']?.toString();
+  factory AddSenderData.fromJson(Map<String, dynamic> json) {
+    return AddSenderData(
+      senderid: json['senderid'] != null
+          ? SenderIdData.fromJson(json['senderid'] as Map<String, dynamic>)
+          : null,
+    );
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['mobile'] = mobile;
-    data['otp'] = otp;
-    data['referenceid'] = referenceid;
-    data['message'] = message;
-    return data;
+    return {
+      'senderid': senderid?.toJson(),
+    };
+  }
+}
+
+class SenderIdData {
+  String? identifier;
+
+  SenderIdData({
+    this.identifier,
+  });
+
+  factory SenderIdData.fromJson(Map<String, dynamic> json) {
+    return SenderIdData(
+      identifier: json['identifier'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'identifier': identifier,
+    };
   }
 }

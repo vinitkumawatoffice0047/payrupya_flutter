@@ -535,15 +535,18 @@ class DmtWalletController extends GetxController {
       );
 
       CustomLoading().hide(context);
-      ConsoleLog.printColor("ADD SENDER RESPONSE: ${response?.data}");
 
       if (response != null && response.statusCode == 200) {
+        ConsoleLog.printColor("ADD SENDER RESPONSE: ${response?.data}");
+        AddSenderResponseModel addSenderResponse =
+        AddSenderResponseModel.fromJson(response.data);
         // var data = response.data;
 
-        if (response.data['Resp_code'] == 'RCS') {
+        if (addSenderResponse.respCode == 'RCS') {
           isSenderVerified.value = true;
 
           ConsoleLog.printSuccess("Sender registered successfully");
+          ConsoleLog.printInfo("Identifier: ${addSenderResponse.data?.senderid?.identifier}");
           Fluttertoast.showToast(msg: "Sender registered successfully");
 
           // Clear form
@@ -552,8 +555,8 @@ class DmtWalletController extends GetxController {
           // Refresh sender details
           await checkSender(context, mobile);
 
-        } else if (response.data['Resp_code'] == 'ERR') {
-          String errorMsg = response.data['Resp_code'] ?? "Failed to add sender";
+        } else if (addSenderResponse.respCode == 'ERR') {
+          String errorMsg = addSenderResponse.respCode ?? "Failed to add sender";
 
           // Check if "already registered"
           if (errorMsg.toLowerCase().contains('already registered')) {
@@ -606,18 +609,32 @@ class DmtWalletController extends GetxController {
           }
         } else {
           // Unexpected response
-          String errorMsg = response.data['Resp_code'] ?? "Unexpected response";
+          String errorMsg = addSenderResponse.respDesc ?? "Unexpected response";
           CustomDialog.error(context: context, message: errorMsg);
         }
       } else if (response?.statusCode == 401) {
         await refreshToken(context);
+      } else {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text('Connection Error'),
+            content: Text('No response from server'),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: Text('OK'),
+              ),
+            ],
+          ),
+        );
       }
     } catch (e) {
       CustomLoading().hide(context);
       ConsoleLog.printError("ADD SENDER ERROR: $e");
       String errorMessage = "Technical issue occurred";
       if (e.toString().contains('not a subtype')) {
-        errorMessage = "Response format error";
+        errorMessage = "Response format error. Please try again.";
       }
       // CustomDialog.error(context: context, message: "Technical issue!");
     }

@@ -66,9 +66,9 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
     _initialize();
 
     // // Show dialog after screen loads (with small delay)
-    // Future.delayed(Duration(milliseconds: 500), () {
-    //   _showDemoSuccessDialog();
-    // });
+    Future.delayed(Duration(milliseconds: 500), () {
+      _showDemoSuccessDialog();
+    });
   }
 
   void _showDemoSuccessDialog() {
