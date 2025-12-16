@@ -483,7 +483,8 @@ class DmtWalletController extends GetxController {
       String mobile = senderMobileController.value.text.trim();
       String name = senderNameController.value.text.trim();
       String address = senderAddressController.value.text.trim();
-      var pincode = senderPincodeController.value;
+      // var pincode = senderPincodeController.value;
+      String pincode = selectedPincode.value;
 
       if (mobile.isEmpty || name.isEmpty || address.isEmpty) {
         Fluttertoast.showToast(msg: "Please fill all required fields");
@@ -518,7 +519,7 @@ class DmtWalletController extends GetxController {
         "sender_otp": otp,
         "sender_name": name,
         "sender_address": address,
-        "sender_pincode": selectedPincode.value,
+        "sender_pincode": pincode,
         "sender_city": selectedCity.value,
         "sender_state": selectedState.value,
       };
@@ -537,10 +538,9 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("ADD SENDER RESPONSE: ${response?.data}");
 
       if (response != null && response.statusCode == 200) {
-        CustomLoading().hide(context);
-        var data = response.data;
+        // var data = response.data;
 
-        if (data['Resp_code'] == 'RCS') {
+        if (response.data['Resp_code'] == 'RCS') {
           isSenderVerified.value = true;
 
           ConsoleLog.printSuccess("Sender registered successfully");
@@ -552,12 +552,62 @@ class DmtWalletController extends GetxController {
           // Refresh sender details
           await checkSender(context, mobile);
 
+        } else if (response.data['Resp_code'] == 'ERR') {
+          String errorMsg = response.data['Resp_code'] ?? "Failed to add sender";
+
+          // Check if "already registered"
+          if (errorMsg.toLowerCase().contains('already registered')) {
+            ConsoleLog.printInfo("Sender already registered");
+            Fluttertoast.showToast(msg: "You are already registered");
+
+            // Navigate to wallet (user is verified)
+            isSenderVerified.value = true;
+            await checkSender(context, mobile);
+
+          } else {
+            // Real error - show error dialog
+            ConsoleLog.printError("ADD SENDER ERROR: $errorMsg");
+
+            Get.dialog(
+              AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                title: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red, size: 28),
+                    SizedBox(width: 12),
+                    Text(
+                      'Registration Failed',
+                      style: GoogleFonts.albertSans(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                content: Text(
+                  errorMsg,
+                  style: GoogleFonts.albertSans(fontSize: 14),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: Text(
+                      'OK',
+                      style: GoogleFonts.albertSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0054D3),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
         } else {
-          String errorMsg = data['Resp_desc'] ?? "Failed to add sender";
-          CustomDialog.error(
-            context: context,
-            message: errorMsg,
-          );
+          // Unexpected response
+          String errorMsg = response.data['Resp_code'] ?? "Unexpected response";
+          CustomDialog.error(context: context, message: errorMsg);
         }
       } else if (response?.statusCode == 401) {
         await refreshToken(context);
@@ -565,7 +615,11 @@ class DmtWalletController extends GetxController {
     } catch (e) {
       CustomLoading().hide(context);
       ConsoleLog.printError("ADD SENDER ERROR: $e");
-      CustomDialog.error(context: context, message: "Technical issue!");
+      String errorMessage = "Technical issue occurred";
+      if (e.toString().contains('not a subtype')) {
+        errorMessage = "Response format error";
+      }
+      // CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
   // // ============================================
