@@ -58,7 +58,7 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
           child: SafeArea(
             child: Column(
               children: [
-                buildHeader(context),
+                buildCustomAppBar(),
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
@@ -101,6 +101,7 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
                             ],
                           ),
                         ),
+                        if(charges.txnPinStatus == "1")...[
                         SizedBox(height: 10),
                         Container(
                           margin: EdgeInsets.symmetric(horizontal: 10),
@@ -128,7 +129,6 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
                                   Text("*", style: GoogleFonts.albertSans(color: Colors.red),)
                                 ],
                               ),
-                              if(charges.txnPinStatus == "1")...[
                               SizedBox(height: 8),
                               // buildTextField(
                               //   controller: taxPinController,
@@ -159,12 +159,12 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
                                   ),
                                 ),
                               ),
-                              ],
                               SizedBox(height: 24),
                             ],
                           ),
                         ),
                         SizedBox(height: 20,),
+                        ]
                       ],
                     ),
                   ),
@@ -207,9 +207,6 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
                           text: "Process",
                           onPressed: () {
                             Get.back();
-                            if(charges.txnPinStatus != "1"){
-                              dmtWalletController.txnPinController.value.text = dmtWalletController.txnPin.value;
-                            }
                             dmtWalletController.initiateTransfer(context);
                           },
                           textStyle: GoogleFonts.albertSans(
@@ -240,14 +237,18 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
     );
   }
 
-  Widget buildHeader(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(16),
+  Widget buildCustomAppBar() {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: GlobalUtils.screenWidth * 0.04,
+        right: GlobalUtils.screenWidth * 0.04,
+        bottom: 16,
+        top: 12,
+      ),
       child: Row(
         children: [
-          /// BACK BUTTON
           GestureDetector(
-            onTap: () {
+          onTap: () {
               // Clean up confirmation data when going back
               dmtWalletController.confirmationData.value = null;
               dmtWalletController.showConfirmation.value = false;
@@ -260,54 +261,94 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_back_ios_new, color: Colors.black87, size: 22),
+              child: const Icon(
+                Icons.arrow_back_ios_new,
+                color: Colors.black87,
+                size: 22,
+              ),
             ),
           ),
-          SizedBox(width: 16),
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: Colors.transparent,
-            backgroundImage: AssetImage('assets/images/avatar.png'),
-            onBackgroundImageError: (exception, stackTrace) {},
-            child: Image.asset(
-              'assets/images/avatar.png',
-              errorBuilder: (context, error, stackTrace) {
-                return Icon(Icons.person, size: 24, color: Colors.grey);
-              },
+          SizedBox(width: GlobalUtils.screenWidth * (14 / 393)),
+          Text(
+            "Transasction Details",
+            style: GoogleFonts.albertSans(
+              fontSize: GlobalUtils.screenWidth * (20 / 393),
+              fontWeight: FontWeight.w600,
+              color: const Color(0xff1B1C1C),
             ),
-          ),
-          SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    senderName,
-                    style: GoogleFonts.albertSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xff1B1C1C),
-                    ),
-                  ),
-                  SizedBox(width: 6),
-                  if (isVerified)
-                    Icon(Icons.verified, color: Colors.green, size: 18),
-                ],
-              ),
-              Text(
-                senderMobile,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xff6B707E),
-                ),
-              ),
-            ],
           ),
         ],
       ),
     );
   }
+  // Widget buildHeader(BuildContext context) {
+  //   return Container(
+  //     padding: EdgeInsets.all(16),
+  //     child: Row(
+  //       children: [
+  //         /// BACK BUTTON
+  //         GestureDetector(
+  //           onTap: () {
+  //             // Clean up confirmation data when going back
+  //             dmtWalletController.confirmationData.value = null;
+  //             dmtWalletController.showConfirmation.value = false;
+  //             Get.back();
+  //           },
+  //           child: Container(
+  //             height: GlobalUtils.screenHeight * (22 / 393),
+  //             width: GlobalUtils.screenWidth * (47 / 393),
+  //             decoration: const BoxDecoration(
+  //               color: Colors.white,
+  //               shape: BoxShape.circle,
+  //             ),
+  //             child: const Icon(Icons.arrow_back_ios_new, color: Colors.black87, size: 22),
+  //           ),
+  //         ),
+  //         SizedBox(width: 16),
+  //         CircleAvatar(
+  //           radius: 22,
+  //           backgroundColor: Colors.transparent,
+  //           backgroundImage: AssetImage('assets/images/avatar.png'),
+  //           onBackgroundImageError: (exception, stackTrace) {},
+  //           child: Image.asset(
+  //             'assets/images/avatar.png',
+  //             errorBuilder: (context, error, stackTrace) {
+  //               return Icon(Icons.person, size: 24, color: Colors.grey);
+  //             },
+  //           ),
+  //         ),
+  //         SizedBox(width: 12),
+  //         Column(
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             Row(
+  //               children: [
+  //                 Text(
+  //                   senderName,
+  //                   style: GoogleFonts.albertSans(
+  //                     fontSize: 16,
+  //                     fontWeight: FontWeight.w400,
+  //                     color: Color(0xff1B1C1C),
+  //                   ),
+  //                 ),
+  //                 SizedBox(width: 6),
+  //                 if (isVerified)
+  //                   Icon(Icons.verified, color: Colors.green, size: 18),
+  //               ],
+  //             ),
+  //             Text(
+  //               senderMobile,
+  //               style: TextStyle(
+  //                 fontSize: 12,
+  //                 color: Color(0xff6B707E),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget buildConfirmRow(String label, String value) {
     return Padding(

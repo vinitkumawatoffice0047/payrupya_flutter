@@ -1870,6 +1870,11 @@ class DmtWalletController extends GetxController {
 
           showConfirmation.value = true;
 
+          // ✅ ADD THESE DEBUG PRINTS BEFORE Get.to()
+          print("🔍 DEBUG: About to navigate");
+          print("🔍 confirmationData: ${confirmationData.value != null}");
+          print("🔍 showConfirmation: ${showConfirmation.value}");
+
           ConsoleLog.printSuccess("Transfer charges fetched");
 
           // Get.to(()=>TransactionConfirmationScreen());
@@ -1900,14 +1905,16 @@ class DmtWalletController extends GetxController {
       // String tpin = tpinController.value.text.trim();
       String tpin = txnPinController.value.text.trim();
 
-      if (tpin.isEmpty) {
-        Fluttertoast.showToast(msg: "Please enter TPIN");
-        return;
-      }
+      if(txnPin.value == "1"){
+        if (tpin.isEmpty) {
+          Fluttertoast.showToast(msg: "Please enter TPIN");
+          return;
+        }
 
-      if (confirmationData.value == null) {
-        Fluttertoast.showToast(msg: "Confirmation data not found");
-        return;
+        if (confirmationData.value == null) {
+          Fluttertoast.showToast(msg: "Confirmation data not found");
+          return;
+        }
       }
 
       CustomLoading().show(context);

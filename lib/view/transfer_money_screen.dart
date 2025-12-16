@@ -1502,19 +1502,27 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
         //   return;
         // }
 
-        // Show confirmation dialog
-        // showConfirmationDialog(amountValue);
-        dmtController.confirmTransfer(context, widget.beneficiary);
-        // Check if confirmation data is available
+        // ✅ Call API and wait
+        print("🔍 Calling confirmTransfer...");
+        await dmtController.confirmTransfer(context, widget.beneficiary);
+        print("🔍 Back from confirmTransfer");
+
+        // ✅ Check if data is available
+        print("🔍 confirmationData: ${dmtController.confirmationData.value}");
+
         if (dmtController.confirmationData.value != null) {
-          // Navigate to confirmation screen
+          print("✅ Data available, navigating...");
+
+          // ✅ Navigate here
           final result = await Get.to(() => TransactionConfirmationScreen());
 
-          // If user comes back, clear confirmation data
-          if (result == null || result == false) {
-            dmtController.confirmationData.value = null;
-            dmtController.showConfirmation.value = false;
-          }
+          print("✅ Back from confirmation screen");
+
+          // Clean up when back
+          dmtController.confirmationData.value = null;
+          dmtController.showConfirmation.value = false;
+        } else {
+          print("❌ No confirmation data");
         }
       },
       textStyle: GoogleFonts.albertSans(
