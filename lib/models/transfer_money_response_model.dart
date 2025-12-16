@@ -1,13 +1,20 @@
 class TransferMoneyResponseModel {
   String? respCode;
   String? respDesc;
+  String? requestId;
   TransferData? data;
 
-  TransferMoneyResponseModel({this.respCode, this.respDesc, this.data});
+  TransferMoneyResponseModel({
+    this.respCode,
+    this.respDesc,
+    this.requestId,
+    this.data
+  });
 
   TransferMoneyResponseModel.fromJson(Map<String, dynamic> json) {
     respCode = json['Resp_code'];
     respDesc = json['Resp_desc'];
+    requestId = json['request_id'];
     data = json['data'] != null ? TransferData.fromJson(json['data']) : null;
   }
 
@@ -15,6 +22,7 @@ class TransferMoneyResponseModel {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['Resp_code'] = respCode;
     data['Resp_desc'] = respDesc;
+    data['request_id'] = requestId;
     if (this.data != null) {
       data['data'] = this.data!.toJson();
     }
@@ -23,55 +31,87 @@ class TransferMoneyResponseModel {
 }
 
 class TransferData {
-  String? txnId;
+  String? benename;
+  String? opid;
+  String? txnid;
+  String? txnStatus;
+  String? txnDesc;
+  String? date;
+  String? datetext;
+  int? commission;
+  int? tds;
+  int? totalcharge;
+  int? totalccf;
+  String? trasamt;
+  int? chargedamt;
+  int? availableLimit;
+  String? consumedLimit;
+  int? monthlyLimit;
   String? utr;
-  String? amount;
-  String? charges;
-  String? status;
-  String? beneName;
-  String? accountNumber;
-  String? bankName;
   String? message;
-  String? timestamp;
 
   TransferData({
-    this.txnId,
+    this.benename,
+    this.opid,
+    this.txnid,
+    this.txnStatus,
+    this.txnDesc,
+    this.date,
+    this.datetext,
+    this.commission,
+    this.tds,
+    this.totalcharge,
+    this.totalccf,
+    this.trasamt,
+    this.chargedamt,
+    this.availableLimit,
+    this.consumedLimit,
+    this.monthlyLimit,
     this.utr,
-    this.amount,
-    this.charges,
-    this.status,
-    this.beneName,
-    this.accountNumber,
-    this.bankName,
     this.message,
-    this.timestamp,
   });
 
   TransferData.fromJson(Map<String, dynamic> json) {
-    txnId = json['txn_id']?.toString();
+    benename = json['benename']?.toString();
+    opid = json['opid']?.toString();
+    txnid = json['txnid']?.toString();
+    txnStatus = json['txn_status']?.toString();
+    txnDesc = json['txn_desc']?.toString();
+    date = json['date']?.toString();
+    datetext = json['datetext']?.toString();
+    commission = json['commission'];
+    tds = json['tds'];
+    totalcharge = json['totalcharge'];
+    totalccf = json['totalccf'];
+    trasamt = json['trasamt']?.toString();
+    chargedamt = json['chargedamt'];
+    availableLimit = json['available_limit'];
+    consumedLimit = json['consumed_limit']?.toString();
+    monthlyLimit = json['monthly_limit'];
     utr = json['utr']?.toString();
-    amount = json['amount']?.toString();
-    charges = json['charges']?.toString();
-    status = json['status']?.toString();
-    beneName = json['bene_name']?.toString();
-    accountNumber = json['account_number']?.toString();
-    bankName = json['bank_name']?.toString();
     message = json['message']?.toString();
-    timestamp = json['timestamp']?.toString();
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
-    data['txn_id'] = txnId;
+    data['benename'] = benename;
+    data['opid'] = opid;
+    data['txnid'] = txnid;
+    data['txn_status'] = txnStatus;
+    data['txn_desc'] = txnDesc;
+    data['date'] = date;
+    data['datetext'] = datetext;
+    data['commission'] = commission;
+    data['tds'] = tds;
+    data['totalcharge'] = totalcharge;
+    data['totalccf'] = totalccf;
+    data['trasamt'] = trasamt;
+    data['chargedamt'] = chargedamt;
+    data['available_limit'] = availableLimit;
+    data['consumed_limit'] = consumedLimit;
+    data['monthly_limit'] = monthlyLimit;
     data['utr'] = utr;
-    data['amount'] = amount;
-    data['charges'] = charges;
-    data['status'] = status;
-    data['bene_name'] = beneName;
-    data['account_number'] = accountNumber;
-    data['bank_name'] = bankName;
     data['message'] = message;
-    data['timestamp'] = timestamp;
     return data;
   }
 }

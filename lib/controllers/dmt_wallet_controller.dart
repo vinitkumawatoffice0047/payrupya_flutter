@@ -26,6 +26,7 @@ import '../utils/connection_validator.dart';
 import '../utils/custom_loading.dart';
 import '../utils/global_utils.dart';
 import '../utils/otp_input_fields.dart';
+import '../utils/transfer_success_dialog.dart';
 import '../view/login_screen.dart';
 import '../view/onboarding_screen.dart';
 import '../view/transaction_confirmation_screen.dart';
@@ -482,7 +483,7 @@ class DmtWalletController extends GetxController {
       String mobile = senderMobileController.value.text.trim();
       String name = senderNameController.value.text.trim();
       String address = senderAddressController.value.text.trim();
-      String pincode = senderPincodeController.value.text.trim();
+      var pincode = senderPincodeController.value;
 
       if (mobile.isEmpty || name.isEmpty || address.isEmpty) {
         Fluttertoast.showToast(msg: "Please fill all required fields");
@@ -517,7 +518,7 @@ class DmtWalletController extends GetxController {
         "sender_otp": otp,
         "sender_name": name,
         "sender_address": address,
-        "sender_pincode": pincode,
+        "sender_pincode": selectedPincode.value,
         "sender_city": selectedCity.value,
         "sender_state": selectedState.value,
       };
@@ -552,9 +553,10 @@ class DmtWalletController extends GetxController {
           await checkSender(context, mobile);
 
         } else {
+          String errorMsg = data['Resp_desc'] ?? "Failed to add sender";
           CustomDialog.error(
             context: context,
-            message: data['Resp_desc'] ?? "Failed to add sender",
+            message: errorMsg,
           );
         }
       } else if (response?.statusCode == 401) {
@@ -1870,10 +1872,9 @@ class DmtWalletController extends GetxController {
 
           showConfirmation.value = true;
 
-          // ✅ ADD THESE DEBUG PRINTS BEFORE Get.to()
-          print("🔍 DEBUG: About to navigate");
-          print("🔍 confirmationData: ${confirmationData.value != null}");
-          print("🔍 showConfirmation: ${showConfirmation.value}");
+          print("DEBUG: About to navigate");
+          print("confirmationData: ${confirmationData.value != null}");
+          print("showConfirmation: ${showConfirmation.value}");
 
           ConsoleLog.printSuccess("Transfer charges fetched");
 
@@ -1899,7 +1900,7 @@ class DmtWalletController extends GetxController {
     }
   }
 
-  // Step 2: Initiate transaction with TPIN
+  // Initiate transaction with TPIN
   Future<void> initiateTransfer(BuildContext context) async {
     try {
       // String tpin = tpinController.value.text.trim();
@@ -1919,11 +1920,11 @@ class DmtWalletController extends GetxController {
 
       CustomLoading().show(context);
 
-      // Step 2: INITIATE TXN
+      // INITIATE TXN
       Map<String, dynamic> body = Map.from(confirmationData.value!['body']);
       body['request_id'] = generateRequestId();
-      body['request_type'] = 'INITIATE TXN';                  // ✅ FIXED
-      body['txnpin'] = tpin;                                   // ✅ FIXED
+      body['request_type'] = 'INITIATE TXN';
+      body['txnpin'] = tpin;
 
       ConsoleLog.printColor("INITIATE TRANSFER REQ: $body");
 
@@ -1938,33 +1939,134 @@ class DmtWalletController extends GetxController {
       CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
-        var data = response.data;
-
-        if (data['Resp_code'] == 'RCS') {
-          ConsoleLog.printSuccess("Transfer successful: ${data['data']?['txn_id']}");
-
-          // Show success dialog
-          showTransferSuccessDialog(context, data['data']);
+        // var data = response.data;
+        TransferMoneyResponseModel transferResponse =
+        TransferMoneyResponseModel.fromJson(response.data);
+        ConsoleLog.printColor("INITIATE TRANSFER RESPONSE: ${response.data}");
+        if (transferResponse.respCode == 'RCS' && transferResponse.data != null) {
+          ConsoleLog.printSuccess("Transfer successful: ${transferResponse.data!.txnid}");
 
           // Clear form
           transferAmountController.value.clear();
-
-          // tpinController.value.clear();
+          transferConfirmAmountController.value.clear();
           txnPinController.value.clear();
           confirmationData.value = null;
           showConfirmation.value = false;
 
+          // Success dialog (no context issues)
+          Get.dialog(
+            TransferSuccessDialog(
+              transferData: transferResponse.data!,
+              onClose: () {
+                Get.back(); // Close dialog
+                Get.back(); // Close transaction confirmation screen
+                Get.back(); // Close transfer money screen
+
+                // Refresh beneficiary list
+                if (senderMobileNo.value.isNotEmpty) {
+                  getBeneficiaryList(Get.context!, senderMobileNo.value);
+                }
+              },
+            ),
+            barrierDismissible: false,
+          );
+
+        } else if (transferResponse.respCode == 'ERR') {
+          // Error
+          ConsoleLog.printError("Transfer Error: ${transferResponse.respDesc}");
+
+          // Use Get.dialog instead of CustomDialog to avoid context issues
+          Get.dialog(
+            AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red, size: 28),
+                  SizedBox(width: 12),
+                  Text(
+                    'Transfer Failed',
+                    style: GoogleFonts.albertSans(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                transferResponse.respDesc ?? "Transaction failed",
+                style: GoogleFonts.albertSans(fontSize: 14),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Get.back(),
+                  child: Text(
+                    'OK',
+                    style: GoogleFonts.albertSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0054D3),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
         } else {
-          CustomDialog.error(
-            context: context,
-            message: data['Resp_desc'] ?? "Transfer failed",
+          // Unexpected response
+          Get.dialog(
+            AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                'Unexpected Response',
+                style: GoogleFonts.albertSans(fontWeight: FontWeight.w600),
+              ),
+              content: Text(
+                transferResponse.respDesc ?? "Unexpected response from server",
+                style: GoogleFonts.albertSans(fontSize: 14),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Get.back(),
+                  child: Text('OK'),
+                ),
+              ],
+            ),
           );
         }
+      } else {
+        // No response
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text('Connection Error'),
+            content: Text('No response from server'),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: Text('OK'),
+              ),
+            ],
+          ),
+        );
       }
     } catch (e) {
       CustomLoading().hide(context);
       ConsoleLog.printError("INITIATE TRANSFER ERROR: $e");
       CustomDialog.error(context: context, message: "Technical issue!");
+      // Use Get.dialog for error
+      Get.dialog(
+        AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Error'),
+          content: Text('Technical issue occurred. Please try again.'),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
     }
   }
 
@@ -2504,41 +2606,41 @@ class DmtWalletController extends GetxController {
     }
   }
 
-  // ============================================
-  // SHOW SUCCESS DIALOG
-  // ============================================
-  void showSuccessDialog(BuildContext context, TransferData? data) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Icon(Icons.check_circle, color: Colors.green, size: 60),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Transfer Successful!', 
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              SizedBox(height: 16),
-              Text('Amount: ₹${data?.amount}'),
-              Text('UTR: ${data?.utr ?? "N/A"}'),
-              Text('Transaction ID: ${data?.txnId}'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Get.back();
-                Get.back();
-              },
-              child: Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // // ============================================
+  // // SHOW SUCCESS DIALOG
+  // // ============================================
+  // void showSuccessDialog(BuildContext context, TransferData? data) {
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+  //         title: Icon(Icons.check_circle, color: Colors.green, size: 60),
+  //         content: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           children: [
+  //             Text('Transfer Successful!',
+  //               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+  //             SizedBox(height: 16),
+  //             Text('Amount: ₹${data?.amount}'),
+  //             Text('UTR: ${data?.utr ?? "N/A"}'),
+  //             Text('Transaction ID: ${data?.txnId}'),
+  //           ],
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () {
+  //               Get.back();
+  //               Get.back();
+  //             },
+  //             child: Text('OK'),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   @override
   void onClose() {

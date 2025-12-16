@@ -9,8 +9,10 @@ import 'dart:async';
 
 import 'package:payrupya/view/wallet_screen.dart';
 
+import '../models/transfer_money_response_model.dart';
 import '../utils/ConsoleLog.dart';
 import '../utils/custom_loading.dart';
+import '../utils/transfer_success_dialog.dart';
 
 class PayrupyaHomeScreen extends StatefulWidget {
   const PayrupyaHomeScreen({super.key});
@@ -62,6 +64,45 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
     //   dmtController.getAllowedServiceByType(context);
     // });
     _initialize();
+
+    // // Show dialog after screen loads (with small delay)
+    // Future.delayed(Duration(milliseconds: 500), () {
+    //   _showDemoSuccessDialog();
+    // });
+  }
+
+  void _showDemoSuccessDialog() {
+    // Create demo transfer data
+    TransferData demoData = TransferData(
+      benename: "ENVITECH SOLUTIONS AND TECHNOLOGIES PRIVATE LIMITED",
+      opid: "00",
+      txnid: "W251216105122UBFT",
+      txnStatus: "SUCCESS",
+      txnDesc: "Transaction Under Process",
+      date: "2025-12-16 10:51:22",
+      datetext: "10:51:22 on 2025-12-16",
+      commission: 0,
+      tds: 0,
+      totalcharge: 6,
+      totalccf: 0,
+      trasamt: "100",
+      chargedamt: 100,
+      availableLimit: 24900,
+      consumedLimit: "100.00",
+      monthlyLimit: 25000,
+    );
+
+    // Show dialog
+    Get.dialog(
+      TransferSuccessDialog(
+        transferData: demoData,
+        onClose: () {
+          Get.back(); // Close dialog
+          print("Dialog closed");
+        },
+      ),
+      barrierDismissible: false,
+    );
   }
 
   Future<void> _initialize() async {
