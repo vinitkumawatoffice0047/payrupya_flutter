@@ -211,7 +211,26 @@ class ApiProvider {
       ConsoleLog.printColor("=== END RESPONSE ===", color: "green");
 
       ConsoleLog.printJsonResponse("Response21: ${response.data}", color: "yellow", tag: "Response");
-      ConsoleLog.printColor("Response1: ${response.data["errorCode"]}", color: "yellow");
+      // Parse response if it's a string
+      dynamic parsedData = response.data;
+      if (response.data is String) {
+        try {
+          parsedData = jsonDecode(response.data);
+          ConsoleLog.printInfo("Parsed JSON string to Map");
+        } catch (e) {
+          ConsoleLog.printError("Failed to parse JSON: $e");
+        }
+      }
+
+      // Safe access to errorCode
+      if (parsedData is Map) {
+        ConsoleLog.printColor("Response1: ${parsedData["errorCode"]}", color: "yellow");
+
+        // Update response.data with parsed data
+        if (response.data is String) {
+          response.data = parsedData;
+        }
+      }
       ConsoleLog.printColor("Response_headers: ${response.headers}", color: "yellow");
       ConsoleLog.printColor("Response_realUri: ${response.realUri}", color: "yellow");
       ConsoleLog.printColor("Response: ${response.data}", color: "yellow");

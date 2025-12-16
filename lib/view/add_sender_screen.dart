@@ -8,7 +8,7 @@
 // import '../controllers/signup_controller.dart';
 // import '../utils/global_utils.dart';
 // import '../utils/otp_input_fields.dart';
-// import 'wallet_screen.dart';
+// import 'payrupya_wallet_screen.dart';
 //
 // class AddSenderScreen extends StatefulWidget {
 //   final bool showBackButton;
@@ -1078,7 +1078,7 @@ import '../utils/custom_loading.dart';
 import '../utils/global_utils.dart';
 import '../utils/otp_input_fields.dart';
 import '../utils/transfer_success_dialog.dart';
-import 'wallet_screen.dart';
+import 'payrupya_wallet_screen.dart';
 
 class AddSenderScreen extends StatefulWidget {
   final bool showBackButton;
@@ -1603,7 +1603,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                         return;
                       }
                       if (signupController.pincodeList.isEmpty) {
-                        Fluttertoast.showToast(msg: "No pincodes available");
+                        Fluttertoast.showToast(msg: "Wait for pincode list to load & press again");
                         return;
                       }
                       showSearchableDropdown(

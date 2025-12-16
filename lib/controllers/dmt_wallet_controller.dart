@@ -471,7 +471,7 @@ class DmtWalletController extends GetxController {
   }
 
   // ============================================
-  // 2. ADD SENDER (REGISTER REMITTER) - ✅ COMPLETELY FIXED
+  // 2. ADD SENDER (REGISTER REMITTER)
   // ============================================
   Future<void> addSender(BuildContext context, String otp) async {
     try {
@@ -538,8 +538,23 @@ class DmtWalletController extends GetxController {
 
       if (response != null && response.statusCode == 200) {
         ConsoleLog.printColor("ADD SENDER RESPONSE: ${response?.data}");
+        Map<String, dynamic> responseData;
+        try {
+          if (response.data is String) {
+            responseData = jsonDecode(response.data as String);
+          } else {
+            responseData = response.data;
+          }
+        } catch (e) {
+          ConsoleLog.printError("Error parsing response: $e");
+          CustomDialog.error(
+            context: context,
+            message: "Failed to parse server response",
+          );
+          return;
+        }
         AddSenderResponseModel addSenderResponse =
-        AddSenderResponseModel.fromJson(response.data);
+        AddSenderResponseModel.fromJson(responseData);
         // var data = response.data;
 
         if (addSenderResponse.respCode == 'RCS') {
@@ -556,7 +571,7 @@ class DmtWalletController extends GetxController {
           await checkSender(context, mobile);
 
         } else if (addSenderResponse.respCode == 'ERR') {
-          String errorMsg = addSenderResponse.respCode ?? "Failed to add sender";
+          String errorMsg = addSenderResponse.respDesc ?? "Failed to add sender";
 
           // Check if "already registered"
           if (errorMsg.toLowerCase().contains('already registered')) {
@@ -573,6 +588,7 @@ class DmtWalletController extends GetxController {
 
             Get.dialog(
               AlertDialog(
+                backgroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 title: Row(
                   children: [
@@ -583,13 +599,14 @@ class DmtWalletController extends GetxController {
                       style: GoogleFonts.albertSans(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
+                        color: Colors.black
                       ),
                     ),
                   ],
                 ),
                 content: Text(
                   errorMsg,
-                  style: GoogleFonts.albertSans(fontSize: 14),
+                  style: GoogleFonts.albertSans(fontSize: 14, color: Colors.black),
                 ),
                 actions: [
                   TextButton(
@@ -617,13 +634,14 @@ class DmtWalletController extends GetxController {
       } else {
         Get.dialog(
           AlertDialog(
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Text('Connection Error'),
-            content: Text('No response from server'),
+            title: Text('Connection Error', style: GoogleFonts.albertSans(color: Colors.black),),
+            content: Text('No response from server', style: GoogleFonts.albertSans(color: Colors.black),),
             actions: [
               TextButton(
                 onPressed: () => Get.back(),
-                child: Text('OK'),
+                child: Text('OK', style: GoogleFonts.albertSans(color: Colors.black)),
               ),
             ],
           ),
@@ -2031,7 +2049,7 @@ class DmtWalletController extends GetxController {
               onClose: () {
                 Get.back(); // Close dialog
                 Get.back(); // Close transaction confirmation screen
-                Get.back(); // Close transfer money screen
+                // Get.back(); // Close transfer money screen
 
                 // Refresh beneficiary list
                 if (senderMobileNo.value.isNotEmpty) {
@@ -2049,6 +2067,7 @@ class DmtWalletController extends GetxController {
           // Use Get.dialog instead of CustomDialog to avoid context issues
           Get.dialog(
             AlertDialog(
+              backgroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               title: Row(
                 children: [
@@ -2059,13 +2078,14 @@ class DmtWalletController extends GetxController {
                     style: GoogleFonts.albertSans(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
+                      color: Colors.black,
                     ),
                   ),
                 ],
               ),
               content: Text(
                 transferResponse.respDesc ?? "Transaction failed",
-                style: GoogleFonts.albertSans(fontSize: 14),
+                style: GoogleFonts.albertSans(fontSize: 14, color: Colors.black),
               ),
               actions: [
                 TextButton(
@@ -2086,19 +2106,20 @@ class DmtWalletController extends GetxController {
           // Unexpected response
           Get.dialog(
             AlertDialog(
+              backgroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               title: Text(
                 'Unexpected Response',
-                style: GoogleFonts.albertSans(fontWeight: FontWeight.w600),
+                style: GoogleFonts.albertSans(fontWeight: FontWeight.w600, color: Colors.black),
               ),
               content: Text(
                 transferResponse.respDesc ?? "Unexpected response from server",
-                style: GoogleFonts.albertSans(fontSize: 14),
+                style: GoogleFonts.albertSans(fontSize: 14, color: Colors.black),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Get.back(),
-                  child: Text('OK'),
+                  child: Text('OK', style: GoogleFonts.albertSans(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black)),
                 ),
               ],
             ),
@@ -2108,13 +2129,23 @@ class DmtWalletController extends GetxController {
         // No response
         Get.dialog(
           AlertDialog(
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Text('Connection Error'),
-            content: Text('No response from server'),
+            title: Text('Connection Error', style: GoogleFonts.albertSans(
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            )),
+            content: Text('No response from server', style: GoogleFonts.albertSans(
+              color: Colors.black,
+            )),
             actions: [
               TextButton(
                 onPressed: () => Get.back(),
-                child: Text('OK'),
+                child: Text('OK', style: GoogleFonts.albertSans(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                )),
               ),
             ],
           ),
@@ -2127,13 +2158,23 @@ class DmtWalletController extends GetxController {
       // Use Get.dialog for error
       Get.dialog(
         AlertDialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Error'),
-          content: Text('Technical issue occurred. Please try again.'),
+          title: Text('Error', style: GoogleFonts.albertSans(
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          )),
+          content: Text('Technical issue occurred. Please try again.',
+            style: GoogleFonts.albertSans(
+              color: Colors.black,
+            )
+          ),
           actions: [
             TextButton(
               onPressed: () => Get.back(),
-              child: Text('OK'),
+              child: Text('OK', style: GoogleFonts.albertSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -2196,41 +2237,41 @@ class DmtWalletController extends GetxController {
   //   );
   // }
 
-  // Show success dialog
-  void showTransferSuccessDialog(BuildContext context, Map<String, dynamic>? data) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Icon(Icons.check_circle, color: Colors.green, size: 60),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Transfer Successful!',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              SizedBox(height: 16),
-              Text('Amount: ₹${data?['amount'] ?? transferAmountController.value.text}'),
-              Text('UTR: ${data?['utr'] ?? "N/A"}'),
-              Text('Transaction ID: ${data?['txn_id'] ?? "N/A"}'),
-              if (data?['txn_desc'] != null)
-                Text('Status: ${data!['txn_desc']}'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Get.back();
-                Get.back(); // Go back to beneficiary list
-              },
-              child: Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // // Show success dialog
+  // void showTransferSuccessDialog(BuildContext context, Map<String, dynamic>? data) {
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+  //         title: Icon(Icons.check_circle, color: Colors.green, size: 60),
+  //         content: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           children: [
+  //             Text('Transfer Successful!',
+  //                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+  //             SizedBox(height: 16),
+  //             Text('Amount: ₹${data?['amount'] ?? transferAmountController.value.text}'),
+  //             Text('UTR: ${data?['utr'] ?? "N/A"}'),
+  //             Text('Transaction ID: ${data?['txn_id'] ?? "N/A"}'),
+  //             if (data?['txn_desc'] != null)
+  //               Text('Status: ${data!['txn_desc']}'),
+  //           ],
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () {
+  //               Get.back();
+  //               Get.back(); // Go back to beneficiary list
+  //             },
+  //             child: Text('OK'),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   // ============================================
   // 9. SEARCH TRANSACTION - ✅ NEW
@@ -2312,7 +2353,9 @@ class DmtWalletController extends GetxController {
           actions: [
             TextButton(
               onPressed: () => Get.back(),
-              child: Text('Close'),
+              child: Text('Close', style: GoogleFonts.albertSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w600)),
             ),
           ],
         );

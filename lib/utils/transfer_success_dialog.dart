@@ -94,7 +94,7 @@ class TransferSuccessDialog extends StatelessWidget {
                           buildDetailRow('Beneficiary', transferData.benename ?? 'N/A'),
                           buildDetailRow('Amount', '₹${transferData.trasamt ?? '0'}'),
                           buildDetailRow('Charges', '₹${transferData.totalcharge ?? 0}'),
-                          buildDetailRow('Charged Amount', '₹${transferData.chargedamt ?? 0}'),
+                          buildDetailRow('Total Amount', '₹${int.parse(transferData.chargedamt.toString())+int.parse(transferData.totalcharge.toString())}'),
                           buildDetailRow('Status', transferData.txnStatus ?? 'N/A',
                               statusColor: transferData.txnStatus == 'SUCCESS' ? Colors.green : Colors.orange),
                           buildDetailRow('Date & Time', transferData.datetext ?? transferData.date ?? 'N/A'),

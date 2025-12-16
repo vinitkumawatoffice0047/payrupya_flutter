@@ -12,14 +12,33 @@ class AddSenderResponseModel {
   });
 
   factory AddSenderResponseModel.fromJson(Map<String, dynamic> json) {
+    AddSenderData? parsedData;
+
+    // ✅ Handle both cases: Map and List
+    if (json['data'] != null) {
+      if (json['data'] is Map) {
+        // Success case: data is a Map
+        parsedData = AddSenderData.fromJson(json['data'] as Map<String, dynamic>);
+      } else if (json['data'] is List) {
+        // Error case: data is an empty array []
+        // In this case, we don't need to parse it
+        parsedData = null;
+      }
+    }
     return AddSenderResponseModel(
       respCode: json['Resp_code'] as String?,
       respDesc: json['Resp_desc'] as String?,
       requestId: json['request_id'] as String?,
-      data: json['data'] != null && json['data'] is Map
-          ? AddSenderData.fromJson(json['data'] as Map<String, dynamic>)
-          : null,
+      data: parsedData,
     );
+    // return AddSenderResponseModel(
+    //   respCode: json['Resp_code'] as String?,
+    //   respDesc: json['Resp_desc'] as String?,
+    //   requestId: json['request_id'] as String?,
+    //   data: json['data'] != null && json['data'] is Map
+    //       ? AddSenderData.fromJson(json['data'] as Map<String, dynamic>)
+    //       : null,
+    // );
   }
 
   Map<String, dynamic> toJson() {

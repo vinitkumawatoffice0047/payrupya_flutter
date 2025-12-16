@@ -7,7 +7,7 @@ import 'package:payrupya/controllers/login_controller.dart';
 import 'package:payrupya/view/otp_verification_screen.dart';
 import 'dart:async';
 
-import 'package:payrupya/view/wallet_screen.dart';
+import 'package:payrupya/view/payrupya_wallet_screen.dart';
 
 import '../models/transfer_money_response_model.dart';
 import '../utils/ConsoleLog.dart';
