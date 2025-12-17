@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
+import 'package:payrupya/controllers/dmt_wallet_controller.dart';
 import '../models/transfer_money_response_model.dart';
 
-class TransferSuccessDialog extends StatelessWidget {
+class TransferSuccessDialog extends StatefulWidget {
   final TransferData transferData;
   final VoidCallback onClose;
 
@@ -13,6 +14,12 @@ class TransferSuccessDialog extends StatelessWidget {
     required this.onClose,
   });
 
+  @override
+  State<TransferSuccessDialog> createState() => _TransferSuccessDialogState();
+}
+
+class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
+  DmtWalletController dmtController = Get.put(DmtWalletController());
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -90,75 +97,172 @@ class TransferSuccessDialog extends StatelessWidget {
                           ),
                           SizedBox(height: 12),
 
-                          buildDetailRow('Transaction ID', transferData.txnid ?? 'N/A'),
-                          buildDetailRow('Beneficiary', transferData.benename ?? 'N/A'),
-                          buildDetailRow('Amount', '₹${transferData.trasamt ?? '0'}'),
-                          buildDetailRow('Charges', '₹${transferData.totalcharge ?? 0}'),
-                          buildDetailRow('Total Amount', '₹${int.parse(transferData.chargedamt.toString())+int.parse(transferData.totalcharge.toString())}'),
-                          buildDetailRow('Status', transferData.txnStatus ?? 'N/A',
-                              statusColor: transferData.txnStatus == 'SUCCESS' ? Colors.green : Colors.orange),
-                          buildDetailRow('Date & Time', transferData.datetext ?? transferData.date ?? 'N/A'),
+                          buildDetailRow('Transaction ID', widget.transferData.txnid ?? 'N/A'),
+                          buildDetailRow('Beneficiary', widget.transferData.benename ?? 'N/A'),
+                          buildDetailRow('Amount', '₹${widget.transferData.trasamt ?? '0'}'),
+                          buildDetailRow('Charges', '₹${widget.transferData.totalcharge ?? 0}'),
+                          buildDetailRow('Total Amount', '₹${int.parse(widget.transferData.chargedamt.toString())+int.parse(widget.transferData.totalcharge.toString())}'),
+                          buildDetailRow('Status', widget.transferData.txnStatus ?? 'N/A',
+                              statusColor: widget.transferData.txnStatus == 'SUCCESS' ? Colors.green : Colors.orange),
+                          buildDetailRow('Date & Time', widget.transferData.datetext ?? widget.transferData.date ?? 'N/A'),
                         ],
                       ),
                     ),
                     SizedBox(height: 5),
 
-                    // Wallet Balance Section
-                    if (transferData.availableLimit != null)
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Color(0xFFE3F2FD),
-                          borderRadius: BorderRadius.circular(12),
+                    // Print Receipt and Share to WhatsApp Buttons
+                    Row(
+                      children: [
+                        // Print Receipt Button
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () async {
+                              await dmtController.printReceipt(
+                                  context,
+                                  "W251216105122UBFT"
+                                  // widget.transferData.txnid ?? ''
+                              );
+                              // Call Print Receipt API
+                              // await dmtController.printReceipt(
+                              //     context,
+                              //     transferData.txnid ?? ''
+                              // );
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Color(0xFF0054D3), width: 1.5),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.print,
+                                    color: Color(0xFF0054D3),
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Print Receipt',
+                                    style: GoogleFonts.albertSans(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF0054D3),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                        padding: EdgeInsets.all(16),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // Column(
-                            //   crossAxisAlignment: CrossAxisAlignment.start,
-                            //   children: [
-                            //     Text(
-                            //       'Available Limit',
-                            //       style: GoogleFonts.albertSans(
-                            //         fontSize: 12,
-                            //         color: Colors.grey[600],
-                            //       ),
-                            //     ),
-                            //     SizedBox(height: 4),
-                            //     Text(
-                            //       '₹${transferData.availableLimit}',
-                            //       style: GoogleFonts.albertSans(
-                            //         fontSize: 20,
-                            //         fontWeight: FontWeight.bold,
-                            //         color: Color(0xFF0054D3),
-                            //       ),
-                            //     ),
-                            //   ],
-                            // ),
-                            // Column(
-                            //   crossAxisAlignment: CrossAxisAlignment.end,
-                            //   children: [
-                            //     Text(
-                            //       'Monthly Limit',
-                            //       style: GoogleFonts.albertSans(
-                            //         fontSize: 12,
-                            //         color: Colors.grey[600],
-                            //       ),
-                            //     ),
-                            //     SizedBox(height: 4),
-                            //     Text(
-                            //       '₹${transferData.monthlyLimit}',
-                            //       style: GoogleFonts.albertSans(
-                            //         fontSize: 16,
-                            //         fontWeight: FontWeight.w600,
-                            //         color: Color(0xff1B1C1C),
-                            //       ),
-                            //     ),
-                            //   ],
-                            // ),
-                          ],
+                        SizedBox(width: 12),
+                        // Share to WhatsApp Button
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () async {
+                              await dmtController.shareToWhatsApp(
+                                context,
+                                "W251216105122UBFT",
+                                "7728869247",
+                                // widget.transferData.txnid ?? '',
+                                // dmtController.senderMobileNo.value,
+                              );
+                              // Call Share to WhatsApp API
+                              // await dmtController.shareToWhatsApp(
+                              //   context,
+                              //   transferData.txnid ?? '',
+                              //   dmtController.senderMobileNo.value,
+                              // );
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Color(0xFF25D366), // WhatsApp Green
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.share,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Share',
+                                    style: GoogleFonts.albertSans(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
+                    ),
+
+                    // // Wallet Balance Section
+                    // if (transferData.availableLimit != null)
+                    //   Container(
+                    //     decoration: BoxDecoration(
+                    //       color: Color(0xFFE3F2FD),
+                    //       borderRadius: BorderRadius.circular(12),
+                    //     ),
+                    //     padding: EdgeInsets.all(16),
+                    //     child: Row(
+                    //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    //       children: [
+                    //         // Column(
+                    //         //   crossAxisAlignment: CrossAxisAlignment.start,
+                    //         //   children: [
+                    //         //     Text(
+                    //         //       'Available Limit',
+                    //         //       style: GoogleFonts.albertSans(
+                    //         //         fontSize: 12,
+                    //         //         color: Colors.grey[600],
+                    //         //       ),
+                    //         //     ),
+                    //         //     SizedBox(height: 4),
+                    //         //     Text(
+                    //         //       '₹${transferData.availableLimit}',
+                    //         //       style: GoogleFonts.albertSans(
+                    //         //         fontSize: 20,
+                    //         //         fontWeight: FontWeight.bold,
+                    //         //         color: Color(0xFF0054D3),
+                    //         //       ),
+                    //         //     ),
+                    //         //   ],
+                    //         // ),
+                    //         // Column(
+                    //         //   crossAxisAlignment: CrossAxisAlignment.end,
+                    //         //   children: [
+                    //         //     Text(
+                    //         //       'Monthly Limit',
+                    //         //       style: GoogleFonts.albertSans(
+                    //         //         fontSize: 12,
+                    //         //         color: Colors.grey[600],
+                    //         //       ),
+                    //         //     ),
+                    //         //     SizedBox(height: 4),
+                    //         //     Text(
+                    //         //       '₹${transferData.monthlyLimit}',
+                    //         //       style: GoogleFonts.albertSans(
+                    //         //         fontSize: 16,
+                    //         //         fontWeight: FontWeight.w600,
+                    //         //         color: Color(0xff1B1C1C),
+                    //         //       ),
+                    //         //     ),
+                    //         //   ],
+                    //         // ),
+                    //       ],
+                    //     ),
+                    //   ),
                     SizedBox(height: 10),  // Reduced spacing before button
                   ],
                 ),
@@ -172,7 +276,7 @@ class TransferSuccessDialog extends StatelessWidget {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: onClose,
+                onPressed: widget.onClose,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   padding: EdgeInsets.symmetric(vertical: 14),
@@ -182,7 +286,7 @@ class TransferSuccessDialog extends StatelessWidget {
                   elevation: 0,
                 ),
                 child: Text(
-                  'Done',
+                    'Done',
                   style: GoogleFonts.albertSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,

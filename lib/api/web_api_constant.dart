@@ -36,6 +36,9 @@ class WebApiConstant{
   // Service Type
   static const String API_URL_GET_SERVICE_TYPE = "${BASE_URL}Fetch/getAllowedServiceByType";
 
+  // Returns HTML content (not PDF)
+  static const String API_URL_GET_RECEIPT = "${BASE_URL}Fetch/TxnReceipt";
+
 
 
 

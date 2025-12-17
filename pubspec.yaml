@@ -42,22 +42,27 @@ dependencies:
   shared_preferences: ^2.2.3  # 2.3.3 se downgrade
   razorpay_flutter: ^1.3.7
   connectivity_plus: ^7.0.0 #^6.1.5 # ^6.1.0
-  permission_handler: ^12.0.1 #^11.4.0 # ^11.3.1
+  permission_handler: ^11.1.0 #^12.0.1 #^11.4.0 # ^11.3.1
   geolocator: ^14.0.2 #^10.1.0
   geocoding: ^4.0.0 #^3.0.0
   intl: ^0.20.2 #for Date Formate
   speech_to_text: ^7.0.0 #^6.6.2 # ^6.6.0
-  url_launcher: ^6.3.1
+  url_launcher: ^6.2.3 #^6.3.1
   image_picker: ^1.1.2
   lottie: ^3.1.3
   carousel_slider: ^5.1.1
-  share_plus: ^12.0.1 #^7.2.2
+  share_plus: ^7.2.1 #^12.0.1 #^7.2.2
+#  flutter_html_to_pdf: ^0.7.0
+  flutter_native_html_to_pdf: ^1.1.5
+  whatsapp_share2: ^2.1.1
+  printing: ^5.11.0
+  open_filex: ^4.3.4
   cached_network_image: ^3.3.1
   shimmer: ^3.0.0
   flutter_svg: ^2.0.9
-  http: ^1.2.0
+  http: ^1.1.0 #^1.2.0
   flutter_animate: ^4.5.0
-  path_provider: ^2.1.2
+  path_provider: ^2.1.1 #^2.1.2
 
 #  e_commerce_app: any
 dev_dependencies:

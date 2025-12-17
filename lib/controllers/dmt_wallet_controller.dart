@@ -7,6 +7,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:whatsapp_share2/whatsapp_share2.dart';
 import '../api/api_provider.dart';
 import '../api/web_api_constant.dart';
 import '../models/add_beneficiary_response_model.dart';
@@ -31,6 +32,16 @@ import '../view/login_screen.dart';
 import '../view/onboarding_screen.dart';
 import '../view/transaction_confirmation_screen.dart';
 import 'login_controller.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
+// import 'package:flutter_html_to_pdf/flutter_html_to_pdf.dart';
+import 'package:flutter_native_html_to_pdf/flutter_native_html_to_pdf.dart';
+import 'package:flutter_native_html_to_pdf/pdf_page_size.dart'; // optional
+import 'package:printing/printing.dart';
 
 // ============================================
 // SORT OPTIONS ENUM
@@ -45,6 +56,7 @@ enum BeneficiarySortOption {
 
 class DmtWalletController extends GetxController {
   LoginController loginController = Get.put(LoginController());
+  final FlutterNativeHtmlToPdf _htmlToPdf = FlutterNativeHtmlToPdf();
 
   RxString userAuthToken = "".obs;
   RxString userSignature = "".obs;
@@ -2046,15 +2058,24 @@ class DmtWalletController extends GetxController {
           Get.dialog(
             TransferSuccessDialog(
               transferData: transferResponse.data!,
-              onClose: () {
+              onClose: () async {
                 Get.back(); // Close dialog
                 Get.back(); // Close transaction confirmation screen
-                // Get.back(); // Close transfer money screen
+                Get.back(); // Close transfer money screen
 
+                // Check sender to get updated limits
+                if (senderMobileNo.value.isNotEmpty) {
+                  await checkSender(Get.context!, senderMobileNo.value);
+                }
                 // Refresh beneficiary list
                 if (senderMobileNo.value.isNotEmpty) {
-                  getBeneficiaryList(Get.context!, senderMobileNo.value);
+                  await getBeneficiaryList(Get.context!, senderMobileNo.value);
                 }
+                ConsoleLog.printSuccess("Wallet data refreshed");
+                Fluttertoast.showToast(
+                  msg: "Transaction successful!",
+                  backgroundColor: Colors.green,
+                );
               },
             ),
             barrierDismissible: false,
@@ -2181,6 +2202,349 @@ class DmtWalletController extends GetxController {
       );
     }
   }
+
+  String _applyA4ReceiptMargins(String html) {
+    const css = '''
+  <style>
+    @page { size: A4; margin: 12mm 10mm; }  /* 👈 A4 margins */
+    html, body { width: 100%; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .receipt-page { padding: 8mm; }        /* 👈 inner padding */
+    table { width: 100% !important; max-width: 100% !important; border-collapse: collapse; }
+  </style>
+  ''';
+
+    // If full HTML exists, inject CSS into <head>
+    if (html.contains('</head>')) {
+      html = html.replaceFirst('</head>', '$css</head>');
+    } else if (html.toLowerCase().contains('<html')) {
+      html = html.replaceFirst(RegExp(r'(<html[^>]*>)', caseSensitive: false), r'$1<head>' + css + r'</head>');
+    } else {
+      // If server sends only fragment, wrap it
+      html = '<html><head>$css</head><body>$html</body></html>';
+    }
+
+    // Add wrapper padding inside body
+    if (html.toLowerCase().contains('<body')) {
+      html = html.replaceFirst(RegExp(r'(<body[^>]*>)', caseSensitive: false), r'$1<div class="receipt-page">');
+      html = html.replaceFirst(RegExp(r'(</body>)', caseSensitive: false), r'</div>$1');
+    }
+
+    return html;
+  }
+
+
+// ============================================
+// PRINT RECEIPT
+// ============================================
+  Future<void> printReceipt(BuildContext context, String txnId) async {
+    try {
+      if (txnId.isEmpty) {
+        Fluttertoast.showToast(
+          msg: "Transaction ID not found",
+          backgroundColor: Colors.red,
+        );
+        return;
+      }
+
+      CustomLoading().show(context);
+
+      // API Call - Fetch/TxnReceipt
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+        "request_type": "DOWNLOAD",
+        "txndata": [txnId], // Array format mandatory
+      };
+
+      ConsoleLog.printColor("GET RECEIPT API CALL");
+      ConsoleLog.printInfo("Request: $body");
+
+      var response = await ApiProvider().requestPostForApi(
+        context,
+        WebApiConstant.API_URL_GET_RECEIPT, // Fetch/TxnReceipt
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      CustomLoading().hide(context);
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+        ConsoleLog.printSuccess("Response Code: ${data['Resp_code']}");
+
+        if (data['Resp_code'] == 'RCS' && data['data'] != null) {
+          String htmlContent = data['data'].toString();
+
+          ConsoleLog.printSuccess("HTML received (${htmlContent.length} chars)");
+
+          // Convert HTML to PDF
+          await convertHtmlToPdfAndSave(context, htmlContent, txnId);
+
+        } else {
+          CustomDialog.error(
+            context: context,
+            message: data['Resp_desc'] ?? "Receipt not found",
+          );
+        }
+      } else {
+        CustomDialog.error(
+          context: context,
+          message: "Failed to get receipt from server",
+        );
+      }
+    } catch (e) {
+      CustomLoading().hide(context);
+      ConsoleLog.printError("PRINT RECEIPT ERROR: $e");
+      CustomDialog.error(
+        context: context,
+        message: "Error: ${e.toString()}",
+      );
+    }
+  }
+
+// ============================================
+// CONVERT HTML TO PDF & SAVE
+// ============================================
+  Future<void> convertHtmlToPdfAndSave(
+      BuildContext context, String htmlContent, String txnId) async {
+    try {
+      ConsoleLog.printInfo("Starting HTML to PDF conversion...");
+
+      // Storage permission (only needed when saving to public Downloads on Android)
+      if (Platform.isAndroid) {
+        PermissionStatus status = await Permission.manageExternalStorage.request();
+
+        // Fallback for devices / targets where manageExternalStorage isn't granted
+        if (!status.isGranted) {
+          status = await Permission.storage.request();
+        }
+
+        if (!status.isGranted) {
+          Fluttertoast.showToast(
+            msg: "Storage permission required to save PDF in Downloads",
+            backgroundColor: Colors.orange,
+          );
+          await openAppSettings();
+          return;
+        }
+      }
+
+      CustomLoading().show(context);
+
+      //Get directory
+      Directory? directory;
+      if (Platform.isAndroid) {
+        // Try Downloads folder first
+        directory = Directory('/storage/emulated/0/Download');
+        if (!await directory.exists()) {
+          ConsoleLog.printWarning(" Downloads folder not accessible");
+          directory = await getExternalStorageDirectory();
+        }
+      } else {
+        directory = await getApplicationDocumentsDirectory();
+      }
+
+      String targetPath = directory!.path;
+      String fileName = "Payrupya_Receipt_$txnId";
+
+      ConsoleLog.printInfo("Target: $targetPath");
+      ConsoleLog.printInfo("File: $fileName.pdf");
+
+      htmlContent = _applyA4ReceiptMargins(htmlContent);
+      // Convert HTML to PDF using flutter_native_html_to_pdf
+      final generatedPdfFile = await _htmlToPdf.convertHtmlToPdf(
+        html: htmlContent,
+        targetDirectory: targetPath,
+        targetName: fileName,
+        pageSize: PdfPageSize.a4, // optional
+      );
+
+      CustomLoading().hide(context);
+
+      if (generatedPdfFile != null && await generatedPdfFile.exists()) {
+        ConsoleLog.printSuccess("PDF Generated!");
+        ConsoleLog.printSuccess("Path: ${generatedPdfFile.path}");
+
+        Fluttertoast.showToast(
+          msg: "Receipt saved to Downloads",
+          backgroundColor: Colors.green,
+          toastLength: Toast.LENGTH_LONG,
+        );
+
+        //Open/Share PDF
+        try {
+          // await Printing.sharePdf(
+          //   bytes: await generatedPdfFile.readAsBytes(),
+          //   filename: "$fileName.pdf",
+          // );
+          final result = await OpenFilex.open(generatedPdfFile.path);
+          ConsoleLog.printInfo("OpenFile result: ${result.message}");
+
+          ConsoleLog.printSuccess("PDF opened successfully");
+
+        } catch (openError) {
+          ConsoleLog.printWarning("Could not open PDF: $openError");
+
+          Fluttertoast.showToast(
+            msg: "Receipt saved at: $targetPath",
+            toastLength: Toast.LENGTH_LONG,
+          );
+        }
+
+      } else {
+        throw Exception("PDF generation failed");
+      }
+
+    } catch (e) {
+      CustomLoading().hide(context);
+      ConsoleLog.printError("PDF ERROR: $e");
+
+      Fluttertoast.showToast(
+        msg: "Failed to generate PDF: ${e.toString()}",
+        backgroundColor: Colors.red,
+        toastLength: Toast.LENGTH_LONG,
+      );
+    }
+  }
+
+  String _normalizeWaPhone(String phone) {
+    // WhatsApp expects countrycode+number, WITHOUT '+' and WITHOUT spaces
+    // Example: 919876543210
+    return phone.replaceAll(RegExp(r'[^0-9]'), '');
+  }
+
+  Future<void> sharePdfToWhatsAppNumber({
+    required String pdfPath,
+    required String mobileNumber,
+    required String text,
+  }) async {
+    final phone = _normalizeWaPhone(mobileNumber);
+
+    // Optional: check WhatsApp installed
+    final installed = await WhatsappShare.isInstalled();
+    if (!installed!) {
+      throw Exception("WhatsApp not installed");
+    }
+
+    await WhatsappShare.shareFile(
+      phone: phone,
+      text: text,
+      filePath: [pdfPath], // PDF path here
+    );
+  }
+
+
+// ============================================
+// SHARE TO WHATSAPP
+// ============================================
+  Future<void> shareToWhatsApp(
+      BuildContext context, String txnId, String mobileNumber) async {
+    try {
+      if (txnId.isEmpty) {
+        Fluttertoast.showToast(
+          msg: "Transaction ID not found",
+          backgroundColor: Colors.red,
+        );
+        return;
+      }
+
+      if (mobileNumber.isEmpty) {
+        Fluttertoast.showToast(
+          msg: "Mobile number not found",
+          backgroundColor: Colors.red,
+        );
+        return;
+      }
+
+      CustomLoading().show(context);
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+        "request_type": "DOWNLOAD",
+        "txndata": [txnId],
+      };
+
+      ConsoleLog.printColor("GET RECEIPT FOR WHATSAPP");
+
+      var response = await ApiProvider().requestPostForApi(
+        context,
+        WebApiConstant.API_URL_GET_RECEIPT,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+
+        if (data['Resp_code'] == 'RCS' && data['data'] != null) {
+          CustomLoading().hide(context);
+
+          final htmlContent = data['data'].toString();
+
+          // Convert HTML -> PDF in TEMP (no storage permission needed)
+          final tempDir = await getTemporaryDirectory();
+          final fileName = "Payrupya_Receipt_$txnId";
+
+          final fixedHtml = _applyA4ReceiptMargins(htmlContent);
+          final pdfFile = await _htmlToPdf.convertHtmlToPdf(
+            html: fixedHtml,
+            targetDirectory: tempDir.path,
+            targetName: fileName,
+            pageSize: PdfPageSize.a4, // optional
+          );
+
+          CustomLoading().hide(context);
+
+          if (pdfFile != null && await pdfFile.exists()) {
+            final shareText = "Payrupya Transaction Receipt\nTxnId: $txnId\nMobile: $mobileNumber";
+
+            await sharePdfToWhatsAppNumber(
+              pdfPath: pdfFile.path,
+              mobileNumber: mobileNumber,   // senderMobileNumber or receiver number
+              text: "Payrupya Receipt\nTxnId: $txnId",
+            );
+            // Share PDF (user will pick WhatsApp from share sheet)
+            // await Share.shareXFiles(
+            //   [XFile(pdfFile.path, mimeType: "application/pdf")],
+            //   text: shareText,
+            //   subject: "Payrupya Receipt - $txnId",
+            // );
+          } else {
+            CustomDialog.error(context: context, message: "PDF generation failed");
+          }
+
+        } else {
+          CustomLoading().hide(context);
+          CustomDialog.error(
+            context: context,
+            message: data['Resp_desc'] ?? "Failed to get receipt",
+          );
+        }
+      } else {
+        CustomLoading().hide(context);
+        CustomDialog.error(
+          context: context,
+          message: "Failed to fetch receipt",
+        );
+      }
+    } catch (e) {
+      CustomLoading().hide(context);
+      ConsoleLog.printError("SHARE ERROR: $e");
+      CustomDialog.error(
+        context: context,
+        message: "Failed to share: ${e.toString()}",
+      );
+    }
+  }
+
+
 
   // Show confirmation dialog with charges
   // void showTransferConfirmationDialog(BuildContext context, BeneficiaryData beneficiary, ConfirmTransferData charges) {
