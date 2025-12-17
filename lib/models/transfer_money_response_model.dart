@@ -15,7 +15,18 @@ class TransferMoneyResponseModel {
     respCode = json['Resp_code'];
     respDesc = json['Resp_desc'];
     requestId = json['request_id'];
-    data = json['data'] != null ? TransferData.fromJson(json['data']) : null;
+    //Handle both empty array [] and Map
+    if (json['data'] != null) {
+      // Check if data is a Map (not a List)
+      if (json['data'] is Map<String, dynamic>) {
+        data = TransferData.fromJson(json['data']);
+      } else if (json['data'] is List) {
+        // If it's an empty array, set data to null
+        data = null;
+      }
+    } else {
+      data = null;
+    }
   }
 
   Map<String, dynamic> toJson() {

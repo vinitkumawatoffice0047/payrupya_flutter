@@ -717,6 +717,7 @@ import 'package:payrupya/view/transaction_confirmation_screen.dart';
 import '../controllers/dmt_wallet_controller.dart';
 // import '../models/dmt_api_response_models.dart';
 import '../models/get_beneficiary_list_response_model.dart';
+import '../utils/custom_loading.dart';
 import '../utils/global_utils.dart';
 
 class TransferMoneyScreen extends StatefulWidget {

@@ -2019,7 +2019,8 @@ class DmtWalletController extends GetxController {
         }
       }
 
-      CustomLoading().show(context);
+      BuildContext? dialogContext = context;
+      CustomLoading().show(dialogContext);
 
       // INITIATE TXN
       Map<String, dynamic> body = Map.from(confirmationData.value!['body']);
@@ -2037,7 +2038,14 @@ class DmtWalletController extends GetxController {
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      // Hide loading safely
+      try {
+        if (dialogContext.mounted) {
+          CustomLoading().hide(dialogContext);
+        }
+      } catch (e) {
+        ConsoleLog.printWarning("Context unmounted while hiding loading");
+      }
 
       if (response != null && response.statusCode == 200) {
         // var data = response.data;
@@ -2173,7 +2181,14 @@ class DmtWalletController extends GetxController {
         );
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      // ✅ Safely hide loading
+      try {
+        if (context.mounted) {
+          CustomLoading().hide(context);
+        }
+      } catch (hideError) {
+        ConsoleLog.printWarning("Could not hide loading: $hideError");
+      }
       ConsoleLog.printError("INITIATE TRANSFER ERROR: $e");
       CustomDialog.error(context: context, message: "Technical issue!");
       // Use Get.dialog for error
