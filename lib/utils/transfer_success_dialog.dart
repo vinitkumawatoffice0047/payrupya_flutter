@@ -32,6 +32,7 @@ class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
     return WillPopScope(
       onWillPop: () async {
         // Still allow done button to work
+        widget.onClose();
         return false;
       },
       child: Dialog(

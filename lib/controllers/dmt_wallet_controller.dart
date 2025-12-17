@@ -55,6 +55,67 @@ enum BeneficiarySortOption {
 }
 
 class DmtWalletController extends GetxController {
+  static const String _kExternalLoaderRouteName = '__dmt_external_loader__';
+  bool _externalLoaderVisible = false;
+  bool _pendingExternalReturnCleanup = false;
+
+  void _showExternalSafeLoader(BuildContext context) {
+    if (_externalLoaderVisible) return;
+    _externalLoaderVisible = true;
+
+    // Use root navigator + a named route so we can safely dismiss only this dialog.
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      useRootNavigator: true,
+      routeSettings: const RouteSettings(name: _kExternalLoaderRouteName),
+      builder: (_) {
+        return WillPopScope(
+          onWillPop: () async => false,
+          child: Material(
+            type: MaterialType.transparency,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const SizedBox(
+                  height: 44,
+                  width: 44,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _hideExternalSafeLoader() {
+    if (!_externalLoaderVisible) return;
+
+    final ctx = Get.overlayContext ?? Get.context;
+    if (ctx == null) return;
+
+    // Pop only our loader dialog route (if it is on top).
+    Navigator.of(ctx, rootNavigator: true)
+        .popUntil((route) => route.settings.name != _kExternalLoaderRouteName);
+
+    _externalLoaderVisible = false;
+  }
+
+  void _forceHideExternalSafeLoader() {
+    final ctx = Get.overlayContext ?? Get.context;
+    if (ctx != null) {
+      Navigator.of(ctx, rootNavigator: true)
+          .popUntil((route) => route.settings.name != _kExternalLoaderRouteName);
+    }
+    _externalLoaderVisible = false;
+  }
+
   LoginController loginController = Get.put(LoginController());
   final FlutterNativeHtmlToPdf _htmlToPdf = FlutterNativeHtmlToPdf();
 
@@ -77,6 +138,16 @@ class DmtWalletController extends GetxController {
       checkAndLoadService();
     });
     // getAllowedServiceByType(Get.context!);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When user returns from an external intent (PDF viewer / WhatsApp share),
+    // make sure our loading dialog is not stuck on screen.
+    if (state == AppLifecycleState.resumed && _pendingExternalReturnCleanup) {
+      _pendingExternalReturnCleanup = false;
+      _forceHideExternalSafeLoader();
+    }
   }
 
   // Load service when location is available
@@ -2066,45 +2137,34 @@ class DmtWalletController extends GetxController {
           Get.dialog(
             TransferSuccessDialog(
               transferData: transferResponse.data!,
-              onClose: () {
+              onClose: () async {
                 Get.back(); // Close dialog
-                // Small delay to ensure dialog is closed
-                Future.microtask(() async{
-                await Future.delayed(Duration(milliseconds: 150));
-                Get.back(); // Close transaction confirmation screen
-                Get.back(); // Close transfer money screen
-                Get.until((route) => route.isFirst ||
-                    route.settings.name?.contains('beneficiary') == true);
+
+                // Small delay to ensure smooth transition
+                await Future.delayed(Duration(milliseconds: 100));
+
+                // Pop Transaction Confirmation Screen
+                Get.back();
+                // Pop Transfer Money Screen
+                Get.back();
+
+                // Navigate back to WalletScreen (pop TransactionConfirmation and TransferMoney screens)
+                // This will pop exactly 2 screens: TransactionConfirmationScreen and TransferMoneyScreen
+                // int poppedCount = 0;
+                // Get.until((route) {
+                //   if (poppedCount < 2) {
+                //     poppedCount++;
+                //     return false; // Keep popping
+                //   }
+                //   return true; // Stop popping, we're now at WalletScreen
+                // });
+
+                // Show success message
                 Fluttertoast.showToast(
                   msg: "Transaction successful!",
                   backgroundColor: Colors.green,
+                  toastLength: Toast.LENGTH_SHORT,
                 );
-                Future.delayed(Duration(milliseconds: 300), () async {
-                  if (senderMobileNo.value.isNotEmpty) {
-                    try {
-                      await checkSender(Get.context!, senderMobileNo.value);
-                      await getBeneficiaryList(Get.context!,
-                          senderMobileNo.value);
-                      ConsoleLog.printSuccess("Data refreshed");
-                    } catch (e) {
-                      ConsoleLog.printError("Background refresh failed: $e");
-                    }
-                  }
-                });
-                });
-                // // Check sender to get updated limits
-                // if (senderMobileNo.value.isNotEmpty) {
-                //   await checkSender(Get.context!, senderMobileNo.value);
-                // }
-                // // Refresh beneficiary list
-                // if (senderMobileNo.value.isNotEmpty) {
-                //   await getBeneficiaryList(Get.context!, senderMobileNo.value);
-                // }
-                // ConsoleLog.printSuccess("Wallet data refreshed");
-                // Fluttertoast.showToast(
-                //   msg: "Transaction successful!",
-                //   backgroundColor: Colors.green,
-                // );
               },
             ),
             barrierDismissible: false,
@@ -2300,7 +2360,7 @@ class DmtWalletController extends GetxController {
       }
 
       if (currentContext.mounted) {
-        CustomLoading().show(currentContext);
+        _showExternalSafeLoader(currentContext);
       }
 
       // API Call - Fetch/TxnReceipt
@@ -2324,7 +2384,7 @@ class DmtWalletController extends GetxController {
       );
 
       if (currentContext.mounted) {
-        CustomLoading().hide(currentContext);
+        _hideExternalSafeLoader();
         shouldHideLoading = false;
       }
 
@@ -2354,7 +2414,7 @@ class DmtWalletController extends GetxController {
       }
     } catch (e) {
       if (shouldHideLoading && currentContext != null && currentContext.mounted) {
-        CustomLoading().hide(currentContext);
+        _hideExternalSafeLoader();
       }
       ConsoleLog.printError("PRINT RECEIPT ERROR: $e");
       CustomDialog.error(
@@ -2365,7 +2425,7 @@ class DmtWalletController extends GetxController {
       // ✅ Extra safety to hide loading
       try {
         if (shouldHideLoading && currentContext != null && currentContext.mounted) {
-          CustomLoading().hide(currentContext);
+          _hideExternalSafeLoader();
         }
       } catch (e) {
         ConsoleLog.printWarning("Error in finally block: $e");
@@ -2385,7 +2445,7 @@ class DmtWalletController extends GetxController {
 
       // Show loading
       if (currentContext.mounted) {
-        CustomLoading().show(currentContext);
+        _showExternalSafeLoader(currentContext);
       }
 
       // Storage permission (only needed when saving to public Downloads on Android)
@@ -2438,7 +2498,7 @@ class DmtWalletController extends GetxController {
       );
 
       if (currentContext.mounted) {
-        CustomLoading().hide(currentContext);
+        _hideExternalSafeLoader();
         shouldHideLoading = false; // Already hidden
       }
 
@@ -2487,6 +2547,8 @@ class DmtWalletController extends GetxController {
           // ✅ Use Future.delayed to ensure loading is hidden before opening PDF
           await Future.delayed(Duration(milliseconds: 100));
 
+          _pendingExternalReturnCleanup = true;
+
           final openResult = await OpenFilex.open(generatedPdfFile.path);
 
           ConsoleLog.printInfo("OpenFile result: ${openResult.message}");
@@ -2512,7 +2574,7 @@ class DmtWalletController extends GetxController {
 
     } catch (e) {
       if (shouldHideLoading && currentContext.mounted) {
-        CustomLoading().hide(currentContext);
+        _hideExternalSafeLoader();
       }
 
       Fluttertoast.showToast(
@@ -2525,7 +2587,7 @@ class DmtWalletController extends GetxController {
       // ✅ EXTRA SAFETY: Always try to hide loading in finally block
       try {
         if (shouldHideLoading && currentContext.mounted) {
-          CustomLoading().hide(currentContext);
+          _hideExternalSafeLoader();
         }
       } catch (e) {
         ConsoleLog.printWarning("Error in finally block: $e");
@@ -2557,7 +2619,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      _showExternalSafeLoader(context);
 
       // Fetch receipt HTML from API
       Map<String, dynamic> body = {
@@ -2579,7 +2641,7 @@ class DmtWalletController extends GetxController {
       );
 
       if (dialogContext.mounted) {
-        CustomLoading().hide(dialogContext);
+        _hideExternalSafeLoader();
       }
 
       if (response != null && response.statusCode == 200) {
@@ -2621,7 +2683,7 @@ class DmtWalletController extends GetxController {
           // Apply A4 margins
           final fixedHtml = applyA4ReceiptMargins(htmlContent);
 
-          CustomLoading().show(context);
+          _showExternalSafeLoader(context);
 
           // Generate PDF
           final pdfFile = await _htmlToPdf.convertHtmlToPdf(
@@ -2632,7 +2694,7 @@ class DmtWalletController extends GetxController {
           );
 
           if (context.mounted) {
-            CustomLoading().hide(context);
+            _hideExternalSafeLoader();
           }
 
           if (pdfFile != null && await pdfFile.exists()) {
@@ -2652,7 +2714,7 @@ class DmtWalletController extends GetxController {
             try {
               //SOLUTION: Share ONLY PDF file without any text
               // Remove text parameter completely - this will share only the file
-
+              _pendingExternalReturnCleanup = true;
               Share.shareXFiles(
                 [XFile(pdfFile.path, mimeType: "application/pdf")],
               ).then((result) {
@@ -2702,7 +2764,7 @@ class DmtWalletController extends GetxController {
     } catch (e) {
       try {
         if (context.mounted) {
-          CustomLoading().hide(context);
+          _hideExternalSafeLoader();
         }
       } catch (hideError) {
         ConsoleLog.printWarning("Could not hide loading: $hideError");
