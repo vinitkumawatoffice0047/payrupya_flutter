@@ -19,6 +19,26 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+        <!--  For opening WhatsApp  -->
+        <package android:name="com.whatsapp"/>
+        <package android:name="com.whatsapp.w4b"/>
+        <!--  For opening PDF files  -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:mimeType="application/pdf"/>
+        </intent>
+        <!-- File sharing -->
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="*/*" />
+        </intent>
+    </queries>
+
     <application
         android:label="PayRupya"
         android:name="${applicationName}"
@@ -68,18 +88,5 @@
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
-    <queries>
-        <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
-        </intent>
-        <!--  For opening WhatsApp  -->
-        <package android:name="com.whatsapp"/>
-        <package android:name="com.whatsapp.w4b"/>
-        <!--  For opening PDF files  -->
-        <intent>
-            <action android:name="android.intent.action.VIEW"/>
-            <data android:mimeType="application/pdf"/>
-        </intent>
-    </queries>
+
 </manifest>

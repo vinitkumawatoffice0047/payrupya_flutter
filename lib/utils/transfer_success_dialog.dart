@@ -99,9 +99,9 @@ class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
 
                           buildDetailRow('Transaction ID', widget.transferData.txnid ?? 'N/A'),
                           buildDetailRow('Beneficiary', widget.transferData.benename ?? 'N/A'),
-                          buildDetailRow('Amount', '₹${widget.transferData.trasamt ?? '0'}'),
+                          buildDetailRow('Amount', '₹${double.parse(widget.transferData.trasamt.toString()) ?? 0.toString()}'),
                           buildDetailRow('Charges', '₹${widget.transferData.totalcharge ?? 0}'),
-                          buildDetailRow('Total Amount', '₹${int.parse(widget.transferData.chargedamt.toString())+int.parse(widget.transferData.totalcharge.toString())}'),
+                          buildDetailRow('Total Amount', '₹${double.parse(widget.transferData.chargedamt.toString())+double.parse(widget.transferData.totalcharge.toString())}'),
                           buildDetailRow('Status', widget.transferData.txnStatus ?? 'N/A',
                               statusColor: widget.transferData.txnStatus == 'SUCCESS' ? Colors.green : Colors.orange),
                           buildDetailRow('Date & Time', widget.transferData.datetext ?? widget.transferData.date ?? 'N/A'),
@@ -119,8 +119,8 @@ class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
                             onTap: () async {
                               await dmtController.printReceipt(
                                   context,
-                                  "W251216105122UBFT"
-                                  // widget.transferData.txnid ?? ''
+                                  // "W251216105122UBFT"
+                                  widget.transferData.txnid ?? ''
                               );
                               // Call Print Receipt API
                               // await dmtController.printReceipt(
@@ -164,10 +164,10 @@ class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
                             onTap: () async {
                               await dmtController.shareToWhatsApp(
                                 context,
-                                "W251216105122UBFT",
-                                "7728869247",
-                                // widget.transferData.txnid ?? '',
-                                // dmtController.senderMobileNo.value,
+                                // "W251216105122UBFT",
+                                // "7728869247",
+                                widget.transferData.txnid ?? '',
+                                dmtController.senderMobileNo.value,
                               );
                               // Call Share to WhatsApp API
                               // await dmtController.shareToWhatsApp(

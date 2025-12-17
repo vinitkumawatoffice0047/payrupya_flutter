@@ -7,6 +7,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../api/api_provider.dart';
 import '../api/web_api_constant.dart';
 import '../models/add_beneficiary_response_model.dart';
@@ -2353,7 +2354,7 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printInfo("Target: $targetPath");
       ConsoleLog.printInfo("File: $fileName.pdf");
 
-      htmlContent = _applyA4ReceiptMargins(htmlContent);
+      htmlContent = applyA4ReceiptMargins(htmlContent);
       // Convert HTML to PDF using flutter_native_html_to_pdf
       final generatedPdfFile = await _htmlToPdf.convertHtmlToPdf(
         html: htmlContent,
@@ -2417,7 +2418,7 @@ class DmtWalletController extends GetxController {
   }
 
 // ============================================
-// SHARE TO WHATSAPP
+// ONLY PDF TO WHATSAPP (NO TEXT)
 // ============================================
   Future<void> shareToWhatsApp(
       BuildContext context, String txnId, String mobileNumber) async {
@@ -2440,6 +2441,7 @@ class DmtWalletController extends GetxController {
 
       CustomLoading().show(context);
 
+      // Fetch receipt HTML from API
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
         "lat": loginController.latitude.value.toString(),
@@ -2462,54 +2464,95 @@ class DmtWalletController extends GetxController {
         var data = response.data;
 
         if (data['Resp_code'] == 'RCS' && data['data'] != null) {
-
           final htmlContent = data['data'].toString();
 
-          // Convert HTML -> PDF in TEMP (no storage permission needed)
-          final tempDir = await getTemporaryDirectory();
-          final fileName = "Payrupya_Receipt_$txnId";
+          // Convert HTML -> PDF in PUBLIC directory
+          Directory? directory;
+          if (Platform.isAndroid) {
+            // Storage permission check
+            PermissionStatus status = await Permission.manageExternalStorage.request();
+            if (!status.isGranted) {
+              status = await Permission.storage.request();
+            }
 
-          final fixedHtml = _applyA4ReceiptMargins(htmlContent);
+            if (!status.isGranted) {
+              CustomLoading().hide(context);
+              Fluttertoast.showToast(
+                msg: "Storage permission required",
+                backgroundColor: Colors.orange,
+              );
+              await openAppSettings();
+              return;
+            }
+
+            // Save to Downloads
+            directory = Directory('/storage/emulated/0/Download');
+            if (!await directory.exists()) {
+              directory = await getExternalStorageDirectory();
+            }
+          } else {
+            directory = await getApplicationDocumentsDirectory();
+          }
+
+          final fileName = "Payrupya_Receipt_$txnId";
+          final targetPath = directory!.path;
+
+          // Apply A4 margins
+          final fixedHtml = applyA4ReceiptMargins(htmlContent);
+
+          // Generate PDF
           final pdfFile = await _htmlToPdf.convertHtmlToPdf(
             html: fixedHtml,
-            targetDirectory: tempDir.path,
+            targetDirectory: targetPath,
             targetName: fileName,
-            pageSize: PdfPageSize.a4, // optional
+            pageSize: PdfPageSize.a4,
           );
 
           CustomLoading().hide(context);
 
           if (pdfFile != null && await pdfFile.exists()) {
-            ConsoleLog.printSuccess("✅ PDF generated for sharing");
+            ConsoleLog.printSuccess("PDF generated: ${pdfFile.path}");
 
-            // Share using native share dialog
-            final shareText = "Payrupya Transaction Receipt\n"
-                "Transaction ID: $txnId\n"
-                "Mobile: $mobileNumber\n\n"
-                "Thank you for using Payrupya!";
+            // Format mobile number for WhatsApp
+            String formattedNumber = mobileNumber.replaceAll(RegExp(r'[^0-9]'), '');
+
+            // Add country code if not present (assuming India +91)
+            if (formattedNumber.length == 10) {
+              formattedNumber = '91$formattedNumber';
+            }
+
+            ConsoleLog.printInfo("Formatted Number: $formattedNumber");
+            ConsoleLog.printInfo("PDF Path: ${pdfFile.path}");
 
             try {
-              await Share.shareXFiles(
+              //SOLUTION: Share ONLY PDF file without any text
+              // Remove text parameter completely - this will share only the file
+
+              final result = await Share.shareXFiles(
                 [XFile(pdfFile.path, mimeType: "application/pdf")],
-                text: shareText,
-                subject: "Payrupya Receipt - $txnId",
+                // NO text parameter
+                // NO subject parameter
+                // Only file will be shared
               );
 
-              ConsoleLog.printSuccess("Share dialog opened");
+              if (result.status == ShareResultStatus.success) {
+                ConsoleLog.printSuccess("✅ PDF shared successfully");
+                Fluttertoast.showToast(
+                  msg: "Receipt shared successfully",
+                  backgroundColor: Colors.green,
+                );
+              } else if (result.status == ShareResultStatus.dismissed) {
+                ConsoleLog.printInfo("Share dismissed by user");
+              }
 
             } catch (shareError) {
               ConsoleLog.printError("Share error: $shareError");
               Fluttertoast.showToast(
-                msg: "Failed to open share dialog",
+                msg: "Failed to share PDF",
                 backgroundColor: Colors.red,
               );
             }
-            // Share PDF (user will pick WhatsApp from share sheet)
-            // await Share.shareXFiles(
-            //   [XFile(pdfFile.path, mimeType: "application/pdf")],
-            //   text: shareText,
-            //   subject: "Payrupya Receipt - $txnId",
-            // );
+
           } else {
             CustomLoading().hide(context);
             Fluttertoast.showToast(
@@ -2535,14 +2578,14 @@ class DmtWalletController extends GetxController {
     } catch (e) {
       CustomLoading().hide(context);
       ConsoleLog.printError("SHARE ERROR: $e");
-      CustomDialog.error(
-        context: context,
-        message: "Failed to share: ${e.toString()}",
+      Fluttertoast.showToast(
+        msg: "Failed to share: ${e.toString()}",
+        backgroundColor: Colors.red,
       );
     }
   }
 
-  String _applyA4ReceiptMargins(String html) {
+  String applyA4ReceiptMargins(String html) {
     const css = '''
   <style>
     @page { size: A4; margin: 12mm 10mm; }

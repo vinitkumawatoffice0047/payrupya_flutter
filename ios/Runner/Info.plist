@@ -59,12 +59,20 @@
         	<key>NSLocationAlwaysUsageDescription</key>
         	<string>We need background location permissions for enhanced app experience.</string>
 
+    <!-- WhatsApp URL scheme -->
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>whatsapp</string>
+        <string>https</string>
+        <string>http</string>
+    </array>
+
     <!-- Photo Library permissions -->
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>This app needs access to save receipts to your photo library</string>
+    <string>We need access to save receipt PDFs</string>
 
     <key>NSPhotoLibraryAddUsageDescription</key>
-    <string>This app needs access to save receipts</string>
+    <string>We need access to save receipt PDFs</string>
 
     <!-- File access permissions -->
     <key>LSSupportsOpeningDocumentsInPlace</key>
@@ -72,12 +80,5 @@
 
     <key>UIFileSharingEnabled</key>
     <true/>
-
-    <!-- WhatsApp URL scheme -->
-    <key>LSApplicationQueriesSchemes</key>
-    <array>
-        <string>whatsapp</string>
-        <string>https</string>
-    </array>
 	</dict>
 </plist>
