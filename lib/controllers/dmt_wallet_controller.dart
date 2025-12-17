@@ -7,7 +7,6 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:whatsapp_share2/whatsapp_share2.dart';
 import '../api/api_provider.dart';
 import '../api/web_api_constant.dart';
 import '../models/add_beneficiary_response_model.dart';
@@ -2203,36 +2202,36 @@ class DmtWalletController extends GetxController {
     }
   }
 
-  String _applyA4ReceiptMargins(String html) {
-    const css = '''
-  <style>
-    @page { size: A4; margin: 12mm 10mm; }  /* 👈 A4 margins */
-    html, body { width: 100%; }
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .receipt-page { padding: 8mm; }        /* 👈 inner padding */
-    table { width: 100% !important; max-width: 100% !important; border-collapse: collapse; }
-  </style>
-  ''';
-
-    // If full HTML exists, inject CSS into <head>
-    if (html.contains('</head>')) {
-      html = html.replaceFirst('</head>', '$css</head>');
-    } else if (html.toLowerCase().contains('<html')) {
-      html = html.replaceFirst(RegExp(r'(<html[^>]*>)', caseSensitive: false), r'$1<head>' + css + r'</head>');
-    } else {
-      // If server sends only fragment, wrap it
-      html = '<html><head>$css</head><body>$html</body></html>';
-    }
-
-    // Add wrapper padding inside body
-    if (html.toLowerCase().contains('<body')) {
-      html = html.replaceFirst(RegExp(r'(<body[^>]*>)', caseSensitive: false), r'$1<div class="receipt-page">');
-      html = html.replaceFirst(RegExp(r'(</body>)', caseSensitive: false), r'</div>$1');
-    }
-
-    return html;
-  }
+  // String _applyA4ReceiptMargins(String html) {
+  //   const css = '''
+  // <style>
+  //   @page { size: A4; margin: 12mm 10mm; }  /* 👈 A4 margins */
+  //   html, body { width: 100%; }
+  //   * { box-sizing: border-box; }
+  //   body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  //   .receipt-page { padding: 8mm; }        /* 👈 inner padding */
+  //   table { width: 100% !important; max-width: 100% !important; border-collapse: collapse; }
+  // </style>
+  // ''';
+  //
+  //   // If full HTML exists, inject CSS into <head>
+  //   if (html.contains('</head>')) {
+  //     html = html.replaceFirst('</head>', '$css</head>');
+  //   } else if (html.toLowerCase().contains('<html')) {
+  //     html = html.replaceFirst(RegExp(r'(<html[^>]*>)', caseSensitive: false), r'$1<head>' + css + r'</head>');
+  //   } else {
+  //     // If server sends only fragment, wrap it
+  //     html = '<html><head>$css</head><body>$html</body></html>';
+  //   }
+  //
+  //   // Add wrapper padding inside body
+  //   if (html.toLowerCase().contains('<body')) {
+  //     html = html.replaceFirst(RegExp(r'(<body[^>]*>)', caseSensitive: false), r'$1<div class="receipt-page">');
+  //     html = html.replaceFirst(RegExp(r'(</body>)', caseSensitive: false), r'</div>$1');
+  //   }
+  //
+  //   return html;
+  // }
 
 
 // ============================================
@@ -2384,13 +2383,19 @@ class DmtWalletController extends GetxController {
           final result = await OpenFilex.open(generatedPdfFile.path);
           ConsoleLog.printInfo("OpenFile result: ${result.message}");
 
-          ConsoleLog.printSuccess("PDF opened successfully");
+          if (result.type != ResultType.done) {
+            // If can't open, show file location
+            Fluttertoast.showToast(
+              msg: "Receipt saved at: ${Platform.isAndroid ? 'Downloads' : 'Documents'}",
+              toastLength: Toast.LENGTH_LONG,
+            );
+          }
 
         } catch (openError) {
           ConsoleLog.printWarning("Could not open PDF: $openError");
 
           Fluttertoast.showToast(
-            msg: "Receipt saved at: $targetPath",
+            msg: "Receipt saved at: ${Platform.isAndroid ? 'Downloads' : 'Documents'}",
             toastLength: Toast.LENGTH_LONG,
           );
         }
@@ -2410,33 +2415,6 @@ class DmtWalletController extends GetxController {
       );
     }
   }
-
-  String _normalizeWaPhone(String phone) {
-    // WhatsApp expects countrycode+number, WITHOUT '+' and WITHOUT spaces
-    // Example: 919876543210
-    return phone.replaceAll(RegExp(r'[^0-9]'), '');
-  }
-
-  Future<void> sharePdfToWhatsAppNumber({
-    required String pdfPath,
-    required String mobileNumber,
-    required String text,
-  }) async {
-    final phone = _normalizeWaPhone(mobileNumber);
-
-    // Optional: check WhatsApp installed
-    final installed = await WhatsappShare.isInstalled();
-    if (!installed!) {
-      throw Exception("WhatsApp not installed");
-    }
-
-    await WhatsappShare.shareFile(
-      phone: phone,
-      text: text,
-      filePath: [pdfPath], // PDF path here
-    );
-  }
-
 
 // ============================================
 // SHARE TO WHATSAPP
@@ -2470,7 +2448,7 @@ class DmtWalletController extends GetxController {
         "txndata": [txnId],
       };
 
-      ConsoleLog.printColor("GET RECEIPT FOR WHATSAPP");
+      ConsoleLog.printColor("GET RECEIPT FOR WHATSAPP SHARE");
 
       var response = await ApiProvider().requestPostForApi(
         context,
@@ -2484,7 +2462,6 @@ class DmtWalletController extends GetxController {
         var data = response.data;
 
         if (data['Resp_code'] == 'RCS' && data['data'] != null) {
-          CustomLoading().hide(context);
 
           final htmlContent = data['data'].toString();
 
@@ -2503,13 +2480,30 @@ class DmtWalletController extends GetxController {
           CustomLoading().hide(context);
 
           if (pdfFile != null && await pdfFile.exists()) {
-            final shareText = "Payrupya Transaction Receipt\nTxnId: $txnId\nMobile: $mobileNumber";
+            ConsoleLog.printSuccess("✅ PDF generated for sharing");
 
-            await sharePdfToWhatsAppNumber(
-              pdfPath: pdfFile.path,
-              mobileNumber: mobileNumber,   // senderMobileNumber or receiver number
-              text: "Payrupya Receipt\nTxnId: $txnId",
-            );
+            // Share using native share dialog
+            final shareText = "Payrupya Transaction Receipt\n"
+                "Transaction ID: $txnId\n"
+                "Mobile: $mobileNumber\n\n"
+                "Thank you for using Payrupya!";
+
+            try {
+              await Share.shareXFiles(
+                [XFile(pdfFile.path, mimeType: "application/pdf")],
+                text: shareText,
+                subject: "Payrupya Receipt - $txnId",
+              );
+
+              ConsoleLog.printSuccess("Share dialog opened");
+
+            } catch (shareError) {
+              ConsoleLog.printError("Share error: $shareError");
+              Fluttertoast.showToast(
+                msg: "Failed to open share dialog",
+                backgroundColor: Colors.red,
+              );
+            }
             // Share PDF (user will pick WhatsApp from share sheet)
             // await Share.shareXFiles(
             //   [XFile(pdfFile.path, mimeType: "application/pdf")],
@@ -2517,21 +2511,25 @@ class DmtWalletController extends GetxController {
             //   subject: "Payrupya Receipt - $txnId",
             // );
           } else {
-            CustomDialog.error(context: context, message: "PDF generation failed");
+            CustomLoading().hide(context);
+            Fluttertoast.showToast(
+              msg: "PDF generation failed",
+              backgroundColor: Colors.red,
+            );
           }
 
         } else {
           CustomLoading().hide(context);
-          CustomDialog.error(
-            context: context,
-            message: data['Resp_desc'] ?? "Failed to get receipt",
+          Fluttertoast.showToast(
+            msg: data['Resp_desc'] ?? "Failed to get receipt",
+            backgroundColor: Colors.red,
           );
         }
       } else {
         CustomLoading().hide(context);
-        CustomDialog.error(
-          context: context,
-          message: "Failed to fetch receipt",
+        Fluttertoast.showToast(
+          msg: "Failed to fetch receipt",
+          backgroundColor: Colors.red,
         );
       }
     } catch (e) {
@@ -2542,6 +2540,41 @@ class DmtWalletController extends GetxController {
         message: "Failed to share: ${e.toString()}",
       );
     }
+  }
+
+  String _applyA4ReceiptMargins(String html) {
+    const css = '''
+  <style>
+    @page { size: A4; margin: 12mm 10mm; }
+    html, body { width: 100%; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .receipt-page { padding: 8mm; }
+    table { width: 100% !important; max-width: 100% !important; border-collapse: collapse; }
+  </style>
+  ''';
+
+    // Inject CSS into HTML
+    if (html.contains('</head>')) {
+      html = html.replaceFirst('</head>', '$css</head>');
+    } else if (html.toLowerCase().contains('<html')) {
+      html = html.replaceFirst(
+          RegExp(r'(<html[^>]*>)', caseSensitive: false),
+          r'$1<head>' + css + r'</head>');
+    } else {
+      html = '<html><head>$css</head><body>$html</body></html>';
+    }
+
+    // Add wrapper padding
+    if (html.toLowerCase().contains('<body')) {
+      html = html.replaceFirst(
+          RegExp(r'(<body[^>]*>)', caseSensitive: false),
+          r'$1<div class="receipt-page">');
+      html = html.replaceFirst(
+          RegExp(r'(</body>)', caseSensitive: false), r'</div>$1');
+    }
+
+    return html;
   }
 
 
