@@ -2068,22 +2068,38 @@ class DmtWalletController extends GetxController {
               transferData: transferResponse.data!,
               onClose: () async {
                 Get.back(); // Close dialog
+                // Small delay to ensure dialog is closed
+                await Future.delayed(Duration(milliseconds: 200));
                 Get.back(); // Close transaction confirmation screen
                 Get.back(); // Close transfer money screen
-
-                // Check sender to get updated limits
-                if (senderMobileNo.value.isNotEmpty) {
-                  await checkSender(Get.context!, senderMobileNo.value);
-                }
-                // Refresh beneficiary list
-                if (senderMobileNo.value.isNotEmpty) {
-                  await getBeneficiaryList(Get.context!, senderMobileNo.value);
-                }
-                ConsoleLog.printSuccess("Wallet data refreshed");
                 Fluttertoast.showToast(
                   msg: "Transaction successful!",
                   backgroundColor: Colors.green,
                 );
+                Future.delayed(Duration(milliseconds: 500), () async {
+                  if (senderMobileNo.value.isNotEmpty) {
+                    try {
+                      await checkSender(Get.context!, senderMobileNo.value);
+                      await getBeneficiaryList(Get.context!, senderMobileNo.value);
+                      ConsoleLog.printSuccess("✅ Wallet data refreshed in background");
+                    } catch (e) {
+                      ConsoleLog.printError("Background refresh failed: $e");
+                    }
+                  }
+                });
+                // // Check sender to get updated limits
+                // if (senderMobileNo.value.isNotEmpty) {
+                //   await checkSender(Get.context!, senderMobileNo.value);
+                // }
+                // // Refresh beneficiary list
+                // if (senderMobileNo.value.isNotEmpty) {
+                //   await getBeneficiaryList(Get.context!, senderMobileNo.value);
+                // }
+                // ConsoleLog.printSuccess("Wallet data refreshed");
+                // Fluttertoast.showToast(
+                //   msg: "Transaction successful!",
+                //   backgroundColor: Colors.green,
+                // );
               },
             ),
             barrierDismissible: false,
@@ -2093,42 +2109,55 @@ class DmtWalletController extends GetxController {
           // Error
           ConsoleLog.printError("Transfer Error: ${transferResponse.respDesc}");
 
+          showConfirmation.value = false;
+          confirmationData.value = null;
+
           // Use Get.dialog instead of CustomDialog to avoid context issues
           Get.dialog(
-            AlertDialog(
-              backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Row(
-                children: [
-                  Icon(Icons.error_outline, color: Colors.red, size: 28),
-                  SizedBox(width: 12),
-                  Text(
-                    'Transfer Failed',
-                    style: GoogleFonts.albertSans(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
+            WillPopScope(
+              onWillPop: () async {
+                // Ensure we go back to the right screen
+                return true;
+              },
+              child: AlertDialog(
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red, size: 28),
+                    SizedBox(width: 12),
+                    Text(
+                      'Transfer Failed',
+                      style: GoogleFonts.albertSans(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+                content: Text(
+                  transferResponse.respDesc ?? "Transaction failed",
+                  style: GoogleFonts.albertSans(fontSize: 14, color: Colors.black),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Get.back(); // Close dialog
+                      // Go back to Transfer Money screen (close confirmation screen too)
+                      Get.back();
+                    },
+                    child: Text(
+                      'OK',
+                      style: GoogleFonts.albertSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0054D3),
+                      ),
                     ),
                   ),
                 ],
               ),
-              content: Text(
-                transferResponse.respDesc ?? "Transaction failed",
-                style: GoogleFonts.albertSans(fontSize: 14, color: Colors.black),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Get.back(),
-                  child: Text(
-                    'OK',
-                    style: GoogleFonts.albertSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF0054D3),
-                    ),
-                  ),
-                ),
-              ],
             ),
           );
         } else {
