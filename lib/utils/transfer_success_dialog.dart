@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 import 'package:payrupya/controllers/dmt_wallet_controller.dart';
+import 'package:payrupya/utils/ConsoleLog.dart';
 import '../models/transfer_money_response_model.dart';
 
 class TransferSuccessDialog extends StatefulWidget {
@@ -127,7 +128,7 @@ class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
                           // Print Receipt Button
                           Expanded(
                             child: GestureDetector(
-                              onTap: () async {
+                              onTap: () {
                                 dmtController.printReceipt(
                                     context,
                                     // "W251216105122UBFT"
@@ -135,9 +136,11 @@ class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
                                 ).then((_) {
                                   // Optional: Show toast when done
                                   if (_isDialogActive && mounted) {
+                                    ConsoleLog.printColor("PDF Opened!", color: "green");
                                     // PDF opened successfully
                                   }
                                 }).catchError((error) {
+                                  ConsoleLog.printColor("Error: $error", color: "green");
                                   // Handle error silently
                                 });
                                 // Call Print Receipt API
@@ -179,7 +182,7 @@ class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
                           // Share to WhatsApp Button
                           Expanded(
                             child: GestureDetector(
-                              onTap: () async {
+                              onTap: () {
                                 dmtController.shareToWhatsApp(
                                   context,
                                   // "W251216105122UBFT",

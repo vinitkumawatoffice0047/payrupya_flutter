@@ -2066,26 +2066,29 @@ class DmtWalletController extends GetxController {
           Get.dialog(
             TransferSuccessDialog(
               transferData: transferResponse.data!,
-              onClose: () async {
+              onClose: () {
                 Get.back(); // Close dialog
                 // Small delay to ensure dialog is closed
-                await Future.delayed(Duration(milliseconds: 200));
+                Future.microtask(() async{
+                await Future.delayed(Duration(milliseconds: 150));
                 Get.back(); // Close transaction confirmation screen
                 Get.back(); // Close transfer money screen
                 Fluttertoast.showToast(
                   msg: "Transaction successful!",
                   backgroundColor: Colors.green,
                 );
-                Future.delayed(Duration(milliseconds: 500), () async {
+                Future.delayed(Duration(milliseconds: 300), () async {
                   if (senderMobileNo.value.isNotEmpty) {
                     try {
                       await checkSender(Get.context!, senderMobileNo.value);
-                      await getBeneficiaryList(Get.context!, senderMobileNo.value);
-                      ConsoleLog.printSuccess("✅ Wallet data refreshed in background");
+                      await getBeneficiaryList(Get.context!,
+                          senderMobileNo.value);
+                      ConsoleLog.printSuccess("Data refreshed");
                     } catch (e) {
                       ConsoleLog.printError("Background refresh failed: $e");
                     }
                   }
+                });
                 });
                 // // Check sender to get updated limits
                 // if (senderMobileNo.value.isNotEmpty) {
