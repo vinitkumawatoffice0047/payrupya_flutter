@@ -2073,6 +2073,8 @@ class DmtWalletController extends GetxController {
                 await Future.delayed(Duration(milliseconds: 150));
                 Get.back(); // Close transaction confirmation screen
                 Get.back(); // Close transfer money screen
+                Get.until((route) => route.isFirst ||
+                    route.settings.name?.contains('beneficiary') == true);
                 Fluttertoast.showToast(
                   msg: "Transaction successful!",
                   backgroundColor: Colors.green,
@@ -2286,6 +2288,8 @@ class DmtWalletController extends GetxController {
 // PRINT RECEIPT
 // ============================================
   Future<void> printReceipt(BuildContext context, String txnId) async {
+    BuildContext? currentContext = context;
+    bool shouldHideLoading = true;
     try {
       if (txnId.isEmpty) {
         Fluttertoast.showToast(
@@ -2295,7 +2299,9 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      if (currentContext.mounted) {
+        CustomLoading().show(currentContext);
+      }
 
       // API Call - Fetch/TxnReceipt
       Map<String, dynamic> body = {
@@ -2317,7 +2323,10 @@ class DmtWalletController extends GetxController {
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      if (currentContext.mounted) {
+        CustomLoading().hide(currentContext);
+        shouldHideLoading = false;
+      }
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
@@ -2344,12 +2353,23 @@ class DmtWalletController extends GetxController {
         );
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      if (shouldHideLoading && currentContext != null && currentContext.mounted) {
+        CustomLoading().hide(currentContext);
+      }
       ConsoleLog.printError("PRINT RECEIPT ERROR: $e");
       CustomDialog.error(
         context: context,
         message: "Error: ${e.toString()}",
       );
+    }finally {
+      // ✅ Extra safety to hide loading
+      try {
+        if (shouldHideLoading && currentContext != null && currentContext.mounted) {
+          CustomLoading().hide(currentContext);
+        }
+      } catch (e) {
+        ConsoleLog.printWarning("Error in finally block: $e");
+      }
     }
   }
 
@@ -2358,8 +2378,15 @@ class DmtWalletController extends GetxController {
 // ============================================
   Future<void> convertHtmlToPdfAndSave(
       BuildContext context, String htmlContent, String txnId) async {
+    BuildContext? currentContext = context;
+    bool shouldHideLoading = true;
     try {
       ConsoleLog.printInfo("Starting HTML to PDF conversion...");
+
+      // Show loading
+      if (currentContext.mounted) {
+        CustomLoading().show(currentContext);
+      }
 
       // Storage permission (only needed when saving to public Downloads on Android)
       if (Platform.isAndroid) {
@@ -2380,7 +2407,7 @@ class DmtWalletController extends GetxController {
         }
       }
 
-      CustomLoading().show(context);
+      // CustomLoading().show(context);
 
       //Get directory
       Directory? directory;
@@ -2410,7 +2437,10 @@ class DmtWalletController extends GetxController {
         pageSize: PdfPageSize.a4, // optional
       );
 
-      CustomLoading().hide(context);
+      if (currentContext.mounted) {
+        CustomLoading().hide(currentContext);
+        shouldHideLoading = false; // Already hidden
+      }
 
       if (generatedPdfFile != null && await generatedPdfFile.exists()) {
         ConsoleLog.printSuccess("PDF Generated!");
@@ -2423,16 +2453,45 @@ class DmtWalletController extends GetxController {
         );
 
         //Open/Share PDF
+        // try {
+        //   // await Printing.sharePdf(
+        //   //   bytes: await generatedPdfFile.readAsBytes(),
+        //   //   filename: "$fileName.pdf",
+        //   // );
+        //   OpenFilex.open(generatedPdfFile.path).then((result) {
+        //     ConsoleLog.printInfo("OpenFile result: ${result.message}");
+        //
+        //     if (result.type != ResultType.done) {
+        //       Fluttertoast.showToast(
+        //         msg: "Receipt saved at: ${Platform.isAndroid ? 'Downloads' : 'Documents'}",
+        //         toastLength: Toast.LENGTH_LONG,
+        //       );
+        //     }
+        //   // final result = await OpenFilex.open(generatedPdfFile.path);
+        //   }).catchError((openError) {
+        //     ConsoleLog.printWarning("Could not open PDF: $openError");
+        //     Fluttertoast.showToast(
+        //       msg: "Receipt saved at: ${Platform.isAndroid ? 'Downloads' : 'Documents'}",
+        //       toastLength: Toast.LENGTH_LONG,
+        //     );
+        //   });
+        // } catch (openError) {
+        //   ConsoleLog.printWarning("Could not open PDF: $openError");
+        //
+        //   Fluttertoast.showToast(
+        //     msg: "Receipt saved at: ${Platform.isAndroid ? 'Downloads' : 'Documents'}",
+        //     toastLength: Toast.LENGTH_LONG,
+        //   );
+        // }
         try {
-          // await Printing.sharePdf(
-          //   bytes: await generatedPdfFile.readAsBytes(),
-          //   filename: "$fileName.pdf",
-          // );
-          final result = await OpenFilex.open(generatedPdfFile.path);
-          ConsoleLog.printInfo("OpenFile result: ${result.message}");
+          // ✅ Use Future.delayed to ensure loading is hidden before opening PDF
+          await Future.delayed(Duration(milliseconds: 100));
 
-          if (result.type != ResultType.done) {
-            // If can't open, show file location
+          final openResult = await OpenFilex.open(generatedPdfFile.path);
+
+          ConsoleLog.printInfo("OpenFile result: ${openResult.message}");
+
+          if (openResult.type != ResultType.done) {
             Fluttertoast.showToast(
               msg: "Receipt saved at: ${Platform.isAndroid ? 'Downloads' : 'Documents'}",
               toastLength: Toast.LENGTH_LONG,
@@ -2441,7 +2500,6 @@ class DmtWalletController extends GetxController {
 
         } catch (openError) {
           ConsoleLog.printWarning("Could not open PDF: $openError");
-
           Fluttertoast.showToast(
             msg: "Receipt saved at: ${Platform.isAndroid ? 'Downloads' : 'Documents'}",
             toastLength: Toast.LENGTH_LONG,
@@ -2453,14 +2511,25 @@ class DmtWalletController extends GetxController {
       }
 
     } catch (e) {
-      CustomLoading().hide(context);
-      ConsoleLog.printError("PDF ERROR: $e");
+      if (shouldHideLoading && currentContext.mounted) {
+        CustomLoading().hide(currentContext);
+      }
 
       Fluttertoast.showToast(
         msg: "Failed to generate PDF: ${e.toString()}",
         backgroundColor: Colors.red,
         toastLength: Toast.LENGTH_LONG,
       );
+
+    } finally {
+      // ✅ EXTRA SAFETY: Always try to hide loading in finally block
+      try {
+        if (shouldHideLoading && currentContext.mounted) {
+          CustomLoading().hide(currentContext);
+        }
+      } catch (e) {
+        ConsoleLog.printWarning("Error in finally block: $e");
+      }
     }
   }
 
@@ -2470,6 +2539,8 @@ class DmtWalletController extends GetxController {
   Future<void> shareToWhatsApp(
       BuildContext context, String txnId, String mobileNumber) async {
     try {
+      BuildContext? dialogContext = context;
+
       if (txnId.isEmpty) {
         Fluttertoast.showToast(
           msg: "Transaction ID not found",
@@ -2507,6 +2578,10 @@ class DmtWalletController extends GetxController {
         userSignature.value,
       );
 
+      if (dialogContext.mounted) {
+        CustomLoading().hide(dialogContext);
+      }
+
       if (response != null && response.statusCode == 200) {
         var data = response.data;
 
@@ -2523,7 +2598,6 @@ class DmtWalletController extends GetxController {
             }
 
             if (!status.isGranted) {
-              CustomLoading().hide(context);
               Fluttertoast.showToast(
                 msg: "Storage permission required",
                 backgroundColor: Colors.orange,
@@ -2547,6 +2621,8 @@ class DmtWalletController extends GetxController {
           // Apply A4 margins
           final fixedHtml = applyA4ReceiptMargins(htmlContent);
 
+          CustomLoading().show(context);
+
           // Generate PDF
           final pdfFile = await _htmlToPdf.convertHtmlToPdf(
             html: fixedHtml,
@@ -2555,7 +2631,9 @@ class DmtWalletController extends GetxController {
             pageSize: PdfPageSize.a4,
           );
 
-          CustomLoading().hide(context);
+          if (context.mounted) {
+            CustomLoading().hide(context);
+          }
 
           if (pdfFile != null && await pdfFile.exists()) {
             ConsoleLog.printSuccess("PDF generated: ${pdfFile.path}");
@@ -2575,23 +2653,25 @@ class DmtWalletController extends GetxController {
               //SOLUTION: Share ONLY PDF file without any text
               // Remove text parameter completely - this will share only the file
 
-              final result = await Share.shareXFiles(
+              Share.shareXFiles(
                 [XFile(pdfFile.path, mimeType: "application/pdf")],
-                // NO text parameter
-                // NO subject parameter
-                // Only file will be shared
-              );
-
-              if (result.status == ShareResultStatus.success) {
-                ConsoleLog.printSuccess("✅ PDF shared successfully");
+              ).then((result) {
+                if (result.status == ShareResultStatus.success) {
+                  ConsoleLog.printSuccess("✅ PDF shared successfully");
+                  Fluttertoast.showToast(
+                    msg: "Receipt shared successfully",
+                    backgroundColor: Colors.green,
+                  );
+                } else if (result.status == ShareResultStatus.dismissed) {
+                  ConsoleLog.printInfo("Share dismissed by user");
+                }
+              }).catchError((shareError) {
+                ConsoleLog.printError("Share error: $shareError");
                 Fluttertoast.showToast(
-                  msg: "Receipt shared successfully",
-                  backgroundColor: Colors.green,
+                  msg: "Failed to share PDF",
+                  backgroundColor: Colors.red,
                 );
-              } else if (result.status == ShareResultStatus.dismissed) {
-                ConsoleLog.printInfo("Share dismissed by user");
-              }
-
+              });
             } catch (shareError) {
               ConsoleLog.printError("Share error: $shareError");
               Fluttertoast.showToast(
@@ -2601,7 +2681,6 @@ class DmtWalletController extends GetxController {
             }
 
           } else {
-            CustomLoading().hide(context);
             Fluttertoast.showToast(
               msg: "PDF generation failed",
               backgroundColor: Colors.red,
@@ -2609,21 +2688,25 @@ class DmtWalletController extends GetxController {
           }
 
         } else {
-          CustomLoading().hide(context);
           Fluttertoast.showToast(
             msg: data['Resp_desc'] ?? "Failed to get receipt",
             backgroundColor: Colors.red,
           );
         }
       } else {
-        CustomLoading().hide(context);
         Fluttertoast.showToast(
           msg: "Failed to fetch receipt",
           backgroundColor: Colors.red,
         );
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      try {
+        if (context.mounted) {
+          CustomLoading().hide(context);
+        }
+      } catch (hideError) {
+        ConsoleLog.printWarning("Could not hide loading: $hideError");
+      }
       ConsoleLog.printError("SHARE ERROR: $e");
       Fluttertoast.showToast(
         msg: "Failed to share: ${e.toString()}",

@@ -129,8 +129,9 @@ class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
                           Expanded(
                             child: GestureDetector(
                               onTap: () {
+                                BuildContext? currentContext = Get.context;
                                 dmtController.printReceipt(
-                                    context,
+                                    currentContext!,
                                     // "W251216105122UBFT"
                                     widget.transferData.txnid ?? ''
                                 ).then((_) {
@@ -183,8 +184,9 @@ class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
                           Expanded(
                             child: GestureDetector(
                               onTap: () {
+                                BuildContext? currentContext = Get.context;
                                 dmtController.shareToWhatsApp(
-                                  context,
+                                  currentContext!,
                                   // "W251216105122UBFT",
                                   // "7728869247",
                                   widget.transferData.txnid ?? '',
