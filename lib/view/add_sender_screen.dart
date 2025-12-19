@@ -1104,7 +1104,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
 
   final DmtWalletController dmtController = Get.put(DmtWalletController());
   final SignupController signupController = Get.put(SignupController());
-  final LoginController loginController = Get.find<LoginController>();
+  final LoginController loginController = Get.put(LoginController());
   bool _isInitialized = false;
   bool _isLoading = true;
 

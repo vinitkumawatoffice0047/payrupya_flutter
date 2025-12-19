@@ -728,6 +728,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:payrupya/controllers/upi_wallet_controller.dart';
+import 'package:payrupya/models/get_beneficiary_list_upi_response_model.dart';
+import 'package:payrupya/view/transfer_money_upi_screen.dart';
 import '../controllers/dmt_wallet_controller.dart';
 import '../models/get_beneficiary_list_response_model.dart';
 import '../utils/global_utils.dart';
@@ -744,7 +747,8 @@ class PayrupyaUPIScreen extends StatefulWidget {
 }
 
 class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
-  final DmtWalletController upiWalletController = Get.put(DmtWalletController());
+  // final UPIWalletController upiWalletController = Get.put(UPIWalletController());
+  late UPIWalletController upiWalletController;
   final TextEditingController searchController = TextEditingController();
   final TextEditingController mobileController = TextEditingController();
 
@@ -752,19 +756,45 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
   void initState() {
     super.initState();
 
+    // ✅ PROPER CONTROLLER INITIALIZATION
+    upiWalletController = Get.put(UPIWalletController(), permanent: false);
+
     // Load service type on init
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      upiWalletController.getAllowedServiceByType(context);
-      upiWalletController.getAllBanks(context);
-      // // Fetch beneficiary list if sender is verified
-      // if (dmtController.currentSender.value != null) {
-      //   dmtController.getBeneficiaryList(
-      //     context,
-      //     dmtController.currentSender.value!.mobile ?? "",
-      //   );
-      // }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // ✅ WAIT FOR AUTH CREDENTIALS TO LOAD
+      await upiWalletController.loadAuthCredentials();
+
+      // ✅ THEN LOAD SERVICES
+      await upiWalletController.getAllowedServiceByType(context);
+
+      // ✅ AUTO CHECK SENDER IF MOBILE EXISTS
+      if (upiWalletController.senderMobileNo.value.isNotEmpty) {
+        await upiWalletController.checkSenderUPI(
+          context,
+          upiWalletController.senderMobileNo.value,
+        );
+      }
     });
   }
+
+  //Old initState()
+  // @override
+  // void initState() {
+  //   super.initState();
+  //
+  //   // Load service type on init
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     upiWalletController.getAllowedServiceByType(context);
+  //     upiWalletController.getAllBanks(context);
+  //     // // Fetch beneficiary list if sender is verified
+  //     // if (dmtController.currentSender.value != null) {
+  //     //   dmtController.getBeneficiaryList(
+  //     //     context,
+  //     //     dmtController.currentSender.value!.mobile ?? "",
+  //     //   );
+  //     // }
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -1259,7 +1289,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
     );
   }
 
-  Widget buildBeneficiaryCard(BuildContext context, BeneficiaryData beneficiary, double screenWidth) {
+  Widget buildBeneficiaryCard(BuildContext context, BeneficiaryUPIData beneficiary, double screenWidth) {
     return Container(
       margin: EdgeInsets.symmetric(vertical: 12),
       child: Row(
@@ -1314,7 +1344,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                   ],
                 ),
                 Text(
-                  beneficiary.name ?? "Unknown",
+                  beneficiary.benename ?? "Unknown",
                   style: GoogleFonts.albertSans(
                     fontSize: 12,
                     color: Color(0xff6B707E),
@@ -1323,7 +1353,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  beneficiary.accountNo ?? "",
+                  beneficiary.accountNumber ?? "",
                   style: GoogleFonts.albertSans(
                     fontSize: 12,
                     color: Color(0xff6B707E),
@@ -1347,7 +1377,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
           // Delete Button
           IconButton(
             onPressed: () {
-              showDeleteDialog(context, beneficiary.beneId ?? "");
+              showDeleteDialog(context, beneficiary.upiBeneId ?? "");
             },
             icon: Icon(Icons.delete, color: Colors.red),
           ),
@@ -1358,7 +1388,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
             height: 36,
             child: ElevatedButton(
               onPressed: () {
-                Get.to(() => TransferMoneyScreen(beneficiary: beneficiary));
+                Get.to(() => TransferMoneyUPIScreen(beneficiary: beneficiary));
               },
               style: ButtonStyle(
                 backgroundColor: MaterialStateProperty.all<Color>(Color(0xFF0054D3)),

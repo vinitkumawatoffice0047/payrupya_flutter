@@ -15,6 +15,7 @@ import '../models/delete_beneficiary_response_model.dart';
 import '../models/get_all_banks_response_model.dart';
 import '../models/get_allowed_service_by_type_response_model.dart';
 import '../models/get_beneficiary_list_response_model.dart';
+import '../models/get_beneficiary_list_upi_response_model.dart';
 import '../models/transfer_money_response_model.dart';
 import '../utils/ConsoleLog.dart';
 import '../utils/CustomDialog.dart';
@@ -245,8 +246,8 @@ class UPIWalletController extends GetxController {
   RxString txnPin = ''.obs;
 
   // Beneficiary List
-  RxList<BeneficiaryData> beneficiaryList = <BeneficiaryData>[].obs;
-  RxList<BeneficiaryData> filteredBeneficiaryList = <BeneficiaryData>[].obs;
+  RxList<BeneficiaryUPIData> beneficiaryList = <BeneficiaryUPIData>[].obs;
+  RxList<BeneficiaryUPIData> filteredBeneficiaryList = <BeneficiaryUPIData>[].obs;
 
   // Banks List
   RxList<BankData> banksList = <BankData>[].obs;
@@ -736,8 +737,8 @@ class UPIWalletController extends GetxController {
       CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
-        GetBeneficiaryListResponseModel beneListResponse =
-        GetBeneficiaryListResponseModel.fromJson(response.data);
+        GetBeneficiaryListUPIResponseModel beneListResponse =
+        GetBeneficiaryListUPIResponseModel.fromJson(response.data);
 
         if (beneListResponse.respCode == "RCS" && beneListResponse.data != null) {
           beneficiaryList.value = beneListResponse.data!;
@@ -1189,7 +1190,7 @@ class UPIWalletController extends GetxController {
 
   // Step 2: Validate OTP and delete beneficiary
   //region deleteBeneficiaryValidate
-  Future<void> deleteBeneficiaryValidate(BuildContext context, String beneId, String otp) async {
+  Future<void> deleteBeneficiaryValidateUPI(BuildContext context, String beneId, String otp) async {
     try {
       if (otp.isEmpty) {
         Fluttertoast.showToast(msg: "Please enter OTP");
@@ -1234,8 +1235,8 @@ class UPIWalletController extends GetxController {
           Fluttertoast.showToast(msg: "Beneficiary deleted successfully");
 
           // Remove from list
-          beneficiaryList.removeWhere((bene) => bene.beneId == beneId);
-          filteredBeneficiaryList.removeWhere((bene) => bene.beneId == beneId);
+          beneficiaryList.removeWhere((bene) => bene.upiBeneId == beneId);
+          filteredBeneficiaryList.removeWhere((bene) => bene.upiBeneId == beneId);
 
           Get.back(); // Close OTP dialog
 
@@ -1360,7 +1361,7 @@ class UPIWalletController extends GetxController {
                               Fluttertoast.showToast(msg: "Please enter 6-digit OTP");
                               return;
                             }
-                            deleteBeneficiaryValidate(context, beneId, otp);
+                            deleteBeneficiaryValidateUPI(context, beneId, otp);
                           },
                           textStyle: GoogleFonts.albertSans(
                             fontSize: 16,
@@ -1391,7 +1392,7 @@ class UPIWalletController extends GetxController {
 
   // Step 1: Confirm transaction and get charges
   //region confirmTransfer
-  Future<void> confirmTransfer(BuildContext transferMoneyContext, BeneficiaryData beneficiary) async {
+  Future<void> confirmTransfer(BuildContext transferMoneyContext, BeneficiaryUPIData beneficiary) async {
     try {
       String amount = transferAmountController.value.text.trim();
       String confirmAmount = transferConfirmAmountController.value.text.trim();
@@ -1440,9 +1441,9 @@ class UPIWalletController extends GetxController {
         "cnfamount": confirmAmount,
         "mode": mode, // (IMPS/NEFT)
         "sendername": senderName.value,
-        "beneid": beneficiary.beneId,
-        "benename": beneficiary.name,
-        "account": beneficiary.accountNo,
+        "beneid": beneficiary.upiBeneId,
+        "benename": beneficiary.benename,
+        "account": beneficiary.accountNumber,
         "banksel": beneficiary.bankName,
         "bankifsc": beneficiary.ifsc,
       };
@@ -1468,7 +1469,7 @@ class UPIWalletController extends GetxController {
           // Log parsed data
           ConsoleLog.printSuccess("Transfer details fetched:");
           ConsoleLog.printInfo("Beneficiary Name: ${senderName.value}");
-          ConsoleLog.printInfo("Account Number: ${beneficiary.accountNo!}");
+          ConsoleLog.printInfo("Account Number: ${beneficiary.accountNumber!}");
           ConsoleLog.printInfo("Mode: $mode");
           ConsoleLog.printInfo("Amount: ${chargesData.trasamt!}");
           ConsoleLog.printInfo("Charged Amount: ${chargesData.chargedamt!.toString()}");
@@ -2264,40 +2265,40 @@ class UPIWalletController extends GetxController {
   //endregion
 
   //region getAllBanks
-  // Future<void> getAllBanks(BuildContext context) async {
-  //   try {
-  //     if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
-  //       ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
-  //       ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
-  //       return;
-  //     }
-  //     Map<String, dynamic> body = {
-  //       "request_id": generateRequestId(),
-  //       "lat": loginController.latitude.value.toString(),
-  //       "long": loginController.longitude.value.toString(),
-  //     };
-  //
-  //     var response = await ApiProvider().requestPostForApi(
-  //       context,
-  //       WebApiConstant.API_URL_GET_ALL_BANKS,
-  //       body,
-  //       userAuthToken.value,
-  //       userSignature.value,
-  //     );
-  //
-  //     if (response != null && response.statusCode == 200) {
-  //       GetAllBanksResponseModel banksResponse =
-  //       GetAllBanksResponseModel.fromJson(response.data);
-  //
-  //       if (banksResponse.respCode == "RCS" && banksResponse.data != null) {
-  //         banksList.value = banksResponse.data!;
-  //         ConsoleLog.printSuccess("Banks loaded: ${banksList.length}");
-  //       }
-  //     }
-  //   } catch (e) {
-  //     ConsoleLog.printError("GET ALL BANKS ERROR: $e");
-  //   }
-  // }
+  Future<void> getAllBanks(BuildContext context) async {
+    try {
+      if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
+        ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
+        ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
+        return;
+      }
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+      };
+
+      var response = await ApiProvider().requestPostForApi(
+        context,
+        WebApiConstant.API_URL_GET_ALL_BANKS,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      if (response != null && response.statusCode == 200) {
+        GetAllBanksResponseModel banksResponse =
+        GetAllBanksResponseModel.fromJson(response.data);
+
+        if (banksResponse.respCode == "RCS" && banksResponse.data != null) {
+          banksList.value = banksResponse.data!;
+          ConsoleLog.printSuccess("Banks loaded: ${banksList.length}");
+        }
+      }
+    } catch (e) {
+      ConsoleLog.printError("GET ALL BANKS ERROR: $e");
+    }
+  }
   //endregion
 
   //region searchBeneficiaries
@@ -2313,8 +2314,8 @@ class UPIWalletController extends GetxController {
 
       filteredBeneficiaryList.value = beneficiaryList.where((bene) {
         // Convert each field to lowercase and compare
-        bool nameMatch = (bene.name?.toLowerCase().contains(lowerQuery) ?? false);
-        bool accountMatch = (bene.accountNo?.contains(query) ?? false); // Account numbers are exact
+        bool nameMatch = (bene.benename?.toLowerCase().contains(lowerQuery) ?? false);
+        bool accountMatch = (bene.accountNumber?.contains(query) ?? false); // Account numbers are exact
         bool bankMatch = (bene.bankName?.toLowerCase().contains(lowerQuery) ?? false);
         bool ifscMatch = (bene.ifsc?.toLowerCase().contains(lowerQuery) ?? false);
 
@@ -2355,24 +2356,24 @@ class UPIWalletController extends GetxController {
 
   //region applySortOption
   void applySortOption(BeneficiarySortOption option) {
-    List<BeneficiaryData> listToSort = List.from(filteredBeneficiaryList);
+    List<BeneficiaryUPIData> listToSort = List.from(filteredBeneficiaryList);
 
     switch (option) {
-      case BeneficiarySortOption.recent:
-        listToSort.sort((a, b) =>
-            (b.updatedOn ?? '').compareTo(a.updatedOn ?? '')
-        );
-        break;
+      // case BeneficiarySortOption.recent:
+      //   listToSort.sort((a, b) =>
+      //       (b.updatedOn ?? '').compareTo(a.updatedOn ?? '')
+      //   );
+      //   break;
 
       case BeneficiarySortOption.nameAsc:
         listToSort.sort((a, b) =>
-            (a.name ?? '').toLowerCase().compareTo((b.name ?? '').toLowerCase())
+            (a.benename ?? '').toLowerCase().compareTo((b.benename ?? '').toLowerCase())
         );
         break;
 
       case BeneficiarySortOption.nameDesc:
         listToSort.sort((a, b) =>
-            (b.name ?? '').toLowerCase().compareTo((a.name ?? '').toLowerCase())
+            (b.benename ?? '').toLowerCase().compareTo((a.benename ?? '').toLowerCase())
         );
         break;
 
@@ -2387,6 +2388,9 @@ class UPIWalletController extends GetxController {
             (b.bankName ?? '').toLowerCase().compareTo((a.bankName ?? '').toLowerCase())
         );
         break;
+      case BeneficiarySortOption.recent:
+        // TODO: Handle this case.
+        throw UnimplementedError();
     }
 
     filteredBeneficiaryList.value = listToSort;
@@ -2439,13 +2443,13 @@ class UPIWalletController extends GetxController {
                 SizedBox(height: 16),
                 Obx(() => Column(
                   children: [
-                    buildSortOption(
-                      context,
-                      'Recently Added',
-                      Icons.access_time,
-                      BeneficiarySortOption.recent,
-                      currentSortOption.value == BeneficiarySortOption.recent,
-                    ),
+                    // buildSortOption(
+                    //   context,
+                    //   'Recently Added',
+                    //   Icons.access_time,
+                    //   BeneficiarySortOption.recent,
+                    //   currentSortOption.value == BeneficiarySortOption.recent,
+                    // ),
                     buildSortOption(
                       context,
                       'Name A-Z',
