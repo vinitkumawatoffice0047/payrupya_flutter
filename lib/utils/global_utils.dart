@@ -1,9 +1,14 @@
 import 'dart:async';
+import 'dart:ffi';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
+
+import 'ConsoleLog.dart';
 
 // Button Type Enum
 enum ButtonType {
@@ -59,6 +64,37 @@ class GlobalUtils {
       // Color(0xff80a8ff),
       // Color(0xffffabab),
     ];
+  }
+
+  static Future<Position?> getLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      ConsoleLog.printError("Location permission permanently denied");
+      return null;
+    }
+
+    if (permission == LocationPermission.denied) {
+      ConsoleLog.printError("Location permission denied");
+      return null;
+    }
+
+    // Check if location services are enabled
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ConsoleLog.printError("Location services are disabled");
+      return null;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+    ConsoleLog.printInfo("Lat: ${position.latitude}, Lng: ${position.longitude}");
+    return position;
   }
 
   // Getter methods for global values

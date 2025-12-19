@@ -4,7 +4,8 @@ import 'package:get/get.dart';
 import 'package:payrupya/view/splash_screen.dart';
 
 import 'utils/ConsoleLog.dart';
-
+final GlobalKey<NavigatorState> navigatorKey =
+GlobalKey<NavigatorState>();
 void main() {
   ConsoleLog.enableLogs = kDebugMode;
   runApp(const MyApp());
@@ -19,6 +20,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'PAYRUPYA',
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         brightness: Brightness.light,
         primaryColor: Color(0xff80a8ff),

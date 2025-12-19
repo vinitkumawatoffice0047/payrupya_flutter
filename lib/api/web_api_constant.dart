@@ -14,6 +14,9 @@ class WebApiConstant{
   static const String API_URL_FORGOT_PASSWORD_CHANGE = "${BASE_URL}Action/changePassword";
   static const String API_URL_FORGOT_PASSWORD_RESEND_OTP = "${BASE_URL}Action/resend_otp_request";
 
+  // Home Screen APIs
+  static const String API_URL_GET_WALLET_BALANCE = "${BASE_URL}Fetch/getWalletBalance";
+
   // Location/Address APIs
   static const String API_URL_GET_STATES = "${BASE_URL}Fetch/getStates";
   static const String API_URL_GET_CITIES = "${BASE_URL}Fetch/fetchCityByState";

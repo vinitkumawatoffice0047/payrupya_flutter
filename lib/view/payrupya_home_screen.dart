@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:payrupya/controllers/dmt_wallet_controller.dart';
+import 'package:payrupya/controllers/payrupya_home_screen_controller.dart';
 import 'package:payrupya/view/add_sender_screen.dart';
 import 'package:payrupya/controllers/login_controller.dart';
+import 'package:payrupya/view/categories_screen.dart';
 import 'package:payrupya/view/otp_verification_screen.dart';
 import 'dart:async';
 
@@ -13,6 +15,7 @@ import '../models/transfer_money_response_model.dart';
 import '../utils/ConsoleLog.dart';
 import '../utils/custom_loading.dart';
 import '../utils/transfer_success_dialog.dart';
+import 'add_sender_upi_screen.dart';
 
 class PayrupyaHomeScreen extends StatefulWidget {
   const PayrupyaHomeScreen({super.key});
@@ -21,14 +24,14 @@ class PayrupyaHomeScreen extends StatefulWidget {
   State<PayrupyaHomeScreen> createState() => _PayrupyaHomeScreenState();
 }
 
-class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
-  String balance = "21,500.00";
+class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTickerProviderStateMixin {
+  late AnimationController refreshController;
   String location = "Jaipur, Rajasthan";
   String coordinates = "26.912434, 75.787270";
 
   final List<String> _promoImages = [
     "assets/images/banner.png",
-    "assets/images/banner.png", // Aap yahaan alag-alag image paths daal sakte hain
+    "assets/images/banner.png", // yahaan alag-alag image paths daal sakte hain
     "assets/images/banner.png",
   ];
   late PageController pageController;
@@ -45,7 +48,6 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
     {'img': 'assets/icons/card.png', 'label': 'Credit Card\nBill'},
     {'img': 'assets/icons/cms.png', 'label': 'CMS'},
   ];
-
   final List<Map<String, dynamic>> downBanks = [
     {'name': 'State Bank Of India', 'time': '2 hrs', 'img': 'assets/images/sbi_logo.png'},
     {'name': 'Union Bank', 'time': '2 hrs', 'img': 'assets/images/union_logo.png'},
@@ -55,76 +57,56 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
   bool isServiceLoaded = false;
 
   DmtWalletController dmtController = Get.put(DmtWalletController());
-  final LoginController loginController = Get.find<LoginController>();
+  LoginController loginController = Get.put(LoginController());
+  PayrupyaHomeScreenController payrupyaHomeScreenController = Get.put(PayrupyaHomeScreenController());
 
   @override
   void initState() {
     super.initState();
-    // Future.delayed(Duration.zero, () {
-    //   dmtController.getAllowedServiceByType(context);
-    // });
-    _initialize();
-
-    // // // Show dialog after screen loads (with small delay)
-    // Future.delayed(Duration(milliseconds: 500), () {
-    //   _showDemoSuccessDialog();
+    refreshController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600), // smooth 360°
+    );
+    CustomLoading.showLoading();
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+      initialize();
     // });
   }
 
-  void _showDemoSuccessDialog() {
-    // Create demo transfer data
-    TransferData demoData = TransferData(
-      benename: "ENVITECH SOLUTIONS AND TECHNOLOGIES PRIVATE LIMITED",
-      opid: "00",
-      txnid: "W251216105122UBFT",
-      txnStatus: "SUCCESS",
-      txnDesc: "Transaction Under Process",
-      date: "2025-12-16 10:51:22",
-      datetext: "10:51:22 on 2025-12-16",
-      commission: 0,
-      tds: 0,
-      totalcharge: 6,
-      totalccf: 0,
-      trasamt: "100",
-      chargedamt: 100,
-      availableLimit: 24900,
-      consumedLimit: "100.00",
-      monthlyLimit: 25000,
-    );
-
-    // Show dialog
-    Get.dialog(
-      TransferSuccessDialog(
-        transferData: demoData,
-        onClose: () {
-          Get.back(); // Close dialog
-          print("Dialog closed");
-        },
-      ),
-      barrierDismissible: false,
-    );
-  }
-
-  Future<void> _initialize() async {
+  Future<void> initialize() async {
+    // if(mounted){
+      CustomLoading().show(context);
+    // }
     pageController = PageController(
       viewportFraction: 1,
       initialPage: _promoImages.length * 1000,
     );
     startAutoScroll();
 
-    // ✅ Better way to check location
-    if (loginController.latitude.value != 0.0 &&
-        loginController.longitude.value != 0.0) {
+    await payrupyaHomeScreenController.getLocationAndLoadData();
+    await payrupyaHomeScreenController.loadAuthCredentials();
 
+    ConsoleLog.printInfo("Latitude: ${payrupyaHomeScreenController.latitude.value}");
+    ConsoleLog.printInfo("Longitude: ${payrupyaHomeScreenController.longitude.value}");
+
+    // ✅ Better way to check location
+    if (payrupyaHomeScreenController.latitude.value != 0.0 &&
+        payrupyaHomeScreenController.longitude.value != 0.0 &&
+        payrupyaHomeScreenController.userAuthToken.value.isNotEmpty) {
+
+      await payrupyaHomeScreenController.getWalletBalance(context);
       ConsoleLog.printInfo("Location available, loading services...");
-      await _loadServices();
+      await loadServices();
     } else {
-      ConsoleLog.printWarning("Location not available yet");
+      ConsoleLog.printWarning("Conditions not met for balance API:");
+      ConsoleLog.printWarning("Lat: ${payrupyaHomeScreenController.latitude.value}");
+      ConsoleLog.printWarning("Lng: ${payrupyaHomeScreenController.longitude.value}");
+      ConsoleLog.printWarning("Token: ${payrupyaHomeScreenController.userAuthToken.value.isNotEmpty}");
       isServiceLoading = false;
     }
   }
 
-  Future<void> _loadServices() async {
+  Future<void> loadServices() async {
     try {
       setState(() {
         isServiceLoading = true;
@@ -154,7 +136,6 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
       ConsoleLog.printError("Failed to load services: $e");
     }
   }
-
 
   void startAutoScroll() {
     timer = Timer.periodic(Duration(seconds: 3), (timer) {
@@ -217,53 +198,55 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
   Widget buildHeader() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {},
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        location,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Text(
-                            coordinates,
-                            style: TextStyle(color: Colors.white70, fontSize: 12),
+      child: Obx(()=>
+        Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          location,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
-                          Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 18),
-                        ],
-                      ),
-                    ],
+                        ),
+                        SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Text(
+                              coordinates,
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                            Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 18),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Row(
-                children: [
-                  buildHeaderIcon("assets/icons/qr_scanner.png", () {}),
-                  SizedBox(width: 12),
-                  buildHeaderIcon("assets/icons/notification_bell.png", () {}),
-                  SizedBox(width: 12),
-                  buildHeaderIcon("assets/icons/menu_icon.png", () {}),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          buildBalanceCard(),
-        ],
+                Row(
+                  children: [
+                    buildHeaderIcon("assets/icons/qr_scanner.png", () {}),
+                    SizedBox(width: 12),
+                    buildHeaderIcon("assets/icons/notification_bell.png", () {}),
+                    SizedBox(width: 12),
+                    buildHeaderIcon("assets/icons/menu_icon.png", () {}),
+                  ],
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+            buildBalanceCard(),
+          ],
+        ),
       ),
     );
   }
@@ -290,11 +273,6 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
         Container(
           width: double.infinity,
           padding: EdgeInsets.all(10),
-          // decoration: BoxDecoration(
-          //   color: Colors.black.withOpacity(0.4),
-          //   borderRadius: BorderRadius.circular(20),
-          //   border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-          // ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -306,18 +284,32 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                      Material(
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(100),
+                          onTap: () {
+                            refreshController.forward(from: 0);
+                            payrupyaHomeScreenController.getWalletBalance(context);
+                          },
+                          child: Container(
+                            padding: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                            child: RotationTransition(
+                              turns: Tween(begin: 0.0, end: 1.0).animate(refreshController),
+                              child: Image.asset(
+                                "assets/icons/refresh_icon.png",
+                                height: 18,
+                                width: 18,
+                              ),
+                            ),
+                          ),
                         ),
-                        // child: Icon(Icons.refresh, color: Colors.white, size: 18),
-                        child: Image.asset("assets/icons/refresh_icon.png", height: 18, width: 18,),
                       ),
                     ],
                   ),
-                  // Spacer(),
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
@@ -343,7 +335,6 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
                 ],
               ),
               SizedBox(height: 30),
-              // Spacer(),
               Text(
                 'Total Balance',
                 style: TextStyle(
@@ -354,7 +345,7 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
               ),
               // SizedBox(height: 5),
               Text(
-                "₹$balance",
+                "₹${payrupyaHomeScreenController.walletBalance.value}",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 36,
@@ -396,11 +387,20 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
               final item = quickLinks[index];
               return GestureDetector(
                 onTap: () {
-                  if(item['label'] == "Payrupya\nWallet"){
+                  // if(item['label'] == "Payrupya\nWallet"){
+                  //   // Get.to(WalletScreen(showBackButton: true));
+                  //   Get.to(AddSenderScreen(showBackButton: true));
+                  // }else if(item['label'] == "DMT KYC"){
+                  //   Get.to(OtpVerificationScreen(phoneNumber: "1234567890", referenceId: "referenceId"));
+                  // }
+                  switch (item['label']) {
+                    case "Payrupya\nWallet":
                     // Get.to(WalletScreen(showBackButton: true));
-                    Get.to(AddSenderScreen(showBackButton: true));
-                  }else if(item['label'] == "DMT KYC"){
-                    Get.to(OtpVerificationScreen(phoneNumber: "1234567890", referenceId: "referenceId"));
+                      Get.to(AddSenderScreen(showBackButton: true));
+                      break;
+                    case "Payrupya\nUPI":
+                      Get.to(AddSenderUPIScreen(showBackButton: true));
+                    break;
                   }
                   print('Tapped on ${item['label']}');
                   },
@@ -627,6 +627,7 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> {
   void dispose() {
     timer?.cancel();
     pageController.dispose();
+    refreshController.dispose();
     super.dispose();
   }
 }

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../main.dart';
 import 'global_utils.dart';
 // import '../Colors/colors.dart';
 bool isDialogShoing = false;
@@ -19,6 +20,43 @@ class CustomLoading{
   final Random _rnd = Random();
   CustomLoading._internal();
 
+  static OverlayEntry? _overlayEntry;
+
+  /// ================= SHOW =================
+  static void showLoading() {
+    if (_overlayEntry != null) return;
+
+    _overlayEntry = OverlayEntry(
+      builder: (_) {
+        return Stack(
+          children: [
+            // Background blur / dark layer
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.4),
+              ),
+            ),
+
+            // Loader center
+            const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    navigatorKey.currentState?.overlay?.insert(_overlayEntry!);
+  }
+
+  /// ================= HIDE =================
+  static void hideLoading() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
 
   Future<bool> show(BuildContext context) async {
     try {
@@ -65,6 +103,7 @@ class CustomLoading{
     }
     return Future.value(true);
   }
+
   String getRandomString(int length) => String.fromCharCodes(Iterable.generate(
       length, (_) => _chars.codeUnitAt(_rnd.nextInt(_chars.length))));
 }

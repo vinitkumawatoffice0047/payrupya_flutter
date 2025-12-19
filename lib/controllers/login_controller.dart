@@ -47,8 +47,27 @@ class LoginController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    getLocation();
+    getLocationAndLoadData();
+    // GlobalUtils.getLocation(latitude.value, longitude.value);
     init();
+  }
+
+  Future<void> getLocationAndLoadData() async {
+    try {
+      Position? position = await GlobalUtils.getLocation();
+      if (position != null) {
+        latitude.value = position.latitude;
+        longitude.value = position.longitude;
+        ConsoleLog.printSuccess("Location updated: ${latitude.value}, ${longitude.value}");
+
+        // Load auth credentials और balance
+        // await init();
+      } else {
+        ConsoleLog.printError("Failed to get location");
+      }
+    } catch (e) {
+      ConsoleLog.printError("Error in getLocationAndLoadData: $e");
+    }
   }
 
   void init() async{
@@ -72,99 +91,78 @@ class LoginController extends GetxController {
     });
   }
 
-  Future<void> getLocation() async {
-    LocationPermission permission = await Geolocator.checkPermission();
-
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      Fluttertoast.showToast(msg: "Location permission permanently denied");
-      return;
-    }
-
-    Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-
-    latitude.value = position.latitude;
-    longitude.value = position.longitude;
-
-    ConsoleLog.printInfo("Lat: ${latitude.value}, Lng: ${longitude.value}");
-  }
 
 
-  // ======================================================
-  // PERMISSION HANDLER (Popup Guaranteed)
-  // ======================================================
-  Future<void> askLocationPermission() async {
-    var status = await Permission.location.status;
-
-    print("Current Permission Status: $status");
-
-    if (status.isDenied) {
-      // Request permission
-      status = await Permission.location.request();
-      print("After Request Status: $status");
-    }
-
-    if (status.isPermanentlyDenied) {
-      // Show dialog to user
-      await showDialog(
-        context: Get.context!,
-        builder: (context) => AlertDialog(
-          title: Text("Location Permission Required"),
-          content: Text("Please enable Location Permission from Settings to continue."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                openAppSettings();
-              },
-              child: Text("Open Settings"),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (status.isGranted) {
-      print("Location Permission Granted!");
-      await getUserLocation();
-    }
-  }
-
-  // ======================================================
-  // GET USER LOCATION (After Permission)
-  // ======================================================
-  Future<void> getUserLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        CustomDialog.error(
-          context: Get.context!,
-          message: "GPS is OFF. Please enable GPS.",
-        );
-        return;
-      }
-
-      Position pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      latitude.value = pos.latitude;
-      longitude.value = pos.longitude;
-
-      print("LAT: ${latitude.value}, LONG: ${longitude.value}");
-    } catch (e) {
-      print("LOCATION ERROR: $e");
-    }
-  }
+  // // ======================================================
+  // // PERMISSION HANDLER (Popup Guaranteed)
+  // // ======================================================
+  // Future<void> askLocationPermission() async {
+  //   var status = await Permission.location.status;
+  //
+  //   print("Current Permission Status: $status");
+  //
+  //   if (status.isDenied) {
+  //     // Request permission
+  //     status = await Permission.location.request();
+  //     print("After Request Status: $status");
+  //   }
+  //
+  //   if (status.isPermanentlyDenied) {
+  //     // Show dialog to user
+  //     await showDialog(
+  //       context: Get.context!,
+  //       builder: (context) => AlertDialog(
+  //         title: Text("Location Permission Required"),
+  //         content: Text("Please enable Location Permission from Settings to continue."),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Navigator.pop(context),
+  //             child: Text("Cancel"),
+  //           ),
+  //           TextButton(
+  //             onPressed: () {
+  //               Navigator.pop(context);
+  //               openAppSettings();
+  //             },
+  //             child: Text("Open Settings"),
+  //           ),
+  //         ],
+  //       ),
+  //     );
+  //   }
+  //
+  //   if (status.isGranted) {
+  //     print("Location Permission Granted!");
+  //     await getUserLocation();
+  //   }
+  // }
+  //
+  // // ======================================================
+  // // GET USER LOCATION (After Permission)
+  // // ======================================================
+  // Future<void> getUserLocation() async {
+  //   try {
+  //     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  //     if (!serviceEnabled) {
+  //       CustomDialog.error(
+  //         context: Get.context!,
+  //         message: "GPS is OFF. Please enable GPS.",
+  //       );
+  //       return;
+  //     }
+  //
+  //     Position pos = await Geolocator.getCurrentPosition(
+  //       desiredAccuracy: LocationAccuracy.high,
+  //     );
+  //
+  //     latitude.value = pos.latitude;
+  //     longitude.value = pos.longitude;
+  //
+  //     print("LAT: ${latitude.value}, LONG: ${longitude.value}");
+  //   } catch (e) {
+  //     print("LOCATION ERROR: $e");
+  //   }
+  // }
 
 
   // ======================================================

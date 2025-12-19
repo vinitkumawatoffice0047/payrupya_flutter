@@ -724,9 +724,6 @@
 //   }
 // }
 
-
-
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -738,15 +735,15 @@ import 'add_sender_screen.dart';
 import 'add_beneficiary_screen.dart';
 import 'transfer_money_screen.dart';
 
-class PayrupyaWalletScreen extends StatefulWidget {
+class PayrupyaUPIScreen extends StatefulWidget {
   // final bool showBackButton;
-  const PayrupyaWalletScreen({super.key/*, this.showBackButton = true*/});
+  const PayrupyaUPIScreen({super.key/*, this.showBackButton = true*/});
 
   @override
-  State<PayrupyaWalletScreen> createState() => _PayrupyaWalletScreenState();
+  State<PayrupyaUPIScreen> createState() => _PayrupyaUPIScreenState();
 }
 
-class _PayrupyaWalletScreenState extends State<PayrupyaWalletScreen> {
+class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
   final DmtWalletController dmtController = Get.put(DmtWalletController());
   final TextEditingController searchController = TextEditingController();
   final TextEditingController mobileController = TextEditingController();

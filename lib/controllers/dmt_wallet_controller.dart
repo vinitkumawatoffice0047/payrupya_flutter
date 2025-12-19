@@ -1,13 +1,8 @@
-// lib/controllers/dmt_wallet_controller.dart
-
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../api/api_provider.dart';
 import '../api/web_api_constant.dart';
 import '../models/add_beneficiary_response_model.dart';
@@ -19,7 +14,6 @@ import '../models/get_all_banks_response_model.dart';
 import '../models/get_allowed_service_by_type_response_model.dart';
 import '../models/get_beneficiary_list_response_model.dart';
 import '../models/transfer_money_response_model.dart';
-import '../models/verify_account_response_model.dart';
 import '../utils/ConsoleLog.dart';
 import '../utils/CustomDialog.dart';
 import '../utils/app_shared_preferences.dart';
@@ -28,24 +22,17 @@ import '../utils/custom_loading.dart';
 import '../utils/global_utils.dart';
 import '../utils/otp_input_fields.dart';
 import '../utils/transfer_success_dialog.dart';
-import '../view/login_screen.dart';
 import '../view/onboarding_screen.dart';
-import '../view/transaction_confirmation_screen.dart';
 import 'login_controller.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
-// import 'package:flutter_html_to_pdf/flutter_html_to_pdf.dart';
 import 'package:flutter_native_html_to_pdf/flutter_native_html_to_pdf.dart';
 import 'package:flutter_native_html_to_pdf/pdf_page_size.dart'; // optional
-import 'package:printing/printing.dart';
 
-// ============================================
-// SORT OPTIONS ENUM
-// ============================================
+//region BeneficiarySortOption enum
 enum BeneficiarySortOption {
   nameAsc,      // A to Z
   nameDesc,     // Z to A
@@ -53,15 +40,17 @@ enum BeneficiarySortOption {
   bankDesc,     // Bank Z to A
   recent,       // Recently Added (if having any timestamp)
 }
+//endregion
 
 class DmtWalletController extends GetxController {
   static const String _kExternalLoaderRouteName = '__dmt_external_loader__';
-  bool _externalLoaderVisible = false;
-  bool _pendingExternalReturnCleanup = false;
+  bool externalLoaderVisible = false;
+  bool pendingExternalReturnCleanup = false;
 
-  void _showExternalSafeLoader(BuildContext context) {
-    if (_externalLoaderVisible) return;
-    _externalLoaderVisible = true;
+  //region showExternalSafeLoader
+  void showExternalSafeLoader(BuildContext context) {
+    if (externalLoaderVisible) return;
+    externalLoaderVisible = true;
 
     // Use root navigator + a named route so we can safely dismiss only this dialog.
     showDialog(
@@ -93,9 +82,11 @@ class DmtWalletController extends GetxController {
       },
     );
   }
+  //endregion
 
-  void _hideExternalSafeLoader() {
-    if (!_externalLoaderVisible) return;
+  //region hideExternalSafeLoader
+  void hideExternalSafeLoader() {
+    if (!externalLoaderVisible) return;
 
     final ctx = Get.overlayContext ?? Get.context;
     if (ctx == null) return;
@@ -104,25 +95,29 @@ class DmtWalletController extends GetxController {
     Navigator.of(ctx, rootNavigator: true)
         .popUntil((route) => route.settings.name != _kExternalLoaderRouteName);
 
-    _externalLoaderVisible = false;
+    externalLoaderVisible = false;
   }
+  //endregion
 
-  void _forceHideExternalSafeLoader() {
+  //region forceHideExternalSafeLoader
+  void forceHideExternalSafeLoader() {
     final ctx = Get.overlayContext ?? Get.context;
     if (ctx != null) {
       Navigator.of(ctx, rootNavigator: true)
           .popUntil((route) => route.settings.name != _kExternalLoaderRouteName);
     }
-    _externalLoaderVisible = false;
+    externalLoaderVisible = false;
   }
+  //endregion
 
   LoginController loginController = Get.put(LoginController());
-  final FlutterNativeHtmlToPdf _htmlToPdf = FlutterNativeHtmlToPdf();
+  final FlutterNativeHtmlToPdf htmlToPdf = FlutterNativeHtmlToPdf();
 
   RxString userAuthToken = "".obs;
   RxString userSignature = "".obs;
   RxString checkSenderRespCode = "".obs;
 
+  //region onInit
   @override
   void onInit() {
     super.onInit();
@@ -139,17 +134,20 @@ class DmtWalletController extends GetxController {
     });
     // getAllowedServiceByType(Get.context!);
   }
+  //endregion
 
-  @override
+  //region didChangeAppLifecycleState
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // When user returns from an external intent (PDF viewer / WhatsApp share),
     // make sure our loading dialog is not stuck on screen.
-    if (state == AppLifecycleState.resumed && _pendingExternalReturnCleanup) {
-      _pendingExternalReturnCleanup = false;
-      _forceHideExternalSafeLoader();
+    if (state == AppLifecycleState.resumed && pendingExternalReturnCleanup) {
+      pendingExternalReturnCleanup = false;
+      forceHideExternalSafeLoader();
     }
   }
+  //endregion
 
+  //region checkAndLoadService
   // Load service when location is available
   void checkAndLoadService() {
     if (loginController.latitude.value != 0.0 &&
@@ -164,8 +162,10 @@ class DmtWalletController extends GetxController {
       }
     }
   }
+  //endregion
 
-    // Load both token and signature properly
+  //region loadAuthCredentials
+  // Load both token and signature properly
   Future<void> loadAuthCredentials() async {
     try {
       Map<String, String> authData = await AppSharedPreferences.getLoginAuth();
@@ -196,6 +196,7 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printError("Error loading auth credentials: $e");
     }
   }
+  //endregion
 
   // Text Controllers
   Rx<TextEditingController> senderMobileController = TextEditingController().obs;
@@ -208,13 +209,10 @@ class DmtWalletController extends GetxController {
   Rx<TextEditingController> beneAccountController = TextEditingController().obs;
   Rx<TextEditingController> beneIfscController = TextEditingController().obs;
   Rx<TextEditingController> beneMobileController = TextEditingController().obs;
-  
   Rx<TextEditingController> transferAmountController = TextEditingController().obs;
   Rx<TextEditingController> transferConfirmAmountController = TextEditingController().obs;
   Rx<TextEditingController> transferModeController = TextEditingController().obs;
   Rx<TextEditingController> txnPinController = TextEditingController().obs;
-  // Rx<TextEditingController> tpinController = TextEditingController().obs;
-
   Rx<TextEditingController> deleteOtpController = TextEditingController().obs;
 
   // Observable variables
@@ -225,15 +223,16 @@ class DmtWalletController extends GetxController {
   RxString selectedBankId = ''.obs;
   RxString selectedIfsc = ''.obs;
   RxString selectedTransferMode = 'IMPS'.obs;
-  
   RxString referenceId = ''.obs;
   RxString identifier = ''.obs;
+
   RxBool isSenderVerified = false.obs;
   RxBool isMobileVerified = false.obs;
   RxBool isAccountVerified = false.obs;
   
   // Sender Data
   Rx<SenderData?> currentSender = Rx<SenderData?>(null);
+
   RxString senderId = ''.obs;
   RxString senderName = ''.obs;
   RxString senderMobileNo = ''.obs;
@@ -250,9 +249,7 @@ class DmtWalletController extends GetxController {
   
   // Search
   RxString searchQuery = ''.obs;
-  // Rx<BeneficiarySortOption> currentSortOption = BeneficiarySortOption.nameAsc.obs;
   Rx<BeneficiarySortOption> currentSortOption = BeneficiarySortOption.recent.obs;
-  // RxString currentSortLabel = 'Name A-Z'.obs;
   RxString currentSortLabel = 'Recently Added'.obs;
 
   RxString serviceCode = ''.obs;
@@ -262,10 +259,15 @@ class DmtWalletController extends GetxController {
   Rx<Map<String, dynamic>?> confirmationData = Rx<Map<String, dynamic>?>(null);
   RxBool showConfirmation = false.obs;
 
+  final GlobalKey<OtpInputFieldsState> deleteOtpKey = GlobalKey<OtpInputFieldsState>();
+
+  //region generateRequestId
   String generateRequestId() {
     return GlobalUtils.generateRandomId(6);
   }
+  //endregion
 
+  //region isTokenValid
   Future<bool> isTokenValid() async {
     // Reload credentials first
     await loadAuthCredentials();
@@ -276,37 +278,22 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printError("Signature Length: ${userSignature.value.length}");
       return false;
     }
-
     return true;
   }
+  //endregion
 
+  //region refreshToken
   Future<void> refreshToken(BuildContext context) async {
     ConsoleLog.printWarning("⚠️ Token expired, please login again");
     await AppSharedPreferences.clearAll();
     Get.offAll(() => OnboardingScreen());
     Fluttertoast.showToast(msg: "Session expired. Please login again.");
   }
+  //endregion
 
-  // ============================================
-  // 0. GET ALL BANKS LIST
-  // ============================================
+  //region getAllowedServiceByType
   Future<void> getAllowedServiceByType(BuildContext context) async {
     try {
-      // ✅ Validate token first
-      // if (!await isTokenValid()) {
-      //   await refreshToken(context);
-      //   return;
-      // }
-      // if (!await isTokenValid()) {
-      //   await refreshToken(context);
-      //   return await getAllowedServiceByType(context);
-      // }
-
-      // if (mobile.isEmpty || mobile.length != 10) {
-      //   Fluttertoast.showToast(msg: "Please enter valid 10-digit mobile number");
-      //   return;
-      // }
-
       if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
         ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
         ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
@@ -331,8 +318,6 @@ class DmtWalletController extends GetxController {
         "type": "REMITTANCE"
       };
 
-      // Map<String, dynamic> body = {"request_id":generateRequestId(),"lat":26.9767144,"long":75.753097,"type":"REMITTANCE"};
-
       var response = await ApiProvider().requestPostForApi(
           context,
           WebApiConstant.API_URL_GET_SERVICE_TYPE,
@@ -342,14 +327,6 @@ class DmtWalletController extends GetxController {
       );
       
       ConsoleLog.printColor("Get Allowed Service By Type Api Request: ${jsonEncode(body)}", color: "yellow");
-      
-      // var response = await ApiProvider().postApiRequest(
-      //   dictParameter: body,
-      //   signature: userSignature.value,
-      //   token: userAuthToken.value,
-      //   url: WebApiConstant.API_URL_GET_SERVICE_TYPE,
-      //   // extraHeaders:
-      // );
 
       if (response != null && response.statusCode == 200) {
         ConsoleLog.printColor("GET ALLOWED SERVICE RESP: ${response.data}");
@@ -378,9 +355,6 @@ class DmtWalletController extends GetxController {
             ConsoleLog.printSuccess("✅ Using first service: ${serviceCode.value}");
             CustomLoading().hide(context);
           } else {
-            // Default fallback
-            // serviceCode.value = "DMTRZP";
-            // await getAllowedServiceByType(context);
             ConsoleLog.printWarning("⚠️ Using default service code: DMTRZP");
             CustomLoading().hide(context);
           }
@@ -394,30 +368,18 @@ class DmtWalletController extends GetxController {
           }
         } else {
           ConsoleLog.printWarning("⚠️ No services found or empty response");
-          // Set default
-          // serviceCode.value = "DMTRZP";
-          // await getAllowedServiceByType(context);
-          // isServiceLoaded.value = true;
           CustomLoading().hide(context);
         }
       } else {
         ConsoleLog.printError("❌ API Error: ${response?.statusCode}");
-        // Set default
-        // serviceCode.value = "DMTRZP";
-        // await getAllowedServiceByType(context);
-        // isServiceLoaded.value = true;
       }
     } catch (e) {
       ConsoleLog.printError("❌ GET ALLOWED SERVICE ERROR: $e");
-      // Set default
-      // serviceCode.value = "DMTRZP";
-      // await getAllowedServiceByType(context);
-      // isServiceLoaded.value = true;
     }
   }
-  // ============================================
-  // 1. CHECK SENDER (REMITTER)
-  // ============================================
+  //endregion
+
+  //region checkSender
   Future<void> checkSender(BuildContext context, String mobile) async {
     try {
       // ✅ Validate token first
@@ -427,7 +389,9 @@ class DmtWalletController extends GetxController {
       }
 
       if (mobile.isEmpty || mobile.length != 10) {
-        Fluttertoast.showToast(msg: "Please enter valid 10-digit mobile number");
+        Fluttertoast.showToast(msg: "Please enter valid 10-digit mobile number",
+          gravity: ToastGravity.TOP,
+        );
         return;
       }
 
@@ -437,6 +401,7 @@ class DmtWalletController extends GetxController {
         Fluttertoast.showToast(
           msg: "Please wait, initializing services...",
           backgroundColor: Colors.orange,
+          gravity: ToastGravity.TOP,
         );
 
         // Wait up to 5 seconds
@@ -450,6 +415,7 @@ class DmtWalletController extends GetxController {
           Fluttertoast.showToast(
             msg: "Service not ready. Please try again.",
             backgroundColor: Colors.red,
+            gravity: ToastGravity.TOP,
           );
           return;
         }
@@ -511,7 +477,7 @@ class DmtWalletController extends GetxController {
           txnPin.value = checkSenderResponse.data?.txnpin ?? '';
 
           ConsoleLog.printSuccess("Sender found: ${currentSender.value?.name}");
-          Fluttertoast.showToast(msg: "Sender verified successfully");
+          Fluttertoast.showToast(msg: "Sender verified successfully", gravity: ToastGravity.TOP);
           
           // Fetch beneficiary list
           await getBeneficiaryList(context, mobile);
@@ -525,7 +491,7 @@ class DmtWalletController extends GetxController {
           identifier.value = checkSenderResponse.data?.identifier ?? '';
 
           ConsoleLog.printWarning("Sender not found");
-          Fluttertoast.showToast(msg: "Please register sender first");
+          Fluttertoast.showToast(msg: "Please register sender first", gravity: ToastGravity.TOP);
           
         } else if (checkSenderResponse.respCode == "ERR") {
           ConsoleLog.printError("Error: ${checkSenderResponse.respDesc}");
@@ -552,10 +518,9 @@ class DmtWalletController extends GetxController {
       CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
+  //endregion
 
-  // ============================================
-  // 2. ADD SENDER (REGISTER REMITTER)
-  // ============================================
+  //region addSender
   Future<void> addSender(BuildContext context, String otp) async {
     try {
       if (!await isTokenValid()) {
@@ -740,212 +705,9 @@ class DmtWalletController extends GetxController {
       // CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
-  // // ============================================
-  // // 2. ADD SENDER (REGISTER REMITTER)
-  // // ============================================
-  // Future<void> addSender(BuildContext context) async {
-  //   try {
-  //     if (!await isTokenValid()) {
-  //       await refreshToken(context);
-  //       return;
-  //     }
-  //
-  //     String mobile = senderMobileController.value.text.trim();
-  //     String name = senderNameController.value.text.trim();
-  //     String address = senderAddressController.value.text.trim();
-  //
-  //     if (mobile.isEmpty || name.isEmpty || address.isEmpty) {
-  //       Fluttertoast.showToast(msg: "Please fill all required fields");
-  //       return;
-  //     }
-  //
-  //     if (selectedState.value.isEmpty || selectedCity.value.isEmpty || selectedPincode.value.isEmpty) {
-  //       Fluttertoast.showToast(msg: "Please select state, city and pincode");
-  //       return;
-  //     }
-  //
-  //     CustomLoading().show(context);
-  //
-  //     Map<String, dynamic> body = {
-  //       "request_id": generateRequestId(),
-  //       "lat": loginController.latitude.value.toString(),
-  //       "long": loginController.longitude.value.toString(),
-  //       "sender": mobile,
-  //       "name": name,
-  //       "address": address,
-  //       "state": selectedState.value,
-  //       "city": selectedCity.value,
-  //       "pincode": selectedPincode.value,
-  //       "service": serviceCode.value,
-  //       "request_type": "REMITTER REGISTRATION",
-  //     };
-  //
-  //     ConsoleLog.printColor("ADD SENDER REQ: $body");
-  //
-  //     var response = await ApiProvider().requestPostForApi(
-  //       context,
-  //       WebApiConstant.API_URL_ADD_SENDER,
-  //       body,
-  //       userAuthToken.value,
-  //       userSignature.value,
-  //     );
-  //
-  //     CustomLoading().hide(context);
-  //     ConsoleLog.printColor("ADD SENDER RESPONSE: ${response?.data}");
-  //
-  //     if (response != null && response.statusCode == 200) {
-  //       CustomLoading().hide(context);
-  //       AddSenderResponseModel addSenderResponse =
-  //           AddSenderResponseModel.fromJson(response.data);
-  //
-  //       if (addSenderResponse.respCode == "RCS") {
-  //         referenceId.value = addSenderResponse.data?.referenceid ?? "";
-  //
-  //         ConsoleLog.printSuccess("Sender registered, OTP sent");
-  //         Fluttertoast.showToast(msg: "OTP sent successfully");
-  //
-  //         // Navigate to OTP screen or show OTP dialog
-  //
-  //       } else {
-  //         CustomDialog.error(
-  //           context: context,
-  //           message: addSenderResponse.respDesc ?? "Failed to add sender",
-  //         );
-  //       }
-  //     }else if (response?.statusCode == 401) {
-  //       await refreshToken(context);
-  //     }
-  //   } catch (e) {
-  //     CustomLoading().hide(context);
-  //     ConsoleLog.printError("ADD SENDER ERROR: $e");
-  //     CustomDialog.error(context: context, message: "Technical issue!");
-  //   }
-  // }
+  //endregion
 
-  // // ============================================
-  // // 3. VERIFY SENDER OTP
-  // // ============================================
-  // Future<void> verifySenderOtp(BuildContext context, String otp) async {
-  //   try {
-  //     if (otp.isEmpty || otp.length != 6) {
-  //       Fluttertoast.showToast(msg: "Please enter 6-digit OTP");
-  //       return;
-  //     }
-  //
-  //     if (referenceId.value.isEmpty) {
-  //       Fluttertoast.showToast(msg: "Reference ID not found");
-  //       return;
-  //     }
-  //
-  //     CustomLoading().show(context);
-  //
-  //     Map<String, dynamic> body = {
-  //       "request_id": generateRequestId(),
-  //       "lat": loginController.latitude.value.toString(),
-  //       "long": loginController.longitude.value.toString(),
-  //       "sender": senderMobileController.value.text.trim(),
-  //       "otp": otp,
-  //       "referenceid": referenceId.value,
-  //       "service": serviceCode.value,
-  //       "request_type": "VERIFY OTP",
-  //     };
-  //
-  //     ConsoleLog.printColor("VERIFY SENDER OTP REQ: $body");
-  //
-  //     var response = await ApiProvider().requestPostForApi(
-  //       context,
-  //       WebApiConstant.API_URL_VERIFY_SENDER_OTP,
-  //       body,
-  //       userAuthToken.value,
-  //       userSignature.value,
-  //     );
-  //
-  //     CustomLoading().hide(context);
-  //
-  //     if (response != null && response.statusCode == 200) {
-  //       CustomLoading().hide(context);
-  //       var data = response.data;
-  //
-  //       if (data['Resp_code'] == 'RCS') {
-  //         isSenderVerified.value = true;
-  //         ConsoleLog.printSuccess("Sender OTP verified successfully");
-  //         // Fluttertoast.showToast(msg: "Sender verified successfully");
-  //
-  //         // Refresh sender details
-  //         // await checkSender(context, senderMobileController.value.text.trim());
-  //
-  //       } else {
-  //         CustomDialog.error(
-  //           context: context,
-  //           message: data['Resp_desc'] ?? "Invalid OTP",
-  //         );
-  //       }
-  //     }
-  //   } catch (e) {
-  //     CustomLoading().hide(context);
-  //     ConsoleLog.printError("VERIFY SENDER OTP ERROR: $e");
-  //     CustomDialog.error(context: context, message: "Technical issue!");
-  //   }
-  // }
-
-  // // ============================================
-  // // 4. GET BENEFICIARY LIST
-  // // ============================================
-  // Future<void> getBeneficiaryList(BuildContext context, String senderMobile) async {
-  //   try {
-  //     if (!await isTokenValid()) {
-  //       await refreshToken(context);
-  //       return;
-  //     }
-  //
-  //     Map<String, dynamic> body = {
-  //       "request_id": generateRequestId(),
-  //       "lat": loginController.latitude.value.toString(),
-  //       "long": loginController.longitude.value.toString(),
-  //       "sender": senderMobile,
-  //       "service": serviceCode.value,
-  //       "start": "0",
-  //       "limit": "100",
-  //       "searchby": "",
-  //     };
-  //
-  //     ConsoleLog.printColor("GET BENEFICIARY LIST REQ: $body");
-  //
-  //     var response = await ApiProvider().requestPostForApi(
-  //       context,
-  //       WebApiConstant.API_URL_GET_BENEFICIARY_LIST,
-  //       body,
-  //       userAuthToken.value,
-  //       userSignature.value,
-  //     );
-  //
-  //     CustomLoading().hide(context);
-  //
-  //     if (response != null && response.statusCode == 200) {
-  //       GetBeneficiaryListResponseModel beneListResponse =
-  //           GetBeneficiaryListResponseModel.fromJson(response.data);
-  //
-  //       if (beneListResponse.respCode == "RCS" && beneListResponse.data != null) {
-  //         beneficiaryList.value = beneListResponse.data!;
-  //         filteredBeneficiaryList.value = beneListResponse.data!;
-  //
-  //         ConsoleLog.printSuccess("Beneficiaries loaded: ${beneficiaryList.length}");
-  //
-  //       } else {
-  //         beneficiaryList.clear();
-  //         filteredBeneficiaryList.clear();
-  //       }
-  //     }else if (response?.statusCode == 401) {
-  //       await refreshToken(context);
-  //     }
-  //   } catch (e) {
-  //     ConsoleLog.printError("GET BENEFICIARY LIST ERROR: $e");
-  //   }
-  // }
-
-  // ============================================
-  // 4. GET BENEFICIARY LIST
-  // ============================================
+  //region getBeneficiaryList
   Future<void> getBeneficiaryList(BuildContext context, String senderMobile) async {
     try {
       if (!await isTokenValid()) {
@@ -996,7 +758,9 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printError("GET BENEFICIARY LIST ERROR: $e");
     }
   }
+  //endregion
 
+  //region isValidAccountNumber
   /// Bank account number:
   /// - Sirf digits allowed
   /// - Length: 9 se 18 digits (India me common range)
@@ -1009,7 +773,9 @@ class DmtWalletController extends GetxController {
     final regExp = RegExp(r'^[0-9]{9,18}$');
     return regExp.hasMatch(trimmed);
   }
+  //endregion
 
+  //region isValidIFSC
   /// IFSC code validation (Indian):
   /// - 4 capital letters (bank code)
   /// - 1 zero (0)
@@ -1024,10 +790,9 @@ class DmtWalletController extends GetxController {
     final regExp = RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$');
     return regExp.hasMatch(trimmed);
   }
+  //endregion
 
-  // ============================================
-  // NEW: GET BENEFICIARY NAME FROM ACCOUNT
-  // ============================================
+  //region getBeneficiaryName
   Future<void> getBeneficiaryName(BuildContext context) async {
     try {
       String accountNumber = beneAccountController.value.text.trim();
@@ -1134,44 +899,14 @@ class DmtWalletController extends GetxController {
       CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
+  //endregion
 
-  // ============================================
-  // 5. VERIFY ACCOUNT (INITIATE BENEVALIDATION)
-  // ============================================
+  //region verifyAccount
   Future<void> verifyAccount(BuildContext context) async {
     try {
       String accountNumber = beneAccountController.value.text.trim();
       String ifsc = beneIfscController.value.text.trim();
       String beneName = beneNameController.value.text.trim();
-      // String beneName = selectedBank.value.trim();
-
-      // if(selectedBank.value.isEmpty || selectedBank.value == "Select Bank"){
-      //   Fluttertoast.showToast(msg: "Please select bank");
-      //   return;
-      // }
-      //
-      // if (accountNumber.trim().isEmpty) {
-      //   Fluttertoast.showToast(msg: "Account number required!");
-      //   return;
-      // }
-      // if (!isValidAccountNumber(accountNumber)) {
-      //   Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
-      //   return;
-      // }
-      //
-      // if (ifsc.trim().isEmpty) {
-      //   Fluttertoast.showToast(msg: "IFSC code required!");
-      //   return;
-      // }
-      // if (!isValidIFSC(ifsc)) {
-      //   Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
-      //   return;
-      // }
-
-      // if (accountNumber.isEmpty || ifsc.isEmpty) {
-      //   Fluttertoast.showToast(msg: "Please enter account number and IFSC");
-      //   return;
-      // }
 
       ConsoleLog.printColor(
           "========>>>>>> Selected Bank: ${selectedBank.value}, \nIFSC: $ifsc, \nAccount: $accountNumber, \nName: $beneName, \nSender: ${currentSender.value?.mobile}, \nSender ID: ${senderId.value}, \nSender Name: ${currentSender.value?.name}"
@@ -1248,93 +983,9 @@ class DmtWalletController extends GetxController {
       CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
+  //endregion
 
-  // // ============================================
-  // // 6. ADD BENEFICIARY
-  // // ============================================
-  // Future<void> addBeneficiary(BuildContext context) async {
-  //   try {
-  //     String beneName = beneNameController.value.text.trim();
-  //     String accountNumber = beneAccountController.value.text.trim();
-  //     String ifsc = beneIfscController.value.text.trim();
-  //     String mobile = beneMobileController.value.text.trim();
-  //
-  //     if (beneName.isEmpty || accountNumber.isEmpty || ifsc.isEmpty) {
-  //       Fluttertoast.showToast(msg: "Please fill all required fields");
-  //       return;
-  //     }
-  //
-  //     if (!isAccountVerified.value) {
-  //       Fluttertoast.showToast(msg: "Please verify account first");
-  //       return;
-  //     }
-  //
-  //     CustomLoading().show(context);
-  //
-  //     Map<String, dynamic> body = {
-  //       "request_id": generateRequestId(),
-  //       "lat": loginController.latitude.value.toString(),
-  //       "long": loginController.longitude.value.toString(),
-  //       "sender": currentSender.value?.mobile ?? "",
-  //       "bene_name": beneName,
-  //       "account_number": accountNumber,
-  //       "ifsc": ifsc,
-  //       "mobile": mobile,
-  //       "bank_id": selectedBankId.value,
-  //       "service": serviceCode.value,
-  //       "request_type": "ADD BENEFICIARY",
-  //     };
-  //
-  //     ConsoleLog.printColor("ADD BENEFICIARY REQ: $body");
-  //
-  //     var response = await ApiProvider().requestPostForApi(
-  //       context,
-  //       WebApiConstant.API_URL_ADD_BENEFICIARY,
-  //       body,
-  //       userAuthToken.value,
-  //       userSignature.value,
-  //     );
-  //
-  //     CustomLoading().hide(context);
-  //
-  //     if (response != null && response.statusCode == 200) {
-  //       CustomLoading().hide(context);
-  //       AddBeneficiaryResponseModel addBeneResponse = 
-  //           AddBeneficiaryResponseModel.fromJson(response.data);
-  //
-  //       if (addBeneResponse.respCode == "RCS") {
-  //         ConsoleLog.printSuccess("Beneficiary added successfully");
-  //         Fluttertoast.showToast(msg: "Beneficiary added successfully");
-  //        
-  //         // Refresh beneficiary list
-  //         await getBeneficiaryList(context, currentSender.value?.mobile ?? "");
-  //        
-  //         // Clear form
-  //         beneNameController.value.clear();
-  //         beneAccountController.value.clear();
-  //         beneIfscController.value.clear();
-  //         beneMobileController.value.clear();
-  //         isAccountVerified.value = false;
-  //        
-  //         Get.back();
-  //        
-  //       } else {
-  //         CustomDialog.error(
-  //           context: context,
-  //           message: addBeneResponse.respDesc ?? "Failed to add beneficiary",
-  //         );
-  //       }
-  //     }
-  //   } catch (e) {
-  //     CustomLoading().hide(context);
-  //     ConsoleLog.printError("ADD BENEFICIARY ERROR: $e");
-  //     CustomDialog.error(context: context, message: "Technical issue!");
-  //   }
-  // }
-
-  // ============================================
-  // 6. ADD BENEFICIARY
-  // ============================================
+  //region addBeneficiary
   Future<void> addBeneficiary(BuildContext context) async {
     try {
       String beneName = beneNameController.value.text.trim();
@@ -1425,68 +1076,10 @@ class DmtWalletController extends GetxController {
       CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
-
-  // // ============================================
-  // // 6. DELETE BENEFICIARY
-  // // ============================================
-  // Future<void> deleteBeneficiary(BuildContext context, String beneId) async {
-  //   try {
-  //     CustomLoading().show(context);
-  //
-  //     Map<String, dynamic> body = {
-  //       "request_id": generateRequestId(),
-  //       "lat": loginController.latitude.value.toString(),
-  //       "long": loginController.longitude.value.toString(),
-  //       "sender": currentSender.value?.mobile ?? "",
-  //       "bene_id": beneId,
-  //       "service": serviceCode.value,
-  //       "request_type": "DELETE BENEFICIARY",
-  //     };
-  //
-  //     ConsoleLog.printColor("DELETE BENEFICIARY REQ: $body");
-  //
-  //     var response = await ApiProvider().requestPostForApi(
-  //       context,
-  //       WebApiConstant.API_URL_DELETE_BENEFICIARY,
-  //       body,
-  //       userAuthToken.value,
-  //       userSignature.value,
-  //     );
-  //
-  //     CustomLoading().hide(context);
-  //
-  //     if (response != null && response.statusCode == 200) {
-  //       CustomLoading().hide(context);
-  //       DeleteBeneficiaryResponseModel deleteResponse =
-  //           DeleteBeneficiaryResponseModel.fromJson(response.data);
-  //
-  //       if (deleteResponse.respCode == "RCS" && deleteResponse.data?.deleted == true) {
-  //         ConsoleLog.printSuccess("Beneficiary deleted successfully");
-  //         Fluttertoast.showToast(msg: "Beneficiary deleted successfully");
-  //
-  //         // Remove from list
-  //         beneficiaryList.removeWhere((bene) => bene.beneId == beneId);
-  //         filteredBeneficiaryList.removeWhere((bene) => bene.beneId == beneId);
-  //
-  //       } else {
-  //         CustomDialog.error(
-  //           context: context,
-  //           message: deleteResponse.respDesc ?? "Failed to delete beneficiary",
-  //         );
-  //       }
-  //     }
-  //   } catch (e) {
-  //     CustomLoading().hide(context);
-  //     ConsoleLog.printError("DELETE BENEFICIARY ERROR: $e");
-  //     CustomDialog.error(context: context, message: "Technical issue!");
-  //   }
-  // }
-
-  // ============================================
-  // 7. DELETE BENEFICIARY - ✅ COMPLETELY REWRITTEN (2-STEP PROCESS)
-  // ============================================
+  //endregion
 
   // Step 1: Request OTP for deletion
+  //region deleteBeneficiaryRequestOtp
   Future<void> deleteBeneficiaryRequestOtp(BuildContext context, String beneId) async {
     try {
       if (senderMobileNo.isEmpty) {
@@ -1540,10 +1133,9 @@ class DmtWalletController extends GetxController {
       CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
+  //endregion
 
-  // ============================================
-// Resend OTP (without opening new dialog)
-// ============================================
+  //region resendDeleteBeneficiaryOtp
   Future<void> resendDeleteBeneficiaryOtp(BuildContext context, String beneId) async {
     try {
       if (senderMobileNo.isEmpty) {
@@ -1598,8 +1190,10 @@ class DmtWalletController extends GetxController {
       );
     }
   }
+  //endregion
 
   // Step 2: Validate OTP and delete beneficiary
+  //region deleteBeneficiaryValidate
   Future<void> deleteBeneficiaryValidate(BuildContext context, String beneId, String otp) async {
     try {
       if (otp.isEmpty) {
@@ -1663,9 +1257,9 @@ class DmtWalletController extends GetxController {
       CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
+  //endregion
 
-  final GlobalKey<OtpInputFieldsState> deleteOtpKey = GlobalKey<OtpInputFieldsState>();
-
+  //region showDeleteOtpDialog
   void showDeleteOtpDialog(BuildContext context, String beneId) {
     deleteOtpController.value.clear();
     showDialog(
@@ -1799,158 +1393,10 @@ class DmtWalletController extends GetxController {
         );}
     );
   }
-
-  // // ============================================
-  // // 7. VERIFY ACCOUNT
-  // // ============================================
-  // Future<void> verifyAccount(BuildContext context) async {
-  //   try {
-  //     String accountNumber = beneAccountController.value.text.trim();
-  //     String ifsc = beneIfscController.value.text.trim();
-  //
-  //     if (accountNumber.isEmpty || ifsc.isEmpty) {
-  //       Fluttertoast.showToast(msg: "Please enter account number and IFSC");
-  //       return;
-  //     }
-  //
-  //     CustomLoading().show(context);
-  //
-  //     Map<String, dynamic> body = {
-  //       "request_id": generateRequestId(),
-  //       "lat": loginController.latitude.value.toString(),
-  //       "long": loginController.longitude.value.toString(),
-  //       "account_number": accountNumber,
-  //       "ifsc": ifsc,
-  //       "bank_id": selectedBankId.value,
-  //     };
-  //
-  //     ConsoleLog.printColor("VERIFY ACCOUNT REQ: $body");
-  //
-  //     var response = await ApiProvider().requestPostForApi(
-  //       context,
-  //       WebApiConstant.API_URL_VERIFY_ACCOUNT,
-  //       body,
-  //       userAuthToken.value,
-  //       userSignature.value,
-  //     );
-  //
-  //     CustomLoading().hide(context);
-  //
-  //     if (response != null && response.statusCode == 200) {
-  //       CustomLoading().hide(context);
-  //       VerifyAccountResponseModel verifyResponse =
-  //           VerifyAccountResponseModel.fromJson(response.data);
-  //
-  //       if (verifyResponse.respCode == "RCS" && verifyResponse.data?.verified == true) {
-  //         isAccountVerified.value = true;
-  //
-  //         // Auto-fill beneficiary name
-  //         if (verifyResponse.data?.beneName != null) {
-  //           beneNameController.value.text = verifyResponse.data!.beneName!;
-  //         }
-  //
-  //         ConsoleLog.printSuccess("Account verified: ${verifyResponse.data?.beneName}");
-  //         Fluttertoast.showToast(msg: "Account verified successfully");
-  //
-  //       } else {
-  //         isAccountVerified.value = false;
-  //         CustomDialog.error(
-  //           context: context,
-  //           message: verifyResponse.respDesc ?? "Account verification failed",
-  //         );
-  //       }
-  //     }
-  //   } catch (e) {
-  //     CustomLoading().hide(context);
-  //     ConsoleLog.printError("VERIFY ACCOUNT ERROR: $e");
-  //     CustomDialog.error(context: context, message: "Technical issue!");
-  //   }
-  // }
-
-  // // ============================================
-  // // 8. TRANSFER MONEY
-  // // ============================================
-  // Future<void> transferMoney(BuildContext context, BeneficiaryData beneficiary) async {
-  //   try {
-  //     String amount = transferAmountController.value.text.trim();
-  //     String tpin = tpinController.value.text.trim();
-  //
-  //     if (amount.isEmpty) {
-  //       Fluttertoast.showToast(msg: "Please enter amount");
-  //       return;
-  //     }
-  //
-  //     double amountValue = double.tryParse(amount) ?? 0;
-  //     if (amountValue <= 0) {
-  //       Fluttertoast.showToast(msg: "Please enter valid amount");
-  //       return;
-  //     }
-  //
-  //     if (tpin.isEmpty) {
-  //       Fluttertoast.showToast(msg: "Please enter TPIN");
-  //       return;
-  //     }
-  //
-  //     CustomLoading().show(context);
-  //
-  //     Map<String, dynamic> body = {
-  //       "request_id": generateRequestId(),
-  //       "lat": loginController.latitude.value.toString(),
-  //       "long": loginController.longitude.value.toString(),
-  //       "sender": currentSender.value?.mobile ?? "",
-  //       "bene_id": beneficiary.beneId,
-  //       "amount": amount,
-  //       "tpin": tpin,
-  //       "service": serviceCode.value,
-  //       "request_type": "TRANSFER",
-  //     };
-  //
-  //     ConsoleLog.printColor("TRANSFER MONEY REQ: $body");
-  //
-  //     var response = await ApiProvider().requestPostForApi(
-  //       context,
-  //       WebApiConstant.API_URL_TRANSFER_MONEY,
-  //       body,
-  //       userAuthToken.value,
-  //       userSignature.value,
-  //     );
-  //
-  //     CustomLoading().hide(context);
-  //
-  //     if (response != null && response.statusCode == 200) {
-  //       CustomLoading().hide(context);
-  //       TransferMoneyResponseModel transferResponse =
-  //           TransferMoneyResponseModel.fromJson(response.data);
-  //
-  //       if (transferResponse.respCode == "RCS") {
-  //         ConsoleLog.printSuccess("Transfer successful: ${transferResponse.data?.txnId}");
-  //
-  //         // Show success dialog
-  //         showSuccessDialog(context, transferResponse.data);
-  //
-  //         // Clear form
-  //         transferAmountController.value.clear();
-  //         tpinController.value.clear();
-  //
-  //       } else {
-  //         CustomDialog.error(
-  //           context: context,
-  //           message: transferResponse.respDesc ?? "Transfer failed",
-  //         );
-  //       }
-  //     }
-  //   } catch (e) {
-  //     CustomLoading().hide(context);
-  //     ConsoleLog.printError("TRANSFER MONEY ERROR: $e");
-  //     CustomDialog.error(context: context, message: "Technical issue!");
-  //   }
-  // }
-
-  // ============================================
-  // 8. TRANSFER MONEY - COMPLETELY REWRITTEN (2-STEP PROCESS)
-  // ============================================
+  //endregion
 
   // Step 1: Confirm transaction and get charges
+  //region confirmTransfer
   Future<void> confirmTransfer(BuildContext transferMoneyContext, BeneficiaryData beneficiary) async {
     try {
       String amount = transferAmountController.value.text.trim();
@@ -2071,8 +1517,9 @@ class DmtWalletController extends GetxController {
       CustomDialog.error(context: transferMoneyContext, message: "Technical issue!");
     }
   }
+  //endregion
 
-  // Initiate transaction with TPIN
+  //region initiateTransfer
   Future<void> initiateTransfer(BuildContext context) async {
     try {
       // String tpin = tpinController.value.text.trim();
@@ -2147,17 +1594,6 @@ class DmtWalletController extends GetxController {
                 Get.back();
                 // Pop Transfer Money Screen
                 Get.back();
-
-                // Navigate back to WalletScreen (pop TransactionConfirmation and TransferMoney screens)
-                // This will pop exactly 2 screens: TransactionConfirmationScreen and TransferMoneyScreen
-                // int poppedCount = 0;
-                // Get.until((route) {
-                //   if (poppedCount < 2) {
-                //     poppedCount++;
-                //     return false; // Keep popping
-                //   }
-                //   return true; // Stop popping, we're now at WalletScreen
-                // });
 
                 // Show success message
                 Fluttertoast.showToast(
@@ -2275,7 +1711,7 @@ class DmtWalletController extends GetxController {
         );
       }
     } catch (e) {
-      // ✅ Safely hide loading
+      // Safely hide loading
       try {
         if (context.mounted) {
           CustomLoading().hide(context);
@@ -2311,42 +1747,9 @@ class DmtWalletController extends GetxController {
       );
     }
   }
+  //endregion
 
-  // String _applyA4ReceiptMargins(String html) {
-  //   const css = '''
-  // <style>
-  //   @page { size: A4; margin: 12mm 10mm; }  /* 👈 A4 margins */
-  //   html, body { width: 100%; }
-  //   * { box-sizing: border-box; }
-  //   body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  //   .receipt-page { padding: 8mm; }        /* 👈 inner padding */
-  //   table { width: 100% !important; max-width: 100% !important; border-collapse: collapse; }
-  // </style>
-  // ''';
-  //
-  //   // If full HTML exists, inject CSS into <head>
-  //   if (html.contains('</head>')) {
-  //     html = html.replaceFirst('</head>', '$css</head>');
-  //   } else if (html.toLowerCase().contains('<html')) {
-  //     html = html.replaceFirst(RegExp(r'(<html[^>]*>)', caseSensitive: false), r'$1<head>' + css + r'</head>');
-  //   } else {
-  //     // If server sends only fragment, wrap it
-  //     html = '<html><head>$css</head><body>$html</body></html>';
-  //   }
-  //
-  //   // Add wrapper padding inside body
-  //   if (html.toLowerCase().contains('<body')) {
-  //     html = html.replaceFirst(RegExp(r'(<body[^>]*>)', caseSensitive: false), r'$1<div class="receipt-page">');
-  //     html = html.replaceFirst(RegExp(r'(</body>)', caseSensitive: false), r'</div>$1');
-  //   }
-  //
-  //   return html;
-  // }
-
-
-// ============================================
-// PRINT RECEIPT
-// ============================================
+  //region printReceipt
   Future<void> printReceipt(BuildContext context, String txnId) async {
     BuildContext? currentContext = context;
     bool shouldHideLoading = true;
@@ -2360,7 +1763,7 @@ class DmtWalletController extends GetxController {
       }
 
       if (currentContext.mounted) {
-        _showExternalSafeLoader(currentContext);
+        showExternalSafeLoader(currentContext);
       }
 
       // API Call - Fetch/TxnReceipt
@@ -2384,7 +1787,7 @@ class DmtWalletController extends GetxController {
       );
 
       if (currentContext.mounted) {
-        _hideExternalSafeLoader();
+        hideExternalSafeLoader();
         shouldHideLoading = false;
       }
 
@@ -2414,7 +1817,7 @@ class DmtWalletController extends GetxController {
       }
     } catch (e) {
       if (shouldHideLoading && currentContext != null && currentContext.mounted) {
-        _hideExternalSafeLoader();
+        hideExternalSafeLoader();
       }
       ConsoleLog.printError("PRINT RECEIPT ERROR: $e");
       CustomDialog.error(
@@ -2422,20 +1825,19 @@ class DmtWalletController extends GetxController {
         message: "Error: ${e.toString()}",
       );
     }finally {
-      // ✅ Extra safety to hide loading
+      // Extra safety to hide loading
       try {
         if (shouldHideLoading && currentContext != null && currentContext.mounted) {
-          _hideExternalSafeLoader();
+          hideExternalSafeLoader();
         }
       } catch (e) {
         ConsoleLog.printWarning("Error in finally block: $e");
       }
     }
   }
+  //endregion
 
-// ============================================
-// CONVERT HTML TO PDF & SAVE
-// ============================================
+  //region convertHtmlToPdfAndSave
   Future<void> convertHtmlToPdfAndSave(
       BuildContext context, String htmlContent, String txnId) async {
     BuildContext? currentContext = context;
@@ -2445,7 +1847,7 @@ class DmtWalletController extends GetxController {
 
       // Show loading
       if (currentContext.mounted) {
-        _showExternalSafeLoader(currentContext);
+        showExternalSafeLoader(currentContext);
       }
 
       // Storage permission (only needed when saving to public Downloads on Android)
@@ -2466,8 +1868,6 @@ class DmtWalletController extends GetxController {
           return;
         }
       }
-
-      // CustomLoading().show(context);
 
       //Get directory
       Directory? directory;
@@ -2490,7 +1890,7 @@ class DmtWalletController extends GetxController {
 
       htmlContent = applyA4ReceiptMargins(htmlContent);
       // Convert HTML to PDF using flutter_native_html_to_pdf
-      final generatedPdfFile = await _htmlToPdf.convertHtmlToPdf(
+      final generatedPdfFile = await htmlToPdf.convertHtmlToPdf(
         html: htmlContent,
         targetDirectory: targetPath,
         targetName: fileName,
@@ -2498,7 +1898,7 @@ class DmtWalletController extends GetxController {
       );
 
       if (currentContext.mounted) {
-        _hideExternalSafeLoader();
+        hideExternalSafeLoader();
         shouldHideLoading = false; // Already hidden
       }
 
@@ -2512,42 +1912,11 @@ class DmtWalletController extends GetxController {
           toastLength: Toast.LENGTH_LONG,
         );
 
-        //Open/Share PDF
-        // try {
-        //   // await Printing.sharePdf(
-        //   //   bytes: await generatedPdfFile.readAsBytes(),
-        //   //   filename: "$fileName.pdf",
-        //   // );
-        //   OpenFilex.open(generatedPdfFile.path).then((result) {
-        //     ConsoleLog.printInfo("OpenFile result: ${result.message}");
-        //
-        //     if (result.type != ResultType.done) {
-        //       Fluttertoast.showToast(
-        //         msg: "Receipt saved at: ${Platform.isAndroid ? 'Downloads' : 'Documents'}",
-        //         toastLength: Toast.LENGTH_LONG,
-        //       );
-        //     }
-        //   // final result = await OpenFilex.open(generatedPdfFile.path);
-        //   }).catchError((openError) {
-        //     ConsoleLog.printWarning("Could not open PDF: $openError");
-        //     Fluttertoast.showToast(
-        //       msg: "Receipt saved at: ${Platform.isAndroid ? 'Downloads' : 'Documents'}",
-        //       toastLength: Toast.LENGTH_LONG,
-        //     );
-        //   });
-        // } catch (openError) {
-        //   ConsoleLog.printWarning("Could not open PDF: $openError");
-        //
-        //   Fluttertoast.showToast(
-        //     msg: "Receipt saved at: ${Platform.isAndroid ? 'Downloads' : 'Documents'}",
-        //     toastLength: Toast.LENGTH_LONG,
-        //   );
-        // }
         try {
-          // ✅ Use Future.delayed to ensure loading is hidden before opening PDF
+          // Use Future.delayed to ensure loading is hidden before opening PDF
           await Future.delayed(Duration(milliseconds: 100));
 
-          _pendingExternalReturnCleanup = true;
+          pendingExternalReturnCleanup = true;
 
           final openResult = await OpenFilex.open(generatedPdfFile.path);
 
@@ -2574,7 +1943,7 @@ class DmtWalletController extends GetxController {
 
     } catch (e) {
       if (shouldHideLoading && currentContext.mounted) {
-        _hideExternalSafeLoader();
+        hideExternalSafeLoader();
       }
 
       Fluttertoast.showToast(
@@ -2584,20 +1953,19 @@ class DmtWalletController extends GetxController {
       );
 
     } finally {
-      // ✅ EXTRA SAFETY: Always try to hide loading in finally block
+      // EXTRA SAFETY: Always try to hide loading in finally block
       try {
         if (shouldHideLoading && currentContext.mounted) {
-          _hideExternalSafeLoader();
+          hideExternalSafeLoader();
         }
       } catch (e) {
         ConsoleLog.printWarning("Error in finally block: $e");
       }
     }
   }
+  //endregion
 
-// ============================================
-// ONLY PDF TO WHATSAPP (NO TEXT)
-// ============================================
+  //region shareToWhatsApp
   Future<void> shareToWhatsApp(
       BuildContext context, String txnId, String mobileNumber) async {
     try {
@@ -2619,7 +1987,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      _showExternalSafeLoader(context);
+      showExternalSafeLoader(context);
 
       // Fetch receipt HTML from API
       Map<String, dynamic> body = {
@@ -2641,7 +2009,7 @@ class DmtWalletController extends GetxController {
       );
 
       if (dialogContext.mounted) {
-        _hideExternalSafeLoader();
+        hideExternalSafeLoader();
       }
 
       if (response != null && response.statusCode == 200) {
@@ -2683,10 +2051,10 @@ class DmtWalletController extends GetxController {
           // Apply A4 margins
           final fixedHtml = applyA4ReceiptMargins(htmlContent);
 
-          _showExternalSafeLoader(context);
+          showExternalSafeLoader(context);
 
           // Generate PDF
-          final pdfFile = await _htmlToPdf.convertHtmlToPdf(
+          final pdfFile = await htmlToPdf.convertHtmlToPdf(
             html: fixedHtml,
             targetDirectory: targetPath,
             targetName: fileName,
@@ -2694,7 +2062,7 @@ class DmtWalletController extends GetxController {
           );
 
           if (context.mounted) {
-            _hideExternalSafeLoader();
+            hideExternalSafeLoader();
           }
 
           if (pdfFile != null && await pdfFile.exists()) {
@@ -2714,7 +2082,7 @@ class DmtWalletController extends GetxController {
             try {
               //SOLUTION: Share ONLY PDF file without any text
               // Remove text parameter completely - this will share only the file
-              _pendingExternalReturnCleanup = true;
+              pendingExternalReturnCleanup = true;
               Share.shareXFiles(
                 [XFile(pdfFile.path, mimeType: "application/pdf")],
               ).then((result) {
@@ -2764,7 +2132,7 @@ class DmtWalletController extends GetxController {
     } catch (e) {
       try {
         if (context.mounted) {
-          _hideExternalSafeLoader();
+          hideExternalSafeLoader();
         }
       } catch (hideError) {
         ConsoleLog.printWarning("Could not hide loading: $hideError");
@@ -2776,7 +2144,9 @@ class DmtWalletController extends GetxController {
       );
     }
   }
+  //endregion
 
+  //region applyA4ReceiptMargins
   String applyA4ReceiptMargins(String html) {
     const css = '''
   <style>
@@ -2811,103 +2181,9 @@ class DmtWalletController extends GetxController {
 
     return html;
   }
+  //endregion
 
-
-
-  // Show confirmation dialog with charges
-  // void showTransferConfirmationDialog(BuildContext context, BeneficiaryData beneficiary, ConfirmTransferData charges) {
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (BuildContext context) {
-  //       return AlertDialog(
-  //         title: Text('Confirm Transfer'),
-  //         content: Column(
-  //           mainAxisSize: MainAxisSize.min,
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             Text('Beneficiary: ${beneficiary.name}'),
-  //             Text('Account: ${beneficiary.accountNo}'),
-  //             Text('Bank: ${beneficiary.bankName}'),
-  //             SizedBox(height: 16),
-  //             Text('Amount: ₹${charges.trasamt}'),
-  //             Text('Charged Amount: ₹${charges.chargedamt}'),
-  //             // Text('Charges: ₹${charges.totalcharge}'),
-  //             Text('Total Charge: ₹${(charges.totalcharge)}'),
-  //             SizedBox(height: 16),
-  //             TextField(
-  //               controller: tpinController.value,
-  //               keyboardType: TextInputType.number,
-  //               obscureText: true,
-  //               maxLength: 4,
-  //               decoration: InputDecoration(
-  //                 labelText: 'Enter TPIN',
-  //                 counterText: '',
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //         actions: [
-  //           TextButton(
-  //             onPressed: () {
-  //               confirmationData.value = null;
-  //               showConfirmation.value = false;
-  //               Get.back();
-  //             },
-  //             child: Text('Cancel'),
-  //           ),
-  //           ElevatedButton(
-  //             onPressed: () {
-  //               Get.back();
-  //               initiateTransfer(context);
-  //             },
-  //             child: Text('Confirm'),
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
-
-  // // Show success dialog
-  // void showTransferSuccessDialog(BuildContext context, Map<String, dynamic>? data) {
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (BuildContext context) {
-  //       return AlertDialog(
-  //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-  //         title: Icon(Icons.check_circle, color: Colors.green, size: 60),
-  //         content: Column(
-  //           mainAxisSize: MainAxisSize.min,
-  //           children: [
-  //             Text('Transfer Successful!',
-  //                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-  //             SizedBox(height: 16),
-  //             Text('Amount: ₹${data?['amount'] ?? transferAmountController.value.text}'),
-  //             Text('UTR: ${data?['utr'] ?? "N/A"}'),
-  //             Text('Transaction ID: ${data?['txn_id'] ?? "N/A"}'),
-  //             if (data?['txn_desc'] != null)
-  //               Text('Status: ${data!['txn_desc']}'),
-  //           ],
-  //         ),
-  //         actions: [
-  //           TextButton(
-  //             onPressed: () {
-  //               Get.back();
-  //               Get.back(); // Go back to beneficiary list
-  //             },
-  //             child: Text('OK'),
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
-
-  // ============================================
-  // 9. SEARCH TRANSACTION - ✅ NEW
-  // ============================================
+  //region searchTransaction
   Future<void> searchTransaction(BuildContext context, String txnId) async {
     try {
       if (txnId.isEmpty) {
@@ -2964,7 +2240,9 @@ class DmtWalletController extends GetxController {
       CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
+  //endregion
 
+  //region showTransactionDetailsDialog
   void showTransactionDetailsDialog(BuildContext context, Map<String, dynamic> txnData) {
     showDialog(
       context: context,
@@ -2994,48 +2272,9 @@ class DmtWalletController extends GetxController {
       },
     );
   }
+  //endregion
 
-  // // ============================================
-  // // 9. GET ALL BANKS LIST
-  // // ============================================
-  // Future<void> getAllBanks(BuildContext context) async {
-  //   try {
-  //     if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
-  //       ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
-  //       ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
-  //       return;
-  //     }
-  //     Map<String, dynamic> body = {
-  //       "request_id": generateRequestId(),
-  //       "lat": loginController.latitude.value.toString(),
-  //       "long": loginController.longitude.value.toString(),
-  //     };
-  //
-  //     var response = await ApiProvider().requestPostForApi(
-  //       context,
-  //       WebApiConstant.API_URL_GET_ALL_BANKS,
-  //       body,
-  //       userAuthToken.value,
-  //       userSignature.value,
-  //     );
-  //
-  //     if (response != null && response.statusCode == 200) {
-  //       GetAllBanksResponseModel banksResponse =
-  //           GetAllBanksResponseModel.fromJson(response.data);
-  //
-  //       if (banksResponse.respCode == "RCS" && banksResponse.data != null) {
-  //         banksList.value = banksResponse.data!;
-  //         ConsoleLog.printSuccess("Banks loaded: ${banksList.length}");
-  //       }
-  //     }
-  //   } catch (e) {
-  //     ConsoleLog.printError("GET ALL BANKS ERROR: $e");
-  //   }
-  // }
-
-  // ============================================
-  // 10. GET ALL BANKS LIST - ✅ CORRECT
-  // ============================================
+  //region getAllBanks
   Future<void> getAllBanks(BuildContext context) async {
     try {
       if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
@@ -3070,28 +2309,9 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printError("GET ALL BANKS ERROR: $e");
     }
   }
+  //endregion
 
-  // ============================================
-  // 11. SEARCH BENEFICIARIES
-  // ============================================
-  // void searchBeneficiaries(String query) {
-  //   searchQuery.value = query.toLowerCase();
-  //
-  //   if (query.isEmpty) {
-  //     filteredBeneficiaryList.value = beneficiaryList;
-  //   } else {
-  //     filteredBeneficiaryList.value = beneficiaryList.where((bene) {
-  //       return (bene.name?.toLowerCase().contains(query) ?? false) ||
-  //           (bene.name?.toUpperCase().contains(query) ?? false) ||
-  //           (bene.accountNo?.contains(query) ?? false) ||
-  //           (bene.bankName?.toLowerCase().contains(query) ?? false) ||
-  //           (bene.bankName?.toUpperCase().contains(query) ?? false);
-  //     }).toList();
-  //   }
-  //
-  //   // Current sort after search
-  //   applySortOption(currentSortOption.value);
-  // }
+  //region searchBeneficiaries
   void searchBeneficiaries(String query) {
     // Store original query (not converted)
     searchQuery.value = query;
@@ -3116,10 +2336,9 @@ class DmtWalletController extends GetxController {
     // Apply current sort after search
     applySortOption(currentSortOption.value);
   }
+  //endregion
 
-  // ============================================
-  // 12. SORT BENEFICIARIES
-  // ============================================
+  //region sortBeneficiaries
   void sortBeneficiaries(BeneficiarySortOption option) {
     currentSortOption.value = option;
     applySortOption(option);
@@ -3143,7 +2362,9 @@ class DmtWalletController extends GetxController {
         break;
     }
   }
+  //endregion
 
+  //region applySortOption
   void applySortOption(BeneficiarySortOption option) {
     List<BeneficiaryData> listToSort = List.from(filteredBeneficiaryList);
 
@@ -3181,10 +2402,9 @@ class DmtWalletController extends GetxController {
 
     filteredBeneficiaryList.value = listToSort;
   }
+  //endregion
 
-  // ============================================
-  // 13. SHOW SORT OPTIONS DIALOG
-  // ============================================
+  //region showSortOptionsDialog
   void showSortOptionsDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -3275,7 +2495,9 @@ class DmtWalletController extends GetxController {
       },
     );
   }
+  //endregion
 
+  //region buildSortOption
   Widget buildSortOption(
       BuildContext context,
       String label,
@@ -3322,11 +2544,9 @@ class DmtWalletController extends GetxController {
       ),
     );
   }
+  //endregion
 
-  // ============================================
-  // 11. GET ALL BENEFICIARY DETAILS
-  // ============================================
-
+  //region getAllBeneficiaryDetails
   Future<void> getAllBeneficiaryDetails(
       BuildContext context,
       {int start = 0, int limit = 100, String searchBy = ""}
@@ -3351,43 +2571,9 @@ class DmtWalletController extends GetxController {
     if (response != null && response.statusCode == 200) {
     }
   }
+  //endregion
 
-  // // ============================================
-  // // SHOW SUCCESS DIALOG
-  // // ============================================
-  // void showSuccessDialog(BuildContext context, TransferData? data) {
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (BuildContext context) {
-  //       return AlertDialog(
-  //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-  //         title: Icon(Icons.check_circle, color: Colors.green, size: 60),
-  //         content: Column(
-  //           mainAxisSize: MainAxisSize.min,
-  //           children: [
-  //             Text('Transfer Successful!',
-  //               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-  //             SizedBox(height: 16),
-  //             Text('Amount: ₹${data?.amount}'),
-  //             Text('UTR: ${data?.utr ?? "N/A"}'),
-  //             Text('Transaction ID: ${data?.txnId}'),
-  //           ],
-  //         ),
-  //         actions: [
-  //           TextButton(
-  //             onPressed: () {
-  //               Get.back();
-  //               Get.back();
-  //             },
-  //             child: Text('OK'),
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
-
+  //region onClose
   @override
   void onClose() {
     senderMobileController.value.dispose();
@@ -3402,8 +2588,8 @@ class DmtWalletController extends GetxController {
     transferAmountController.value.dispose();
     transferModeController.value.dispose();
     txnPinController.value.dispose();
-    // tpinController.value.dispose();
     deleteOtpController.value.dispose();
     super.onClose();
   }
+  //endregion
 }

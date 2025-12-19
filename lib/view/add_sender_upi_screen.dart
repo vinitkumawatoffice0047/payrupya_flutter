@@ -1080,21 +1080,21 @@ import '../utils/otp_input_fields.dart';
 import '../utils/transfer_success_dialog.dart';
 import 'payrupya_wallet_screen.dart';
 
-class AddSenderScreen extends StatefulWidget {
+class AddSenderUPIScreen extends StatefulWidget {
   final bool showBackButton;
   final String? initialMobile;
 
-  const AddSenderScreen({
+  const AddSenderUPIScreen({
     super.key,
     this.showBackButton = true,
     this.initialMobile,
   });
 
   @override
-  State<AddSenderScreen> createState() => _AddSenderScreenState();
+  State<AddSenderUPIScreen> createState() => _AddSenderUPIScreenState();
 }
 
-class _AddSenderScreenState extends State<AddSenderScreen> {
+class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
   bool verifyByMobile = true;
   bool isMobileNumberAlreadyRegistered = false;
   // bool showOtpDialog = false;
@@ -1104,8 +1104,8 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
   final DmtWalletController dmtController = Get.put(DmtWalletController());
   final SignupController signupController = Get.put(SignupController());
   final LoginController loginController = Get.find<LoginController>();
-  bool _isInitialized = false;
-  bool _isLoading = true;
+  bool isInitialized = false;
+  bool isLoading = true;
 
   final GlobalKey<OtpInputFieldsState> otpKey = GlobalKey<OtpInputFieldsState>();
 
@@ -1114,7 +1114,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeServices();
+      initializeServices();
     });
 
     // If initial mobile is provided, set it and check sender
@@ -1137,10 +1137,10 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
     });
   }
 
-  Future<void> _initializeServices() async {
+  Future<void> initializeServices() async {
     try {
       setState(() {
-        _isLoading = true;
+        isLoading = true;
       });
 
       ConsoleLog.printInfo("=== Initializing DMT Services ===");
@@ -1166,7 +1166,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
           backgroundColor: Colors.red,
         );
         setState(() {
-          _isLoading = false;
+          isLoading = false;
         });
         return;
       }
@@ -1194,8 +1194,8 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
       await dmtController.getAllBanks(context);
 
       setState(() {
-        _isInitialized = true;
-        _isLoading = false;
+        isInitialized = true;
+        isLoading = false;
       });
 
       ConsoleLog.printSuccess("Services initialized. Service Code: ${dmtController.serviceCode.value}");
@@ -1206,8 +1206,8 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
       // await dmtController.getAllowedServiceByType(context);
 
       setState(() {
-        _isInitialized = true;
-        _isLoading = false;
+        isInitialized = true;
+        isLoading = false;
       });
     }
   }
@@ -1248,8 +1248,8 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                     ],
                   ),
                 ),
-                SizedBox(height: 15,),
-
+                // Spacer(),
+                SizedBox(height: 15),
                 //region Continue Button
                 // Continue Button
                 GlobalUtils.CustomButton(
@@ -1258,7 +1258,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                   onPressed: () async {
 
                     /// 🔒 Button disable condition
-                    if (_isLoading || dmtController.serviceCode.value.isEmpty) {
+                    if (isLoading || dmtController.serviceCode.value.isEmpty) {
                       return;
                     }
 
@@ -1369,82 +1369,6 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                   borderRadius: 16,
                 ),
                 //endregion
-            //     // Continue Button Old with Separate Verify Button on Mobile No Field
-            //     GlobalUtils.CustomButton(
-            //       text: "Continue",
-            //       onPressed: () async {
-            //         if (!dmtController.isSenderVerified.value && isMobileNumberAlreadyRegistered) {
-            //           final otp = otpKey.currentState?.currentOtp ?? '';
-            //           if(otp.isEmpty){
-            //             Fluttertoast.showToast(msg: "Please enter OTP");
-            //             return;
-            //           }
-            //           if(dmtController.senderMobileController.value.text.isEmpty && dmtController.senderMobileController.value.text.length < 10){
-            //             Fluttertoast.showToast(msg: "Please enter mobile number");
-            //             return;
-            //           }
-            //           if(dmtController.senderNameController.value.text.isEmpty){
-            //             Fluttertoast.showToast(msg: "Please enter name");
-            //             return;
-            //           }
-            //           if(dmtController.selectedState.value.isEmpty){
-            //             Fluttertoast.showToast(msg: "Please select state");
-            //             return;
-            //           }
-            //           if(dmtController.selectedPincode.value.isEmpty){
-            //             Fluttertoast.showToast(msg: "Please select pincode");
-            //             return;
-            //           }
-            //           if(dmtController.senderAddressController.value.text.isEmpty) {
-            //             Fluttertoast.showToast(msg: "Please enter address");
-            //             return;
-            //           }
-            //           if(
-            //           otp.isNotEmpty &&
-            //               dmtController.senderMobileController.value.text.isNotEmpty &&
-            //               dmtController.senderNameController.value.text.isNotEmpty &&
-            //               dmtController.selectedState.value.isNotEmpty &&
-            //               dmtController.selectedCity.value.isNotEmpty &&
-            //               dmtController.selectedPincode.value.isNotEmpty &&
-            //               dmtController.senderAddressController.value.text.isNotEmpty
-            //           ){
-            //             // Add new sender
-            //             await dmtController.addSender(context, otp);
-            //           }
-            //
-            //           // // Show OTP dialog
-            //           // setState(() => showOtpDialog = true);
-            //           // Future.delayed(const Duration(milliseconds: 100), () {
-            //           //   if (showOtpDialog && mounted) {
-            //           //     otpKey.currentState?.clear();
-            //           //     otpKey.currentState?.focusFirst();
-            //           //   }
-            //           // });
-            //         } else{
-            //           Fluttertoast.showToast(msg: "Please Verify Mobile Number!");
-            //           return null;
-            //         }/*else {
-            //   // Navigate to wallet
-            //   // Get.to(() => WalletScreen(showBackButton: true));
-            //   Get.to(() => WalletScreen());
-            // }*/
-            //       },
-            //       textStyle: GoogleFonts.albertSans(
-            //         fontSize: 16,
-            //         color: Colors.white,
-            //         fontWeight: FontWeight.w600,
-            //       ),
-            //       width: GlobalUtils.screenWidth * 0.9,
-            //       height: GlobalUtils.screenWidth * (60 / 393),
-            //       backgroundGradient: GlobalUtils.blueBtnGradientColor,
-            //       borderColor: Color(0xFF71A9FF),
-            //       showShadow: false,
-            //       textColor: Colors.white,
-            //       animation: ButtonAnimation.fade,
-            //       animationDuration: const Duration(milliseconds: 150),
-            //       buttonType: ButtonType.elevated,
-            //       borderRadius: 16,
-            //     ),
                 SizedBox(height: 16),
               ],
             ),
@@ -1491,7 +1415,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
             SizedBox(width: GlobalUtils.screenWidth * (14 / 393)),
           ],
           Text(
-            "Payrupya Wallet",
+            "Payrupya UPI",
             style: GoogleFonts.albertSans(
               fontSize: GlobalUtils.screenWidth * (20 / 393),
               fontWeight: FontWeight.w600,
@@ -1504,421 +1428,534 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
   }
 
   Widget buildSenderForm() {
-    return Column(
-      children: [
-        // Show loading indicator
-        if (_isLoading) ...[
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              children: [
-                CircularProgressIndicator(color: Colors.black,),
-                SizedBox(height: 16),
-                Text(
-                  "Initializing services...",
-                  style: GoogleFonts.albertSans(
-                    fontSize: 14,
-                    color: Color(0xFF6B707E),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 24),
-        ],
-        if (!_isLoading) ...[
-          Container(
-          padding: EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 15,
-                offset: Offset(0, 4),
+    return SizedBox(
+      height: GlobalUtils.screenHeight,
+      width: GlobalUtils.screenWidth,
+      child: Column(
+        children: [
+          //region Show loading indicator
+          // Show loading indicator
+          if (isLoading) ...[
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: 12),
-              Text(
-                'Sender Details :',
-                style: GoogleFonts.albertSans(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xff1B1C1C),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Verify by',
-                style: GoogleFonts.albertSans(
-                  fontSize: 14,
-                  color: Color(0xff707070),
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-              SizedBox(height: 12),
-              Row(
+              child: Column(
                 children: [
-                  SizedBox(
-                    width: GlobalUtils.screenWidth * (174 / 393),
-                    height: 60,
-                    child: buildToggleButton('Mobile Number', verifyByMobile, () {
-                      setState(() => verifyByMobile = true);
-                    }),
+                  CircularProgressIndicator(color: Colors.black,),
+                  SizedBox(height: 16),
+                  Text(
+                    "Initializing services...",
+                    style: GoogleFonts.albertSans(
+                      fontSize: 14,
+                      color: Color(0xFF6B707E),
+                    ),
                   ),
                 ],
               ),
-              SizedBox(height: 20),
+            ),
+            SizedBox(height: 24),
+          ],
+          //endregion
 
-              // Mobile Number Field
-              buildLabelText('Sender Mobile Number'),
-              SizedBox(height: 8),
-              GlobalUtils.CustomTextField(
-                label: "Phone Number",
-                showLabel: false,
-                controller: dmtController.senderMobileController.value,
-                isMobileNumber: true,
-                placeholder: "Phone Number",
-                placeholderColor: Colors.white,
-                height: GlobalUtils.screenWidth * (60 / 393),
-                width: GlobalUtils.screenWidth * 0.9,
-                autoValidate: false,
-                backgroundColor: Colors.white,
-                borderColor: Color(0xffE2E5EC),
-                borderRadius: 16,
-                placeholderStyle: GoogleFonts.albertSans(
-                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  color: Color(0xFF6B707E),
-                ),
-                inputTextStyle: GoogleFonts.albertSans(
-                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  color: Color(0xFF1B1C1C),
-                ),
-                errorColor: Colors.red,
-                errorFontSize: 12,
-                onChanged: (value) {
-                  /// Agar OTP / Extra fields already visible hain
-                  if (isMobileNumberAlreadyRegistered) {
-                    setState(() {
-                      isMobileNumberAlreadyRegistered = false;
-                    });
-
-                    /// Sender verification reset
-                    dmtController.isSenderVerified.value = false;
-
-                    /// OPTIONAL but recommended: extra fields clear
-                    dmtController.senderNameController.value.clear();
-                    dmtController.senderAddressController.value.clear();
-                    dmtController.selectedState.value = '';
-                    dmtController.selectedCity.value = '';
-                    dmtController.selectedPincode.value = '';
-
-                    /// OTP clear
-                    otpKey.currentState?.clear();
-                  }
-                }
-                // suffixIcon: TextButton(
-                //   onPressed: (_isLoading || dmtController.serviceCode.value.isEmpty)
-                //       ? null // ✅ Disable button if service not ready
-                //       : () async {
-                //     String mobile = dmtController.senderMobileController.value.text.trim();
-                //
-                //     if (mobile.isEmpty || mobile.length != 10) {
-                //       Fluttertoast.showToast(
-                //         msg: "Please enter valid 10-digit mobile number",
-                //         backgroundColor: Colors.red,
-                //       );
-                //       return;
-                //     }
-                //
-                //     // Check sender
-                //     await dmtController.checkSender(context, mobile);
-                //
-                //     // If sender not found, show registration form
-                //     if (!dmtController.isSenderVerified.value) {
-                //       setState(() {
-                //         isMobileNumberAlreadyRegistered = true;
-                //       });
-                //     } else if(dmtController.senderName.value.isEmpty){
-                //       setState(() {
-                //         isMobileNumberAlreadyRegistered = false;
-                //       });
-                //     }
-                //     if(dmtController.checkSenderRespCode.value == "RCS") {
-                //       // Sender exists, navigate to wallet
-                //       // Get.to(() => WalletScreen(showBackButton: true));
-                //       // await Future.delayed(Duration(seconds: 5));
-                //       await Get.to(() => WalletScreen());
-                //     }
-                //   },
-                //   child: _isLoading
-                //       ? SizedBox(
-                //     width: 16,
-                //     height: 16,
-                //     child: CircularProgressIndicator(
-                //       strokeWidth: 2,
-                //       valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0054D3)),
-                //     ),
-                //   )
-                //       : Text(
-                //     "Verify",
-                //     style: GoogleFonts.albertSans(
-                //       fontSize: 12,
-                //       fontWeight: FontWeight.w500,
-                //       color: (_isLoading || dmtController.serviceCode.value.isEmpty)
-                //           ? Colors.grey // ✅ Grey when disabled
-                //           : Color(0xFF0054D3),
-                //     ),
-                //   ),
-                // ),
-              ),
-
-              if (isMobileNumberAlreadyRegistered && !dmtController.isSenderVerified.value && dmtController.checkSenderRespCode.value.isNotEmpty && dmtController.checkSenderRespCode.value == "RNF") ...[
-                SizedBox(height: 16),
-                buildLabelText('OTP Verification'),
-                SizedBox(height: 8),
-
-                OtpInputFields(
-                  key: otpKey,
-                  length: 6,
-                ),
-                //final otp = otpKey.currentState?.currentOtp ?? '';
-
-                SizedBox(height: 16),
-
-                // Name Field
-                buildLabelText('Your Name'),
-                SizedBox(height: 8),
-                GlobalUtils.CustomTextField(
-                  label: "Your Name",
-                  showLabel: false,
-                  controller: dmtController.senderNameController.value,
-                  isName: true,
-                  placeholder: "Your Name",
-                  height: GlobalUtils.screenWidth * (60 / 393),
-                  width: GlobalUtils.screenWidth * 0.9,
-                  backgroundColor: Colors.white,
-                  borderColor: Color(0xffE2E5EC),
-                  borderRadius: 16,
-                  placeholderStyle: GoogleFonts.albertSans(
-                    fontSize: GlobalUtils.screenWidth * (14 / 393),
-                    color: Color(0xFF6B707E),
-                  ),
-                  inputTextStyle: GoogleFonts.albertSans(
-                    fontSize: GlobalUtils.screenWidth * (14 / 393),
-                    color: Color(0xFF1B1C1C),
-                  ),
-                ),
-                SizedBox(height: 16),
-
-                // State Dropdown
-                buildLabelText('State'),
-                SizedBox(height: 8),
-                Obx(()=>
-                   GestureDetector(
-                    onTap: () {
-                      signupController.fetchStates(context);
-                      showSearchableDropdown(
-                        context,
-                        'Select State',
-                        signupController.stateList,
-                        signupController.selectedState,
-                            (value) {
-                          signupController.selectedState.value = value;
-                          dmtController.selectedState.value = value;
-                          signupController.fetchCities(context);
-                        },
-                      );
-                    },
-                    child: Container(
-                      height: GlobalUtils.screenWidth * (60 / 393),
-                      width: GlobalUtils.screenWidth * 0.9,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Color(0xffE2E5EC)),
-                      ),
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              signupController.selectedState.value.isEmpty
-                                  ? "Select State"
-                                  : signupController.selectedState.value,
-                              style: GoogleFonts.albertSans(
-                                fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                color: signupController.selectedState.value.isEmpty
-                                    ? Color(0xFF6B707E)
-                                    : Color(0xFF1B1C1C),
-                              ),
-                            ),
-                          ),
-                          Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 16),
-
-                // City Dropdown
-                buildLabelText('City'),
-                SizedBox(height: 8),
-                Obx(()=>
-                  GestureDetector(
-                    onTap: () {
-                      if (signupController.selectedState.value.isEmpty) {
-                        Fluttertoast.showToast(msg: "Please select state first");
-                        return;
-                      }
-                      showSearchableDropdown(
-                        context,
-                        'Select City',
-                        signupController.cityList,
-                        signupController.selectedCity,
-                            (value) {
-                          signupController.selectedCity.value = value;
-                          dmtController.selectedCity.value = value;
-                          signupController.fetchPincodes(context);
-                        },
-                      );
-                    },
-                    child: Container(
-                      height: GlobalUtils.screenWidth * (60 / 393),
-                      width: GlobalUtils.screenWidth * 0.9,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Color(0xffE2E5EC)),
-                      ),
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              signupController.selectedCity.value.isEmpty
-                                  ? "Select City"
-                                  : signupController.selectedCity.value,
-                              style: GoogleFonts.albertSans(
-                                fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                color: signupController.selectedCity.value.isEmpty
-                                    ? Color(0xFF6B707E)
-                                    : Color(0xFF1B1C1C),
-                              ),
-                            ),
-                          ),
-                          Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 16),
-
-                // Pincode Dropdown
-                buildLabelText('Pincode'),
-                SizedBox(height: 8),
-                Obx(()=>
-                  GestureDetector(
-                    onTap: () {
-                      if (signupController.selectedState.value.isEmpty) {
-                        Fluttertoast.showToast(msg: "Please select state first");
-                        return;
-                      }
-                      if (signupController.selectedCity.value.isEmpty) {
-                        Fluttertoast.showToast(msg: "Please select city first");
-                        return;
-                      }
-                      if (signupController.pincodeList.isEmpty) {
-                        Fluttertoast.showToast(msg: "Wait for pincode list to load & press again");
-                        return;
-                      }
-                      showSearchableDropdown(
-                        context,
-                        'Select Pincode',
-                        signupController.pincodeList,
-                        signupController.selectedPincode,
-                            (value) {
-                          signupController.selectedPincode.value = value;
-                          dmtController.selectedPincode.value = value;
-                        },
-                      );
-                    },
-                    child: Container(
-                      height: GlobalUtils.screenWidth * (60 / 393),
-                      width: GlobalUtils.screenWidth * 0.9,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Color(0xffE2E5EC)),
-                      ),
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              signupController.selectedPincode.value.isEmpty
-                                  ? "Select Pincode"
-                                  : signupController.selectedPincode.value,
-                              style: GoogleFonts.albertSans(
-                                fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                color: signupController.selectedPincode.value.isEmpty
-                                    ? Color(0xFF6B707E)
-                                    : Color(0xFF1B1C1C),
-                              ),
-                            ),
-                          ),
-                          Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 16),
-
-                // Address Field
-                buildLabelText('Address'),
-                SizedBox(height: 8),
-                GlobalUtils.CustomTextField(
-                  label: "Address",
-                  showLabel: false,
-                  controller: dmtController.senderAddressController.value,
-                  placeholder: "Address",
-                  width: GlobalUtils.screenWidth * 0.9,
-                  backgroundColor: Colors.white,
-                  borderColor: Color(0xffE2E5EC),
-                  borderRadius: 16,
-                  placeholderStyle: GoogleFonts.albertSans(
-                    fontSize: GlobalUtils.screenWidth * (14 / 393),
-                    color: Color(0xFF6B707E),
-                  ),
-                  inputTextStyle: GoogleFonts.albertSans(
-                    fontSize: GlobalUtils.screenWidth * (14 / 393),
-                    color: Color(0xFF1B1C1C),
-                  ),
-                  minLines: 1,
-                  maxLines: 3,
+          if (!isLoading) ...[
+            Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 15,
+                  offset: Offset(0, 4),
                 ),
               ],
-              SizedBox(height: 10),
-            ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 12),
+
+                //region Sender Details Title
+                Text(
+                  'Sender Details :',
+                  style: GoogleFonts.albertSans(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xff1B1C1C),
+                  ),
+                ),
+                //endregion
+
+                //region Verify By Mobile Number Toggle
+                // SizedBox(height: 16),
+                // Text(
+                //   'Verify by',
+                //   style: GoogleFonts.albertSans(
+                //     fontSize: 14,
+                //     color: Color(0xff707070),
+                //     fontWeight: FontWeight.w400,
+                //   ),
+                // ),
+                // SizedBox(height: 12),
+                // Row(
+                //   children: [
+                //     SizedBox(
+                //       width: GlobalUtils.screenWidth * (174 / 393),
+                //       height: 60,
+                //       child: buildToggleButton('Mobile Number', verifyByMobile, () {
+                //         setState(() => verifyByMobile = true);
+                //       }),
+                //     ),
+                //   ],
+                // ),
+                //endregion
+
+                SizedBox(height: 20),
+
+                //region Mobile Number Field
+                // Mobile Number Field
+                buildLabelText('Sender Mobile Number'),
+                SizedBox(height: 8),
+                GlobalUtils.CustomTextField(
+                  label: "Phone Number",
+                  showLabel: false,
+                  controller: dmtController.senderMobileController.value,
+                  isMobileNumber: true,
+                  placeholder: "Phone Number",
+                  placeholderColor: Colors.white,
+                  height: GlobalUtils.screenWidth * (60 / 393),
+                  width: GlobalUtils.screenWidth * 0.9,
+                  autoValidate: false,
+                  backgroundColor: Colors.white,
+                  borderColor: Color(0xffE2E5EC),
+                  borderRadius: 16,
+                  placeholderStyle: GoogleFonts.albertSans(
+                    fontSize: GlobalUtils.screenWidth * (14 / 393),
+                    color: Color(0xFF6B707E),
+                  ),
+                  inputTextStyle: GoogleFonts.albertSans(
+                    fontSize: GlobalUtils.screenWidth * (14 / 393),
+                    color: Color(0xFF1B1C1C),
+                  ),
+                  errorColor: Colors.red,
+                  errorFontSize: 12,
+                  onChanged: (value) {
+                    /// Agar OTP / Extra fields already visible hain
+                    if (isMobileNumberAlreadyRegistered) {
+                      setState(() {
+                        isMobileNumberAlreadyRegistered = false;
+                      });
+
+                      /// Sender verification reset
+                      dmtController.isSenderVerified.value = false;
+
+                      /// OPTIONAL but recommended: extra fields clear
+                      dmtController.senderNameController.value.clear();
+                      dmtController.senderAddressController.value.clear();
+                      dmtController.selectedState.value = '';
+                      dmtController.selectedCity.value = '';
+                      dmtController.selectedPincode.value = '';
+
+                      /// OTP clear
+                      otpKey.currentState?.clear();
+                    }
+                  }
+                  // suffixIcon: TextButton(
+                  //   onPressed: (isLoading || dmtController.serviceCode.value.isEmpty)
+                  //       ? null // ✅ Disable button if service not ready
+                  //       : () async {
+                  //     String mobile = dmtController.senderMobileController.value.text.trim();
+                  //
+                  //     if (mobile.isEmpty || mobile.length != 10) {
+                  //       Fluttertoast.showToast(
+                  //         msg: "Please enter valid 10-digit mobile number",
+                  //         backgroundColor: Colors.red,
+                  //       );
+                  //       return;
+                  //     }
+                  //
+                  //     // Check sender
+                  //     await dmtController.checkSender(context, mobile);
+                  //
+                  //     // If sender not found, show registration form
+                  //     if (!dmtController.isSenderVerified.value) {
+                  //       setState(() {
+                  //         isMobileNumberAlreadyRegistered = true;
+                  //       });
+                  //     } else if(dmtController.senderName.value.isEmpty){
+                  //       setState(() {
+                  //         isMobileNumberAlreadyRegistered = false;
+                  //       });
+                  //     }
+                  //     if(dmtController.checkSenderRespCode.value == "RCS") {
+                  //       // Sender exists, navigate to wallet
+                  //       // Get.to(() => WalletScreen(showBackButton: true));
+                  //       // await Future.delayed(Duration(seconds: 5));
+                  //       await Get.to(() => WalletScreen());
+                  //     }
+                  //   },
+                  //   child: isLoading
+                  //       ? SizedBox(
+                  //     width: 16,
+                  //     height: 16,
+                  //     child: CircularProgressIndicator(
+                  //       strokeWidth: 2,
+                  //       valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0054D3)),
+                  //     ),
+                  //   )
+                  //       : Text(
+                  //     "Verify",
+                  //     style: GoogleFonts.albertSans(
+                  //       fontSize: 12,
+                  //       fontWeight: FontWeight.w500,
+                  //       color: (isLoading || dmtController.serviceCode.value.isEmpty)
+                  //           ? Colors.grey // ✅ Grey when disabled
+                  //           : Color(0xFF0054D3),
+                  //     ),
+                  //   ),
+                  // ),
+                ),
+                //endregion
+
+                if (isMobileNumberAlreadyRegistered && !dmtController.isSenderVerified.value && dmtController.checkSenderRespCode.value.isNotEmpty && dmtController.checkSenderRespCode.value == "RNF") ...[
+                  SizedBox(height: 16),
+
+                  //region OTP Fields
+                  buildLabelText('OTP Verification'),
+                  SizedBox(height: 8),
+                  OtpInputFields(
+                    key: otpKey,
+                    length: 6,
+                  ),
+                  //endregion
+
+                  SizedBox(height: 16),
+
+                  //region Name Field
+                  // Name Field
+                  buildLabelText('Your Name'),
+                  SizedBox(height: 8),
+                  GlobalUtils.CustomTextField(
+                    label: "Your Name",
+                    showLabel: false,
+                    controller: dmtController.senderNameController.value,
+                    isName: true,
+                    placeholder: "Your Name",
+                    height: GlobalUtils.screenWidth * (60 / 393),
+                    width: GlobalUtils.screenWidth * 0.9,
+                    backgroundColor: Colors.white,
+                    borderColor: Color(0xffE2E5EC),
+                    borderRadius: 16,
+                    placeholderStyle: GoogleFonts.albertSans(
+                      fontSize: GlobalUtils.screenWidth * (14 / 393),
+                      color: Color(0xFF6B707E),
+                    ),
+                    inputTextStyle: GoogleFonts.albertSans(
+                      fontSize: GlobalUtils.screenWidth * (14 / 393),
+                      color: Color(0xFF1B1C1C),
+                    ),
+                  ),
+                  //endregion
+
+                  SizedBox(height: 16),
+
+                  //region State Dropdown
+                  // State Dropdown
+                  buildLabelText('State'),
+                  SizedBox(height: 8),
+                  Obx(()=>
+                     GestureDetector(
+                      onTap: () {
+                        signupController.fetchStates(context);
+                        showSearchableDropdown(
+                          context,
+                          'Select State',
+                          signupController.stateList,
+                          signupController.selectedState,
+                              (value) {
+                            signupController.selectedState.value = value;
+                            dmtController.selectedState.value = value;
+                            signupController.fetchCities(context);
+                          },
+                        );
+                      },
+                      child: Container(
+                        height: GlobalUtils.screenWidth * (60 / 393),
+                        width: GlobalUtils.screenWidth * 0.9,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Color(0xffE2E5EC)),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                signupController.selectedState.value.isEmpty
+                                    ? "Select State"
+                                    : signupController.selectedState.value,
+                                style: GoogleFonts.albertSans(
+                                  fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                  color: signupController.selectedState.value.isEmpty
+                                      ? Color(0xFF6B707E)
+                                      : Color(0xFF1B1C1C),
+                                ),
+                              ),
+                            ),
+                            Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  //endregion
+
+                  SizedBox(height: 16),
+
+                  //region City Dropdown
+                  // City Dropdown
+                  buildLabelText('City'),
+                  SizedBox(height: 8),
+                  Obx(()=>
+                    GestureDetector(
+                      onTap: () {
+                        if (signupController.selectedState.value.isEmpty) {
+                          Fluttertoast.showToast(msg: "Please select state first");
+                          return;
+                        }
+                        showSearchableDropdown(
+                          context,
+                          'Select City',
+                          signupController.cityList,
+                          signupController.selectedCity,
+                              (value) {
+                            signupController.selectedCity.value = value;
+                            dmtController.selectedCity.value = value;
+                            signupController.fetchPincodes(context);
+                          },
+                        );
+                      },
+                      child: Container(
+                        height: GlobalUtils.screenWidth * (60 / 393),
+                        width: GlobalUtils.screenWidth * 0.9,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Color(0xffE2E5EC)),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                signupController.selectedCity.value.isEmpty
+                                    ? "Select City"
+                                    : signupController.selectedCity.value,
+                                style: GoogleFonts.albertSans(
+                                  fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                  color: signupController.selectedCity.value.isEmpty
+                                      ? Color(0xFF6B707E)
+                                      : Color(0xFF1B1C1C),
+                                ),
+                              ),
+                            ),
+                            Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  //endregion
+
+                  SizedBox(height: 16),
+
+                  //region Pincode Dropdown
+                  // Pincode Dropdown
+                  buildLabelText('Pincode'),
+                  SizedBox(height: 8),
+                  Obx(()=>
+                    GestureDetector(
+                      onTap: () {
+                        if (signupController.selectedState.value.isEmpty) {
+                          Fluttertoast.showToast(msg: "Please select state first");
+                          return;
+                        }
+                        if (signupController.selectedCity.value.isEmpty) {
+                          Fluttertoast.showToast(msg: "Please select city first");
+                          return;
+                        }
+                        if (signupController.pincodeList.isEmpty) {
+                          Fluttertoast.showToast(msg: "Wait for pincode list to load & press again");
+                          return;
+                        }
+                        showSearchableDropdown(
+                          context,
+                          'Select Pincode',
+                          signupController.pincodeList,
+                          signupController.selectedPincode,
+                              (value) {
+                            signupController.selectedPincode.value = value;
+                            dmtController.selectedPincode.value = value;
+                          },
+                        );
+                      },
+                      child: Container(
+                        height: GlobalUtils.screenWidth * (60 / 393),
+                        width: GlobalUtils.screenWidth * 0.9,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Color(0xffE2E5EC)),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                signupController.selectedPincode.value.isEmpty
+                                    ? "Select Pincode"
+                                    : signupController.selectedPincode.value,
+                                style: GoogleFonts.albertSans(
+                                  fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                  color: signupController.selectedPincode.value.isEmpty
+                                      ? Color(0xFF6B707E)
+                                      : Color(0xFF1B1C1C),
+                                ),
+                              ),
+                            ),
+                            Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  //endregion
+
+                  SizedBox(height: 16),
+
+                  //region Address Field
+                  // Address Field
+                  buildLabelText('Address'),
+                  SizedBox(height: 8),
+                  GlobalUtils.CustomTextField(
+                    label: "Address",
+                    showLabel: false,
+                    controller: dmtController.senderAddressController.value,
+                    placeholder: "Address",
+                    width: GlobalUtils.screenWidth * 0.9,
+                    backgroundColor: Colors.white,
+                    borderColor: Color(0xffE2E5EC),
+                    borderRadius: 16,
+                    placeholderStyle: GoogleFonts.albertSans(
+                      fontSize: GlobalUtils.screenWidth * (14 / 393),
+                      color: Color(0xFF6B707E),
+                    ),
+                    inputTextStyle: GoogleFonts.albertSans(
+                      fontSize: GlobalUtils.screenWidth * (14 / 393),
+                      color: Color(0xFF1B1C1C),
+                    ),
+                    minLines: 1,
+                    maxLines: 3,
+                  ),
+                  //endregion
+                ],
+                SizedBox(height: 10),
+              ],
+            ),
           ),
-        ),
+          ],
+          // SizedBox(height: 24),
+          // Spacer(),
+
+          // //region Continue Button
+          // // Continue Button
+          // GlobalUtils.CustomButton(
+          //   text: "Continue",
+          //   onPressed: () async {
+          //     if (!dmtController.isSenderVerified.value && isMobileNumberAlreadyRegistered) {
+          //       final otp = otpKey.currentState?.currentOtp ?? '';
+          //       if(otp.isEmpty){
+          //         Fluttertoast.showToast(msg: "Please enter OTP");
+          //         return;
+          //       }
+          //       if(dmtController.senderMobileController.value.text.isEmpty && dmtController.senderMobileController.value.text.length < 10){
+          //         Fluttertoast.showToast(msg: "Please enter mobile number");
+          //         return;
+          //       }
+          //       if(dmtController.senderNameController.value.text.isEmpty){
+          //         Fluttertoast.showToast(msg: "Please enter name");
+          //         return;
+          //       }
+          //       if(dmtController.selectedState.value.isEmpty){
+          //         Fluttertoast.showToast(msg: "Please select state");
+          //         return;
+          //       }
+          //       if(dmtController.selectedPincode.value.isEmpty){
+          //         Fluttertoast.showToast(msg: "Please select pincode");
+          //         return;
+          //       }
+          //       if(dmtController.senderAddressController.value.text.isEmpty) {
+          //         Fluttertoast.showToast(msg: "Please enter address");
+          //         return;
+          //       }
+          //       if(
+          //       otp.isNotEmpty &&
+          //       dmtController.senderMobileController.value.text.isNotEmpty &&
+          //       dmtController.senderNameController.value.text.isNotEmpty &&
+          //       dmtController.selectedState.value.isNotEmpty &&
+          //       dmtController.selectedCity.value.isNotEmpty &&
+          //       dmtController.selectedPincode.value.isNotEmpty &&
+          //       dmtController.senderAddressController.value.text.isNotEmpty
+          //       ){
+          //       // Add new sender
+          //       await dmtController.addSender(context, otp);
+          //       }
+          //
+          //       // // Show OTP dialog
+          //       // setState(() => showOtpDialog = true);
+          //       // Future.delayed(const Duration(milliseconds: 100), () {
+          //       //   if (showOtpDialog && mounted) {
+          //       //     otpKey.currentState?.clear();
+          //       //     otpKey.currentState?.focusFirst();
+          //       //   }
+          //       // });
+          //     } else{
+          //       Fluttertoast.showToast(msg: "Please Verify Mobile Number!");
+          //       return null;
+          //     }/*else {
+          //       // Navigate to wallet
+          //       // Get.to(() => WalletScreen(showBackButton: true));
+          //       Get.to(() => WalletScreen());
+          //     }*/
+          //   },
+          //   textStyle: GoogleFonts.albertSans(
+          //     fontSize: 16,
+          //     color: Colors.white,
+          //     fontWeight: FontWeight.w600,
+          //   ),
+          //   width: GlobalUtils.screenWidth * 0.9,
+          //   height: GlobalUtils.screenWidth * (60 / 393),
+          //   backgroundGradient: GlobalUtils.blueBtnGradientColor,
+          //   borderColor: Color(0xFF71A9FF),
+          //   showShadow: false,
+          //   textColor: Colors.white,
+          //   animation: ButtonAnimation.fade,
+          //   animationDuration: const Duration(milliseconds: 150),
+          //   buttonType: ButtonType.elevated,
+          //   borderRadius: 16,
+          // ),
+          // //endregion
+          // SizedBox(height: 16),
         ],
-      ],
+      ),
     );
   }
 
