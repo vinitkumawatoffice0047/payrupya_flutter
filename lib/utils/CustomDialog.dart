@@ -225,29 +225,29 @@ class CustomDialog{
   // ================================
   // ERROR DIALOG
   // ================================
-  static void error({
-    required BuildContext context,
-    required String message,
-  }) {
+  static void error({required String message}) {
     _show(
-      context: context,
       icon: Image.asset("assets/images/oops.png", height: 80),
       message: message,
       buttonText: "Continue",
       onPressed: () => Get.back(),
     );
   }
+  // static void error({required BuildContext context,required String message,}) {
+  //   _show(
+  //     context: context,
+  //     icon: Image.asset("assets/images/oops.png", height: 80),
+  //     message: message,
+  //     buttonText: "Continue",
+  //     onPressed: () => Get.back(),
+  //   );
+  // }
 
   // ================================
   // SUCCESS DIALOG
   // ================================
-  static void success({
-    required BuildContext context,
-    required String message,
-    VoidCallback? onContinue,
-  }) {
+  static void success({required String message, VoidCallback? onContinue,}) {
     _show(
-      context: context,
       icon: const Icon(Icons.check_circle, size: 70, color: Colors.green),
       message: message,
       buttonText: "Continue",
@@ -257,22 +257,25 @@ class CustomDialog{
       },
     );
   }
+  // static void success({required BuildContext context,required String message,VoidCallback? onContinue,}) {
+  //   _show(
+  //     context: context,
+  //     icon: const Icon(Icons.check_circle, size: 70, color: Colors.green),
+  //     message: message,
+  //     buttonText: "Continue",
+  //     onPressed: () {
+  //       Get.back();
+  //       if (onContinue != null) onContinue();
+  //     },
+  //   );
+  // }
 
   // ================================
   // CONFIRMATION DIALOG
   // ================================
-  static void confirm({
-    required BuildContext context,
-    required String title,
-    required String message,
-    String yesText = "Yes",
-    String noText = "No",
-    required VoidCallback onYes,
-  }) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => WillPopScope(
+  static void confirm({required String title, required String message, String yesText = "Yes", String noText = "No", required VoidCallback onYes,}) {
+    Get.dialog(
+      WillPopScope(
         onWillPop: () async => false,
         child: Dialog(
           backgroundColor: Colors.transparent,
@@ -283,22 +286,26 @@ class CustomDialog{
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(title,
-                    style: GoogleFonts.poppins(
-                        fontSize: 18, fontWeight: FontWeight.w700)),
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                      fontSize: 18, fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(height: 20),
-                Text(message,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(fontSize: 15)),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(fontSize: 15),
+                ),
                 const SizedBox(height: 30),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     if (noText.isNotEmpty)
                       _button(
                         text: noText,
-                        gradient: GlobalUtils.greyNegativeBtnGradientColor,
+                        gradient:
+                        GlobalUtils.greyNegativeBtnGradientColor,
                         onTap: () => Get.back(),
                       ),
                     _button(
@@ -308,36 +315,80 @@ class CustomDialog{
                         Get.back();
                         onYes();
                       },
-                    )
+                    ),
                   ],
-                )
+                ),
               ],
             ),
           ),
         ),
       ),
+      barrierDismissible: false,
     );
   }
+  // static void confirm({required BuildContext context, required String title, required String message, String yesText = "Yes", String noText = "No", required VoidCallback onYes,}) {
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (_) => WillPopScope(
+  //       onWillPop: () async => false,
+  //       child: Dialog(
+  //         backgroundColor: Colors.transparent,
+  //         insetPadding: const EdgeInsets.all(25),
+  //         child: Container(
+  //           padding: const EdgeInsets.all(20),
+  //           decoration: _boxDecoration(),
+  //           child: Column(
+  //             mainAxisSize: MainAxisSize.min,
+  //             children: [
+  //               Text(title,
+  //                   style: GoogleFonts.poppins(
+  //                       fontSize: 18, fontWeight: FontWeight.w700)),
+  //               const SizedBox(height: 20),
+  //               Text(message,
+  //                   textAlign: TextAlign.center,
+  //                   style: GoogleFonts.poppins(fontSize: 15)),
+  //               const SizedBox(height: 30),
+  //
+  //               Row(
+  //                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  //                 children: [
+  //                   if (noText.isNotEmpty)
+  //                     _button(
+  //                       text: noText,
+  //                       gradient: GlobalUtils.greyNegativeBtnGradientColor,
+  //                       onTap: () => Get.back(),
+  //                     ),
+  //                   _button(
+  //                     text: yesText,
+  //                     gradient: GlobalUtils.blueGradientColor,
+  //                     onTap: () {
+  //                       Get.back();
+  //                       onYes();
+  //                     },
+  //                   )
+  //                 ],
+  //               )
+  //             ],
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   // ================================
-  // COMMON INTERNAL DIALOG HANDLER
+  // COMMON INTERNAL HANDLER
   // ================================
-  static void _show({
-    required BuildContext context,
-    required Widget icon,
-    required String message,
-    required String buttonText,
-    required VoidCallback onPressed,
-  }) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => WillPopScope(
+  static void _show({required Widget icon, required String message, required String buttonText, required VoidCallback onPressed,}) {
+    Get.dialog(
+      WillPopScope(
         onWillPop: () async => false,
         child: Dialog(
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.all(25),
           child: Container(
+            width: Get.width - 50,
             padding: const EdgeInsets.all(20),
             decoration: _boxDecoration(),
             child: Column(
@@ -345,9 +396,14 @@ class CustomDialog{
               children: [
                 icon,
                 const SizedBox(height: 20),
-                Text(message,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.albertSans(fontSize: 15, color: Color(0xFF6B707E))),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.albertSans(
+                    fontSize: 15,
+                    color: const Color(0xFF6B707E),
+                  ),
+                ),
                 const SizedBox(height: 30),
                 _button(
                   text: buttonText,
@@ -359,24 +415,50 @@ class CustomDialog{
           ),
         ),
       ),
+      barrierDismissible: false,
     );
   }
 
+  // static void _show({required BuildContext context, required Widget icon, required String message, required String buttonText, required VoidCallback onPressed,}) {
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (_) => WillPopScope(
+  //       onWillPop: () async => false,
+  //       child: Dialog(
+  //         backgroundColor: Colors.transparent,
+  //         insetPadding: const EdgeInsets.all(25),
+  //         child: Container(
+  //           padding: const EdgeInsets.all(20),
+  //           decoration: _boxDecoration(),
+  //           child: Column(
+  //             mainAxisSize: MainAxisSize.min,
+  //             children: [
+  //               icon,
+  //               const SizedBox(height: 20),
+  //               Text(message,
+  //                   textAlign: TextAlign.center,
+  //                   style: GoogleFonts.albertSans(fontSize: 15, color: Color(0xFF6B707E))),
+  //               const SizedBox(height: 30),
+  //               _button(
+  //                 text: buttonText,
+  //                 gradient: GlobalUtils.blueGradientColor,
+  //                 onTap: onPressed,
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+
   // DECORATION
-  static BoxDecoration _boxDecoration() => BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(28),
-    boxShadow: [
-      BoxShadow(color: Colors.black26, blurRadius: 10, spreadRadius: 1),
-    ],
-  );
+  static BoxDecoration _boxDecoration() =>
+      BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28), boxShadow: [ BoxShadow(color: Colors.black26, blurRadius: 10, spreadRadius: 1), ],);
 
   // COMMON BUTTON
-  static Widget _button({
-    required String text,
-    required Gradient gradient,
-    required VoidCallback onTap,
-  }) {
+  static Widget _button({required String text, required Gradient gradient, required VoidCallback onTap,}) {
     return InkWell(
       onTap: onTap,
       child: Container(

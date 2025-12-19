@@ -47,6 +47,8 @@ class GlobalUtils {
   static Color globalBlueIconColor = const Color(0xff80a8ff).withOpacity(0.2);
   static Color globalDarkIconColor = const Color(0xff2a2a2a);
   static Color globalLightIconColor = const Color(0xfff5f5f5);
+  static RxString CityName = "".obs;
+  static RxString StateName = "".obs;
 
   // Method to initialize all global values
   static void init(BuildContext context) {

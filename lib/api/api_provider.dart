@@ -5,6 +5,13 @@ import 'package:dio/dio.dart';
 // import 'package:e_commerce_app/utils/ConsoleLog.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_instance/src/extension_instance.dart';
+import 'package:get/get_navigation/src/extension_navigation.dart';
+import 'package:get/get_rx/src/rx_types/rx_types.dart';
+import 'package:payrupya/controllers/upi_wallet_controller.dart';
+import '../controllers/dmt_wallet_controller.dart';
+import '../controllers/login_controller.dart';
 import '../models/CartListApiResponseModel.dart';
 import '../models/HomeDetailsApiResponseModel.dart';
 import '../models/MyOrderApiResponseModel.dart';
@@ -15,10 +22,15 @@ import '../models/ProductApiResponseModel.dart';
 import '../models/RazarPayDepositApiResponseModel.dart';
 import '../models/SearchProductApiResponseModel.dart';
 import '../models/SubCategoriesApiResponseModel.dart';
+import '../models/get_city_state_by_pincode_response_model.dart';
 import '../utils/ConsoleLog.dart';
+import '../utils/CustomDialog.dart';
+import '../utils/app_shared_preferences.dart';
 import '../utils/connection_validator.dart';
 import '../utils/custom_loading.dart';
+import '../utils/global_utils.dart';
 import '../utils/will_pop_validation.dart';
+import '../view/onboarding_screen.dart';
 import 'web_api_constant.dart';
 // import 'package:fluttertoast/fluttertoast.dart';
 // import 'package:get/get_core/src/get_main.dart';
@@ -61,6 +73,11 @@ class ApiResponse {
 
 class ApiProvider {
   Dio dio = Dio();
+  LoginController loginController = Get.put(LoginController());
+  DmtWalletController dmtController = Get.put(DmtWalletController());
+  UPIWalletController upiWalletController = Get.put(UPIWalletController());
+  RxString userAuthToken = "".obs;
+  RxString userSignature = "".obs;
 
   Map<String, String> headers = {
     "Content-Type": "application/json",
@@ -306,6 +323,138 @@ class ApiProvider {
       return null;
     }
   }
+
+
+  //region loadAuthCredentials
+  // Load both token and signature properly
+  Future<void> loadAuthCredentials() async {
+    try {
+      Map<String, String> authData = await AppSharedPreferences.getLoginAuth();
+      userAuthToken.value = authData["token"] ?? "";
+      userSignature.value = authData["signature"] ?? "";
+
+      ConsoleLog.printInfo("Token: ${userAuthToken.value.isNotEmpty ? 'Found' : 'NOT FOUND'}");
+      ConsoleLog.printInfo("Signature: ${userSignature.value.isNotEmpty ? 'Found' : 'NOT FOUND'}");
+
+      // Debug: Print first 20 chars
+      if (userAuthToken.value.isNotEmpty) {
+        int tokenLength = userAuthToken.value.length;
+        int previewLength = tokenLength > 20 ? 20 : tokenLength;
+        if (previewLength > 0) {
+          ConsoleLog.printColor("Token Preview: ${userAuthToken.value.substring(0, previewLength)}...", color: "cyan");
+        }
+      }
+
+      if (userSignature.value.isNotEmpty) {
+        int signatureLength = userSignature.value.length;
+        int previewLength = signatureLength > 20 ? 20 : signatureLength;
+        if (previewLength > 0) {
+          ConsoleLog.printColor("Signature Preview: ${userSignature.value.substring(0, previewLength)}...", color: "cyan");
+        }
+      }
+
+    } catch (e) {
+      ConsoleLog.printError("Error loading auth credentials: $e");
+    }
+  }
+  //endregion
+
+  //region isTokenValid
+  Future<bool> isTokenValid() async {
+    // Reload credentials first
+    await loadAuthCredentials();
+
+    if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+      ConsoleLog.printError("❌ Token or Signature missing");
+      ConsoleLog.printError("Token Length: ${userAuthToken.value.length}");
+      ConsoleLog.printError("Signature Length: ${userSignature.value.length}");
+      return false;
+    }
+    return true;
+  }
+  //endregion
+
+  //region refreshToken
+  Future<void> refreshToken(BuildContext context) async {
+    ConsoleLog.printWarning("⚠️ Token expired, please login again");
+    await AppSharedPreferences.clearAll();
+    Get.offAll(() => OnboardingScreen());
+    Fluttertoast.showToast(msg: "Session expired. Please login again.");
+  }
+  //endregion
+
+  //region getCityStateByPinCode
+  Future<void> getCityStateByPinCode(BuildContext context, String pinCode) async {
+    try {
+      // Validate token first
+      if (!await isTokenValid()) {
+        await refreshToken(context);
+        return;
+      }
+
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(message: "No Internet Connection!");
+        return;
+      }
+
+      CustomLoading.showLoading();
+
+      Map<String, dynamic> body = {
+        "request_id": GlobalUtils.generateRandomId(6),
+        "lat": loginController.latitude.value,
+        "long": loginController.longitude.value,
+        "pincode": pinCode
+      };
+
+      var response = await requestPostForApi(
+        context,
+        WebApiConstant.API_URL_GET_CITY_STATE_BY_PINCODE,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      ConsoleLog.printColor("Get Cit State by PinCode Api Request: ${jsonEncode(body)}", color: "yellow");
+
+      if (response != null && response.statusCode == 200) {
+        ConsoleLog.printColor("GET CITY STATE BY PINCODE RESP: ${jsonEncode(response.data)}");
+
+        GetCityStateByPincodeResponseModel apiResponse =
+        GetCityStateByPincodeResponseModel.fromJson(response.data);
+
+        CustomLoading.hideLoading();
+        if (apiResponse.respCode == "RCS" &&
+            apiResponse.data != null) {
+          GlobalUtils.CityName.value = apiResponse.data!.city ?? "";
+          GlobalUtils.StateName.value = apiResponse.data!.statename ?? "";
+          ConsoleLog.printSuccess("======>>>>>> City Name: ${GlobalUtils.CityName.value}, State Name: ${GlobalUtils.StateName.value}");
+          dmtController.senderCityController.value.text = GlobalUtils.CityName.toString();
+          dmtController.senderStateController.value.text = GlobalUtils.StateName.toString();
+          upiWalletController.senderCityController.value.text = GlobalUtils.CityName.toString();
+          upiWalletController.senderStateController.value.text = GlobalUtils.StateName.toString();
+        }/* else {
+          GlobalUtils.CityName.value = "";
+          GlobalUtils.StateName.value = "";
+          ConsoleLog.printWarning("⚠️ No data found!");
+        }*/
+      } else {
+        ConsoleLog.printError("❌ API Error: ${response?.statusCode}");
+      }
+    } catch (e) {
+      ConsoleLog.printError("❌ GET CITY STATE BY PINCODE ERROR: $e");
+    }
+  }
+  //endregion
+
+
+
+
+
+
+
+
 
 
 

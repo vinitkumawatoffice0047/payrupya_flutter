@@ -121,7 +121,7 @@ class PayrupyaHomeScreenController extends GetxController {
       // Check Internet
       bool isConnected = await ConnectionValidator.isConnected();
       if (!isConnected) {
-        CustomDialog.error(context: context, message: "No Internet Connection!");
+        CustomDialog.error(message: "No Internet Connection!");
         return;
       }
 
@@ -132,7 +132,7 @@ class PayrupyaHomeScreenController extends GetxController {
       }
 
       if (userAuthToken.value.isEmpty) {
-        CustomDialog.error(context: context, message: "Authentication required!");
+        CustomDialog.error(message: "Authentication required!");
         return;
       }
 

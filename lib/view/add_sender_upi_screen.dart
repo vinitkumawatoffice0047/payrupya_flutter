@@ -1068,7 +1068,10 @@ import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:payrupya/controllers/upi_wallet_controller.dart';
+import 'package:payrupya/view/payrupya_upi_screen.dart';
 
+import '../api/api_provider.dart';
 import '../controllers/dmt_wallet_controller.dart';
 import '../controllers/login_controller.dart';
 import '../controllers/signup_controller.dart';
@@ -1101,7 +1104,7 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
   bool showOtpField = false;
   bool isOtpSent = false;
 
-  final DmtWalletController dmtController = Get.put(DmtWalletController());
+  final UPIWalletController upiWalletController = Get.put(UPIWalletController());
   final SignupController signupController = Get.put(SignupController());
   final LoginController loginController = Get.find<LoginController>();
   bool isInitialized = false;
@@ -1119,12 +1122,12 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
 
     // If initial mobile is provided, set it and check sender
     if (widget.initialMobile != null && widget.initialMobile!.isNotEmpty) {
-      dmtController.senderMobileController.value.text = widget.initialMobile!;
+      upiWalletController.senderMobileController.value.text = widget.initialMobile!;
 
       // Check sender after a small delay
       Future.delayed(Duration(milliseconds: 500), () {
         if (mounted) {
-          dmtController.checkSender(context, widget.initialMobile!);
+          upiWalletController.checkSenderUPI(context, widget.initialMobile!);
         }
       });
     }
@@ -1146,7 +1149,7 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
       ConsoleLog.printInfo("=== Initializing DMT Services ===");
 
       // 1. Load auth credentials first
-      await dmtController.loadAuthCredentials();
+      await upiWalletController.loadAuthCredentials();
 
       // 2. Wait for location
       int waitCount = 0;
@@ -1172,16 +1175,16 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
       }
 
       // 3. Check if service code is already loaded
-      if (dmtController.serviceCode.value.isEmpty) {
+      if (upiWalletController.serviceCode.value.isEmpty) {
         ConsoleLog.printWarning("Service code empty, loading from API...");
 
         // 4. Load service code
-        await dmtController.getAllowedServiceByType(context);
+        await upiWalletController.getAllowedServiceByType(context);
 
         // Wait for service to load
         await Future.delayed(Duration(milliseconds: 1000));
 
-        if (dmtController.serviceCode.value.isEmpty) {
+        if (upiWalletController.serviceCode.value.isEmpty) {
           ConsoleLog.printError("❌ Service code still empty after API call");
           Fluttertoast.showToast(
             msg: "Failed to initialize services. Please try again.",
@@ -1191,14 +1194,14 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
       }
 
       // 4. Load banks list
-      await dmtController.getAllBanks(context);
+      // await upiWalletController.getAllBanks(context);
 
       setState(() {
         isInitialized = true;
         isLoading = false;
       });
 
-      ConsoleLog.printSuccess("Services initialized. Service Code: ${dmtController.serviceCode.value}");
+      ConsoleLog.printSuccess("Services initialized. Service Code: ${upiWalletController.serviceCode.value}");
 
     } catch (e) {
       ConsoleLog.printError("Failed to initialize services: $e");
@@ -1253,17 +1256,17 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
                 //region Continue Button
                 // Continue Button
                 GlobalUtils.CustomButton(
-                  text: (!dmtController.isSenderVerified.value &&
+                  text: (!upiWalletController.isSenderVerified.value &&
                       isMobileNumberAlreadyRegistered) ? "Continue" : "Verify",
                   onPressed: () async {
 
                     /// 🔒 Button disable condition
-                    if (isLoading || dmtController.serviceCode.value.isEmpty) {
+                    if (isLoading || upiWalletController.serviceCode.value.isEmpty) {
                       return;
                     }
 
                     /// CASE 1️⃣ : Sender OTP verification flow
-                    if (!dmtController.isSenderVerified.value &&
+                    if (!upiWalletController.isSenderVerified.value &&
                         isMobileNumberAlreadyRegistered) {
 
                       final otp = otpKey.currentState?.currentOtp ?? '';
@@ -1275,56 +1278,56 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
                         return;
                       }
 
-                      if (dmtController.senderMobileController.value.text.length != 10) {
+                      if (upiWalletController.senderMobileController.value.text.length != 10) {
                         Fluttertoast.showToast(msg: "Please enter valid mobile number",
                           gravity: ToastGravity.TOP,
                         );
                         return;
                       }
 
-                      if (dmtController.senderNameController.value.text.isEmpty) {
+                      if (upiWalletController.senderNameController.value.text.isEmpty) {
                         Fluttertoast.showToast(msg: "Please enter name",
                           gravity: ToastGravity.TOP,
                         );
                         return;
                       }
 
-                      if (dmtController.selectedState.value.isEmpty) {
-                        Fluttertoast.showToast(msg: "Please select state",
-                          gravity: ToastGravity.TOP,
-                        );
-                        return;
-                      }
-
-                      if (dmtController.selectedCity.value.isEmpty) {
-                        Fluttertoast.showToast(msg: "Please select city",
-                          gravity: ToastGravity.TOP,
-                        );
-                        return;
-                      }
-
-                      if (dmtController.selectedPincode.value.isEmpty) {
-                        Fluttertoast.showToast(msg: "Please select pincode",
-                          gravity: ToastGravity.TOP,
-                        );
-                        return;
-                      }
-
-                      if (dmtController.senderAddressController.value.text.isEmpty) {
+                      if (upiWalletController.senderAddressController.value.text.isEmpty) {
                         Fluttertoast.showToast(msg: "Please enter address",
                           gravity: ToastGravity.TOP,
                         );
                         return;
                       }
 
+                      if (upiWalletController.senderPincodeController.value.text.isEmpty) {
+                        Fluttertoast.showToast(msg: "Please enter pincode number",
+                          gravity: ToastGravity.TOP,
+                        );
+                        return;
+                      }
+
+                      if (upiWalletController.senderCityController.value.text.isEmpty) {
+                        Fluttertoast.showToast(msg: "Please enter city name",
+                          gravity: ToastGravity.TOP,
+                        );
+                        return;
+                      }
+
+                      if (upiWalletController.senderStateController.value.text.isEmpty) {
+                        Fluttertoast.showToast(msg: "Please enter state name",
+                          gravity: ToastGravity.TOP,
+                        );
+                        return;
+                      }
+
                       /// ✅ Add Sender API
-                      await dmtController.addSender(context, otp);
+                      await upiWalletController.addSenderUPI(context, otp);
                       return;
                     }
 
                     /// CASE 2️⃣ : Mobile verify / check sender
                     String mobile =
-                    dmtController.senderMobileController.value.text.trim();
+                    upiWalletController.senderMobileController.value.text.trim();
 
                     if (mobile.isEmpty || mobile.length != 10) {
                       Fluttertoast.showToast(
@@ -1336,20 +1339,20 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
                     }
 
                     /// ✅ THIS WAS NOT CALLING EARLIER
-                    await dmtController.checkSender(context, mobile);
+                    await upiWalletController.checkSenderUPI(context, mobile);
 
-                    if (!dmtController.isSenderVerified.value) {
+                    if (!upiWalletController.isSenderVerified.value) {
                       setState(() {
                         isMobileNumberAlreadyRegistered = true;
                       });
-                    } else if (dmtController.senderName.value.isEmpty) {
+                    } else if (upiWalletController.senderName.value.isEmpty) {
                       setState(() {
                         isMobileNumberAlreadyRegistered = false;
                       });
                     }
 
-                    if (dmtController.checkSenderRespCode.value == "RCS") {
-                      await Get.to(() => PayrupyaWalletScreen());
+                    if (upiWalletController.checkSenderRespCode.value == "RCS") {
+                      await Get.to(() => PayrupyaUPIScreen());
                     }
                   },
                   textStyle: GoogleFonts.albertSans(
@@ -1390,16 +1393,16 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
           if (widget.showBackButton) ...[
             GestureDetector(
               onTap: () {
-                dmtController.senderMobileController.value.clear();
+                upiWalletController.senderMobileController.value.clear();
                 otpKey.currentState?.clear();
-                dmtController.senderNameController.value.clear();
+                upiWalletController.senderNameController.value.clear();
                 signupController.selectedState.value = "";
-                dmtController.selectedState.value = "";
+                upiWalletController.selectedState.value = "";
                 signupController.selectedCity.value = "";
-                dmtController.selectedCity.value = "";
+                upiWalletController.selectedCity.value = "";
                 signupController.selectedPincode.value = "";
-                dmtController.selectedPincode.value = "";
-                dmtController.senderAddressController.value.clear();
+                upiWalletController.selectedPincode.value = "";
+                upiWalletController.senderAddressController.value.clear();
                 Get.back();
               },
               child: Container(
@@ -1523,7 +1526,7 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
                 GlobalUtils.CustomTextField(
                   label: "Phone Number",
                   showLabel: false,
-                  controller: dmtController.senderMobileController.value,
+                  controller: upiWalletController.senderMobileController.value,
                   isMobileNumber: true,
                   placeholder: "Phone Number",
                   placeholderColor: Colors.white,
@@ -1551,14 +1554,14 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
                       });
 
                       /// Sender verification reset
-                      dmtController.isSenderVerified.value = false;
+                      upiWalletController.isSenderVerified.value = false;
 
                       /// OPTIONAL but recommended: extra fields clear
-                      dmtController.senderNameController.value.clear();
-                      dmtController.senderAddressController.value.clear();
-                      dmtController.selectedState.value = '';
-                      dmtController.selectedCity.value = '';
-                      dmtController.selectedPincode.value = '';
+                      upiWalletController.senderNameController.value.clear();
+                      upiWalletController.senderAddressController.value.clear();
+                      upiWalletController.selectedState.value = '';
+                      upiWalletController.selectedCity.value = '';
+                      upiWalletController.selectedPincode.value = '';
 
                       /// OTP clear
                       otpKey.currentState?.clear();
@@ -1621,7 +1624,7 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
                 ),
                 //endregion
 
-                if (isMobileNumberAlreadyRegistered && !dmtController.isSenderVerified.value && dmtController.checkSenderRespCode.value.isNotEmpty && dmtController.checkSenderRespCode.value == "RNF") ...[
+                if (isMobileNumberAlreadyRegistered && !upiWalletController.isSenderVerified.value && upiWalletController.checkSenderRespCode.value.isNotEmpty && upiWalletController.checkSenderRespCode.value == "RNF") ...[
                   SizedBox(height: 16),
 
                   //region OTP Fields
@@ -1642,7 +1645,7 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
                   GlobalUtils.CustomTextField(
                     label: "Your Name",
                     showLabel: false,
-                    controller: dmtController.senderNameController.value,
+                    controller: upiWalletController.senderNameController.value,
                     isName: true,
                     placeholder: "Your Name",
                     height: GlobalUtils.screenWidth * (60 / 393),
@@ -1663,192 +1666,13 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
 
                   SizedBox(height: 16),
 
-                  //region State Dropdown
-                  // State Dropdown
-                  buildLabelText('State'),
-                  SizedBox(height: 8),
-                  Obx(()=>
-                     GestureDetector(
-                      onTap: () {
-                        signupController.fetchStates(context);
-                        showSearchableDropdown(
-                          context,
-                          'Select State',
-                          signupController.stateList,
-                          signupController.selectedState,
-                              (value) {
-                            signupController.selectedState.value = value;
-                            dmtController.selectedState.value = value;
-                            signupController.fetchCities(context);
-                          },
-                        );
-                      },
-                      child: Container(
-                        height: GlobalUtils.screenWidth * (60 / 393),
-                        width: GlobalUtils.screenWidth * 0.9,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Color(0xffE2E5EC)),
-                        ),
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                signupController.selectedState.value.isEmpty
-                                    ? "Select State"
-                                    : signupController.selectedState.value,
-                                style: GoogleFonts.albertSans(
-                                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                  color: signupController.selectedState.value.isEmpty
-                                      ? Color(0xFF6B707E)
-                                      : Color(0xFF1B1C1C),
-                                ),
-                              ),
-                            ),
-                            Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  //endregion
-
-                  SizedBox(height: 16),
-
-                  //region City Dropdown
-                  // City Dropdown
-                  buildLabelText('City'),
-                  SizedBox(height: 8),
-                  Obx(()=>
-                    GestureDetector(
-                      onTap: () {
-                        if (signupController.selectedState.value.isEmpty) {
-                          Fluttertoast.showToast(msg: "Please select state first");
-                          return;
-                        }
-                        showSearchableDropdown(
-                          context,
-                          'Select City',
-                          signupController.cityList,
-                          signupController.selectedCity,
-                              (value) {
-                            signupController.selectedCity.value = value;
-                            dmtController.selectedCity.value = value;
-                            signupController.fetchPincodes(context);
-                          },
-                        );
-                      },
-                      child: Container(
-                        height: GlobalUtils.screenWidth * (60 / 393),
-                        width: GlobalUtils.screenWidth * 0.9,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Color(0xffE2E5EC)),
-                        ),
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                signupController.selectedCity.value.isEmpty
-                                    ? "Select City"
-                                    : signupController.selectedCity.value,
-                                style: GoogleFonts.albertSans(
-                                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                  color: signupController.selectedCity.value.isEmpty
-                                      ? Color(0xFF6B707E)
-                                      : Color(0xFF1B1C1C),
-                                ),
-                              ),
-                            ),
-                            Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  //endregion
-
-                  SizedBox(height: 16),
-
-                  //region Pincode Dropdown
-                  // Pincode Dropdown
-                  buildLabelText('Pincode'),
-                  SizedBox(height: 8),
-                  Obx(()=>
-                    GestureDetector(
-                      onTap: () {
-                        if (signupController.selectedState.value.isEmpty) {
-                          Fluttertoast.showToast(msg: "Please select state first");
-                          return;
-                        }
-                        if (signupController.selectedCity.value.isEmpty) {
-                          Fluttertoast.showToast(msg: "Please select city first");
-                          return;
-                        }
-                        if (signupController.pincodeList.isEmpty) {
-                          Fluttertoast.showToast(msg: "Wait for pincode list to load & press again");
-                          return;
-                        }
-                        showSearchableDropdown(
-                          context,
-                          'Select Pincode',
-                          signupController.pincodeList,
-                          signupController.selectedPincode,
-                              (value) {
-                            signupController.selectedPincode.value = value;
-                            dmtController.selectedPincode.value = value;
-                          },
-                        );
-                      },
-                      child: Container(
-                        height: GlobalUtils.screenWidth * (60 / 393),
-                        width: GlobalUtils.screenWidth * 0.9,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Color(0xffE2E5EC)),
-                        ),
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                signupController.selectedPincode.value.isEmpty
-                                    ? "Select Pincode"
-                                    : signupController.selectedPincode.value,
-                                style: GoogleFonts.albertSans(
-                                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                  color: signupController.selectedPincode.value.isEmpty
-                                      ? Color(0xFF6B707E)
-                                      : Color(0xFF1B1C1C),
-                                ),
-                              ),
-                            ),
-                            Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  //endregion
-
-                  SizedBox(height: 16),
-
                   //region Address Field
-                  // Address Field
                   buildLabelText('Address'),
                   SizedBox(height: 8),
                   GlobalUtils.CustomTextField(
                     label: "Address",
                     showLabel: false,
-                    controller: dmtController.senderAddressController.value,
+                    controller: upiWalletController.senderAddressController.value,
                     placeholder: "Address",
                     width: GlobalUtils.screenWidth * 0.9,
                     backgroundColor: Colors.white,
@@ -1865,6 +1689,92 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
                     minLines: 1,
                     maxLines: 3,
                   ),
+                  SizedBox(height: 16),
+                  //endregion
+
+                  //region Pincode Field
+                  buildLabelText('Pincode'),
+                  SizedBox(height: 8),
+                  GlobalUtils.CustomTextField(
+                    label: "Pincode",
+                    showLabel: false,
+                    controller: upiWalletController.senderPincodeController.value,
+                    placeholder: "Pincode",
+                    width: GlobalUtils.screenWidth * 0.9,
+                    backgroundColor: Colors.white,
+                    borderColor: Color(0xffE2E5EC),
+                    borderRadius: 16,
+                    placeholderStyle: GoogleFonts.albertSans(
+                      fontSize: GlobalUtils.screenWidth * (14 / 393),
+                      color: Color(0xFF6B707E),
+                    ),
+                    inputTextStyle: GoogleFonts.albertSans(
+                      fontSize: GlobalUtils.screenWidth * (14 / 393),
+                      color: Color(0xFF1B1C1C),
+                    ),
+                    maxLength: 6,
+                    minLines: 1,
+                    maxLines: 3,
+                    keyboardType: TextInputType.number,
+                    onChanged: (value){
+                      if(value.length == 6){
+                        ApiProvider().getCityStateByPinCode(context, upiWalletController.senderPincodeController.value.text);
+                      }
+                    },
+                  ),
+                  SizedBox(height: 16),
+                  //endregion
+
+                  //region City
+                  buildLabelText('City'),
+                  SizedBox(height: 8),
+                  GlobalUtils.CustomTextField(
+                    label: "City",
+                    showLabel: false,
+                    controller: upiWalletController.senderCityController.value,
+                    placeholder: "City",
+                    width: GlobalUtils.screenWidth * 0.9,
+                    backgroundColor: Colors.white,
+                    borderColor: Color(0xffE2E5EC),
+                    borderRadius: 16,
+                    placeholderStyle: GoogleFonts.albertSans(
+                      fontSize: GlobalUtils.screenWidth * (14 / 393),
+                      color: Color(0xFF6B707E),
+                    ),
+                    inputTextStyle: GoogleFonts.albertSans(
+                      fontSize: GlobalUtils.screenWidth * (14 / 393),
+                      color: Color(0xFF1B1C1C),
+                    ),
+                    minLines: 1,
+                    maxLines: 3,
+                  ),
+                  SizedBox(height: 16),
+                  //endregion
+
+                  //region State
+                  buildLabelText('State'),
+                  SizedBox(height: 8),
+                  GlobalUtils.CustomTextField(
+                    label: "State",
+                    showLabel: false,
+                    controller: upiWalletController.senderStateController.value,
+                    placeholder: "State",
+                    width: GlobalUtils.screenWidth * 0.9,
+                    backgroundColor: Colors.white,
+                    borderColor: Color(0xffE2E5EC),
+                    borderRadius: 16,
+                    placeholderStyle: GoogleFonts.albertSans(
+                      fontSize: GlobalUtils.screenWidth * (14 / 393),
+                      color: Color(0xFF6B707E),
+                    ),
+                    inputTextStyle: GoogleFonts.albertSans(
+                      fontSize: GlobalUtils.screenWidth * (14 / 393),
+                      color: Color(0xFF1B1C1C),
+                    ),
+                    minLines: 1,
+                    maxLines: 3,
+                  ),
+                  SizedBox(height: 16),
                   //endregion
                 ],
                 SizedBox(height: 10),
@@ -2174,7 +2084,7 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
                   children: [
                     TextSpan(text: 'We sent a verification code to '),
                     TextSpan(
-                      text: '+91 ${dmtController.senderMobileController.value.text}',
+                      text: '+91 ${upiWalletController.senderMobileController.value.text}',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
@@ -2203,7 +2113,7 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
                     onTap: () async {
                       final otp = otpKey.currentState?.currentOtp ?? '';
                       // Resend OTP
-                      await dmtController.addSender(context, otp);
+                      await upiWalletController.addSenderUPI(context, otp);
 
                       otpKey.currentState?.clear();
                       otpKey.currentState?.focusFirst();
@@ -2226,7 +2136,7 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
               GlobalUtils.CustomButton(
                 text: "VERIFY",
                 onPressed: () async {
-                  dmtController.checkSender(context, dmtController.senderMobileController.value.text.trim());
+                  upiWalletController.checkSenderUPI(context, upiWalletController.senderMobileController.value.text.trim());
                   // final otp = otpKey.currentState?.currentOtp ?? '';
                   //
                   // if (otp.length < 6) {
@@ -2273,7 +2183,7 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
   @override
   void dispose() {
     super.dispose();
-    dmtController.dispose();
+    upiWalletController.dispose();
     signupController.dispose();
     loginController.dispose();
     otpKey.currentState?.dispose();

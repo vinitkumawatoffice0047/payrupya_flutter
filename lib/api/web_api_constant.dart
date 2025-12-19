@@ -18,6 +18,7 @@ class WebApiConstant{
   static const String API_URL_GET_WALLET_BALANCE = "${BASE_URL}Fetch/getWalletBalance";
 
   // Location/Address APIs
+  static const String API_URL_GET_CITY_STATE_BY_PINCODE = "${BASE_URL}Fetch/getCityStateByPincode";
   static const String API_URL_GET_STATES = "${BASE_URL}Fetch/getStates";
   static const String API_URL_GET_CITIES = "${BASE_URL}Fetch/fetchCityByState";
   static const String API_URL_GET_PINCODES = "${BASE_URL}Fetch/fetchPincodeByState";
@@ -26,7 +27,9 @@ class WebApiConstant{
 
   // DMT/Wallet APIs
   static const String API_URL_CHECK_SENDER = "${BASE_URL}Action/process_remit_action_new";
+  static const String API_URL_CHECK_SENDER_UPI = "${BASE_URL}Action/process_remit_action";
   static const String API_URL_ADD_SENDER = "${BASE_URL}Action/process_remit_action_new";
+  static const String API_URL_ADD_SENDER_UPI = "${BASE_URL}Action/process_remit_action";
   // static const String API_URL_VERIFY_SENDER_OTP = "${BASE_URL}Action/process_remit_action_new";
   static const String API_URL_GET_BENEFICIARY_LIST = "${BASE_URL}Fetch/getBeneList";
   static const String API_URL_ADD_BENEFICIARY = "${BASE_URL}Action/addBeneData";

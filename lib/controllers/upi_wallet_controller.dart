@@ -7,7 +7,9 @@ import '../api/api_provider.dart';
 import '../api/web_api_constant.dart';
 import '../models/add_beneficiary_response_model.dart';
 import '../models/add_sender_response_model.dart';
-import '../models/check_sender_response_model.dart';
+import '../models/add_sender_upi_response_model.dart';
+import '../models/check_sender_response_model.dart' hide SenderData;
+import '../models/check_sender_upi_response_model.dart';
 import '../models/confirm_transfer_response_model.dart';
 import '../models/delete_beneficiary_response_model.dart';
 import '../models/get_all_banks_response_model.dart';
@@ -42,7 +44,7 @@ enum BeneficiarySortOption {
 }
 //endregion
 
-class DmtWalletController extends GetxController {
+class UPIWalletController extends GetxController {
   static const String _kExternalLoaderRouteName = '__dmt_external_loader__';
   bool externalLoaderVisible = false;
   bool pendingExternalReturnCleanup = false;
@@ -206,7 +208,7 @@ class DmtWalletController extends GetxController {
   Rx<TextEditingController> senderCityController = TextEditingController().obs;
   Rx<TextEditingController> senderStateController = TextEditingController().obs;
   Rx<TextEditingController> senderOtpController = TextEditingController().obs;
-  
+
   Rx<TextEditingController> beneNameController = TextEditingController().obs;
   Rx<TextEditingController> beneAccountController = TextEditingController().obs;
   Rx<TextEditingController> beneIfscController = TextEditingController().obs;
@@ -231,7 +233,7 @@ class DmtWalletController extends GetxController {
   RxBool isSenderVerified = false.obs;
   RxBool isMobileVerified = false.obs;
   RxBool isAccountVerified = false.obs;
-  
+
   // Sender Data
   Rx<SenderData?> currentSender = Rx<SenderData?>(null);
 
@@ -245,10 +247,10 @@ class DmtWalletController extends GetxController {
   // Beneficiary List
   RxList<BeneficiaryData> beneficiaryList = <BeneficiaryData>[].obs;
   RxList<BeneficiaryData> filteredBeneficiaryList = <BeneficiaryData>[].obs;
-  
+
   // Banks List
   RxList<BankData> banksList = <BankData>[].obs;
-  
+
   // Search
   RxString searchQuery = ''.obs;
   Rx<BeneficiarySortOption> currentSortOption = BeneficiarySortOption.recent.obs;
@@ -321,13 +323,13 @@ class DmtWalletController extends GetxController {
       };
 
       var response = await ApiProvider().requestPostForApi(
-          context,
-          WebApiConstant.API_URL_GET_SERVICE_TYPE,
-          body,
-          userAuthToken.value,
-          userSignature.value,
+        context,
+        WebApiConstant.API_URL_GET_SERVICE_TYPE,
+        body,
+        userAuthToken.value,
+        userSignature.value,
       );
-      
+
       ConsoleLog.printColor("Get Allowed Service By Type Api Request: ${jsonEncode(body)}", color: "yellow");
 
       if (response != null && response.statusCode == 200) {
@@ -382,9 +384,9 @@ class DmtWalletController extends GetxController {
   //endregion
 
   //region checkSender
-  Future<void> checkSender(BuildContext context, String mobile) async {
+  Future<void> checkSenderUPI(BuildContext context, String mobile) async {
     try {
-      // Validate token first
+      // ✅ Validate token first
       if (!await isTokenValid()) {
         await refreshToken(context);
         return;
@@ -437,7 +439,7 @@ class DmtWalletController extends GetxController {
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
         "sender": mobile,
-        "service": serviceCode.value,
+        "service": "UPI",
         "request_type": "CHECK REMITTER",
       };
 
@@ -445,7 +447,7 @@ class DmtWalletController extends GetxController {
 
       var response = await ApiProvider().requestPostForApi(
         context,
-        WebApiConstant.API_URL_CHECK_SENDER,
+        WebApiConstant.API_URL_CHECK_SENDER_UPI,
         body,
         userAuthToken.value,
         userSignature.value,
@@ -460,8 +462,8 @@ class DmtWalletController extends GetxController {
 
       if (response.statusCode == 200) {
         CustomLoading().hide(context);
-        CheckSenderResponseModel checkSenderResponse =
-            CheckSenderResponseModel.fromJson(response.data);
+        CheckSenderUPIResponseModel checkSenderResponse =
+        CheckSenderUPIResponseModel.fromJson(response.data);
 
         checkSenderRespCode.value = checkSenderResponse.respCode ?? "";
 
@@ -480,10 +482,10 @@ class DmtWalletController extends GetxController {
 
           ConsoleLog.printSuccess("Sender found: ${currentSender.value?.name}");
           Fluttertoast.showToast(msg: "Sender verified successfully", gravity: ToastGravity.TOP);
-          
+
           // Fetch beneficiary list
           await getBeneficiaryList(context, mobile);
-          
+
         } else if (checkSenderResponse.respCode == "RNF") {
           // Sender not found - need to register
           currentSender.value = checkSenderResponse.data;
@@ -494,7 +496,7 @@ class DmtWalletController extends GetxController {
 
           ConsoleLog.printWarning("Sender not found");
           Fluttertoast.showToast(msg: "Please register sender first", gravity: ToastGravity.TOP);
-          
+
         } else if (checkSenderResponse.respCode == "ERR") {
           ConsoleLog.printError("Error: ${checkSenderResponse.respDesc}");
 
@@ -521,7 +523,7 @@ class DmtWalletController extends GetxController {
   //endregion
 
   //region addSender
-  Future<void> addSender(BuildContext context, String otp) async {
+  Future<void> addSenderUPI(BuildContext context, String otp) async {
     try {
       if (!await isTokenValid()) {
         await refreshToken(context);
@@ -561,7 +563,7 @@ class DmtWalletController extends GetxController {
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
         "sender": mobile,
-        "service": serviceCode.value,
+        "service": "UPI",
         "request_type": "REMITTER REGISTRATION",
         "identifier": identifier.value,
         "sender_otp": otp,
@@ -572,11 +574,11 @@ class DmtWalletController extends GetxController {
         "sender_state": selectedState.value,
       };
 
-      ConsoleLog.printColor("ADD SENDER REQ: $body");
+      ConsoleLog.printColor("ADD SENDER UPI REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
         context,
-        WebApiConstant.API_URL_ADD_SENDER,
+        WebApiConstant.API_URL_ADD_SENDER_UPI,
         body,
         userAuthToken.value,
         userSignature.value,
@@ -585,7 +587,7 @@ class DmtWalletController extends GetxController {
       CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
-        ConsoleLog.printColor("ADD SENDER RESPONSE: ${response?.data}");
+        ConsoleLog.printColor("ADD SENDER UPI RESPONSE: ${jsonEncode(response?.data)}");
         Map<String, dynamic> responseData;
         try {
           if (response.data is String) {
@@ -600,22 +602,22 @@ class DmtWalletController extends GetxController {
           );
           return;
         }
-        AddSenderResponseModel addSenderResponse =
-        AddSenderResponseModel.fromJson(responseData);
+        AddSenderUPIResponseModel addSenderResponse =
+        AddSenderUPIResponseModel.fromJson(responseData);
         // var data = response.data;
 
         if (addSenderResponse.respCode == 'RCS') {
           isSenderVerified.value = true;
 
-          ConsoleLog.printSuccess("Sender registered successfully");
+          ConsoleLog.printSuccess("Sender UPI registered successfully");
           ConsoleLog.printInfo("Identifier: ${addSenderResponse.data?.senderid?.identifier}");
-          Fluttertoast.showToast(msg: "Sender registered successfully");
+          Fluttertoast.showToast(msg: "Sender UPI registered successfully");
 
           // Clear form
           senderOtpController.value.clear();
 
           // Refresh sender details
-          await checkSender(context, mobile);
+          await checkSenderUPI(context, mobile);
 
         } else if (addSenderResponse.respCode == 'ERR') {
           String errorMsg = addSenderResponse.respDesc ?? "Failed to add sender";
@@ -627,11 +629,11 @@ class DmtWalletController extends GetxController {
 
             // Navigate to wallet (user is verified)
             isSenderVerified.value = true;
-            await checkSender(context, mobile);
+            await checkSenderUPI(context, mobile);
 
           } else {
             // Real error - show error dialog
-            ConsoleLog.printError("ADD SENDER ERROR: $errorMsg");
+            ConsoleLog.printError("ADD SENDER UPI ERROR: $errorMsg");
 
             Get.dialog(
               AlertDialog(
@@ -644,9 +646,9 @@ class DmtWalletController extends GetxController {
                     Text(
                       'Registration Failed',
                       style: GoogleFonts.albertSans(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black
                       ),
                     ),
                   ],
@@ -1005,23 +1007,23 @@ class DmtWalletController extends GetxController {
       }
 
       CustomLoading().show(context);
-      
+
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
-        "senderid": senderId.value,                           
+        "senderid": senderId.value,
         "sender": senderMobileNo.value,
-        "senderdata": {                                       
+        "senderdata": {
           "sendermobile": senderMobileNo.value,
         },
-        "request_type": "ADD BENEDATA",                       
+        "request_type": "ADD BENEDATA",
         "service": serviceCode.value,
-        "account": accountNumber,                             
-        "banksel": selectedBank.value,                        
-        "bankifsc": ifsc,                                     
-        "benename": beneName,                                 
-        "is_verified": isAccountVerified.value ? '1' : '0',   
+        "account": accountNumber,
+        "banksel": selectedBank.value,
+        "bankifsc": ifsc,
+        "benename": beneName,
+        "is_verified": isAccountVerified.value ? '1' : '0',
       };
 
       ConsoleLog.printColor("ADD BENEFICIARY REQ: $body");
@@ -1255,134 +1257,134 @@ class DmtWalletController extends GetxController {
   void showDeleteOtpDialog(BuildContext context, String beneId) {
     deleteOtpController.value.clear();
     showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return Material(
-          type: MaterialType.transparency,
-          child: Container(
-          color: Colors.black54,
-          child: Center(
-            child: SingleChildScrollView(
-              child: Container(
-                margin: EdgeInsets.symmetric(horizontal: 10),
-                padding: EdgeInsets.symmetric(horizontal: 17, vertical: 24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          return Material(
+            type: MaterialType.transparency,
+            child: Container(
+              color: Colors.black54,
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Container(
+                    margin: EdgeInsets.symmetric(horizontal: 10),
+                    padding: EdgeInsets.symmetric(horizontal: 17, vertical: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'Enter Verification Code',
-                          style: GoogleFonts.albertSans(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xff0F0F0F),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Enter Verification Code',
+                              style: GoogleFonts.albertSans(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xff0F0F0F),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                Get.back();
+                                // setState(() => showOtpDialog = false);
+                              },
+                              child: Icon(Icons.close, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+                        RichText(
+                          text: TextSpan(
+                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                            children: [
+                              TextSpan(text: 'We sent a verification code to '),
+                              TextSpan(
+                                text: '+91 ${senderMobileController.value.text}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () {
-                            Get.back();
-                            // setState(() => showOtpDialog = false);
+                        SizedBox(height: 24),
+
+                        // OTP Input Fields
+                        OtpInputFields(
+                          key: deleteOtpKey,
+                          length: 6,
+                          onChanged: (otp) {
+                            deleteOtpController.value.text = otp;
                           },
-                          child: Icon(Icons.close, color: Colors.grey[600]),
+                        ),
+
+                        SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Didn\'t receive the code? ',
+                              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                            ),
+                            GestureDetector(
+                              onTap: () async {
+                                await resendDeleteBeneficiaryOtp(context, beneId);
+                                deleteOtpKey.currentState?.clear();
+                                deleteOtpKey.currentState?.focusFirst();
+                                Fluttertoast.showToast(msg: "OTP sent successfully");
+                              },
+                              child: Text(
+                                'Click to resend',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF2E5BFF),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 24),
+
+                        // Verify Button
+                        GlobalUtils.CustomButton(
+                          text: "VERIFY",
+                          onPressed: () async {
+                            String otp = deleteOtpController.value.text.trim();
+                            if (otp.isEmpty || otp.length != 6) {
+                              Fluttertoast.showToast(msg: "Please enter 6-digit OTP");
+                              return;
+                            }
+                            deleteBeneficiaryValidate(context, beneId, otp);
+                          },
+                          textStyle: GoogleFonts.albertSans(
+                            fontSize: 16,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          width: GlobalUtils.screenWidth * 0.9,
+                          height: GlobalUtils.screenWidth * (60 / 393),
+                          backgroundGradient: GlobalUtils.blueBtnGradientColor,
+                          borderColor: Color(0xFF71A9FF),
+                          showShadow: false,
+                          textColor: Colors.white,
+                          animation: ButtonAnimation.fade,
+                          animationDuration: const Duration(milliseconds: 150),
+                          buttonType: ButtonType.elevated,
+                          borderRadius: 16,
                         ),
                       ],
                     ),
-                    SizedBox(height: 16),
-                    RichText(
-                      text: TextSpan(
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                        children: [
-                          TextSpan(text: 'We sent a verification code to '),
-                          TextSpan(
-                            text: '+91 ${senderMobileController.value.text}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 24),
-              
-                    // OTP Input Fields
-                    OtpInputFields(
-                      key: deleteOtpKey,
-                      length: 6,
-                      onChanged: (otp) {
-                        deleteOtpController.value.text = otp;
-                      },
-                    ),
-              
-                    SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Didn\'t receive the code? ',
-                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                        ),
-                        GestureDetector(
-                          onTap: () async {
-                            await resendDeleteBeneficiaryOtp(context, beneId);
-                            deleteOtpKey.currentState?.clear();
-                            deleteOtpKey.currentState?.focusFirst();
-                            Fluttertoast.showToast(msg: "OTP sent successfully");
-                          },
-                          child: Text(
-                            'Click to resend',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF2E5BFF),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 24),
-              
-                    // Verify Button
-                    GlobalUtils.CustomButton(
-                      text: "VERIFY",
-                      onPressed: () async {
-                        String otp = deleteOtpController.value.text.trim();
-                        if (otp.isEmpty || otp.length != 6) {
-                          Fluttertoast.showToast(msg: "Please enter 6-digit OTP");
-                          return;
-                        }
-                        deleteBeneficiaryValidate(context, beneId, otp);
-                      },
-                      textStyle: GoogleFonts.albertSans(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      width: GlobalUtils.screenWidth * 0.9,
-                      height: GlobalUtils.screenWidth * (60 / 393),
-                      backgroundGradient: GlobalUtils.blueBtnGradientColor,
-                      borderColor: Color(0xFF71A9FF),
-                      showShadow: false,
-                      textColor: Colors.white,
-                      animation: ButtonAnimation.fade,
-                      animationDuration: const Duration(milliseconds: 150),
-                      buttonType: ButtonType.elevated,
-                      borderRadius: 16,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-                ),
-        );}
+          );}
     );
   }
   //endregion
@@ -1722,16 +1724,16 @@ class DmtWalletController extends GetxController {
             color: Colors.black,
           )),
           content: Text('Technical issue occurred. Please try again.',
-            style: GoogleFonts.albertSans(
-              color: Colors.black,
-            )
+              style: GoogleFonts.albertSans(
+                color: Colors.black,
+              )
           ),
           actions: [
             TextButton(
               onPressed: () => Get.back(),
               child: Text('OK', style: GoogleFonts.albertSans(
-                fontSize: 16,
-                fontWeight: FontWeight.w600)),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -1963,7 +1965,6 @@ class DmtWalletController extends GetxController {
         Fluttertoast.showToast(
           msg: "Transaction ID not found",
           backgroundColor: Colors.red,
-          gravity: ToastGravity.TOP
         );
         return;
       }
@@ -1972,7 +1973,6 @@ class DmtWalletController extends GetxController {
         Fluttertoast.showToast(
           msg: "Mobile number not found",
           backgroundColor: Colors.red,
-          gravity: ToastGravity.TOP
         );
         return;
       }
@@ -2021,7 +2021,6 @@ class DmtWalletController extends GetxController {
               Fluttertoast.showToast(
                 msg: "Storage permission required",
                 backgroundColor: Colors.orange,
-                gravity: ToastGravity.TOP
               );
               await openAppSettings();
               return;
@@ -2082,7 +2081,6 @@ class DmtWalletController extends GetxController {
                   Fluttertoast.showToast(
                     msg: "Receipt shared successfully",
                     backgroundColor: Colors.green,
-                    gravity: ToastGravity.TOP
                   );
                 } else if (result.status == ShareResultStatus.dismissed) {
                   ConsoleLog.printInfo("Share dismissed by user");
@@ -2092,7 +2090,6 @@ class DmtWalletController extends GetxController {
                 Fluttertoast.showToast(
                   msg: "Failed to share PDF",
                   backgroundColor: Colors.red,
-                  gravity: ToastGravity.TOP
                 );
               });
             } catch (shareError) {
@@ -2100,7 +2097,6 @@ class DmtWalletController extends GetxController {
               Fluttertoast.showToast(
                 msg: "Failed to share PDF",
                 backgroundColor: Colors.red,
-                gravity: ToastGravity.TOP
               );
             }
 
@@ -2108,7 +2104,6 @@ class DmtWalletController extends GetxController {
             Fluttertoast.showToast(
               msg: "PDF generation failed",
               backgroundColor: Colors.red,
-              gravity: ToastGravity.TOP
             );
           }
 
@@ -2116,14 +2111,12 @@ class DmtWalletController extends GetxController {
           Fluttertoast.showToast(
             msg: data['Resp_desc'] ?? "Failed to get receipt",
             backgroundColor: Colors.red,
-            gravity: ToastGravity.TOP
           );
         }
       } else {
         Fluttertoast.showToast(
           msg: "Failed to fetch receipt",
           backgroundColor: Colors.red,
-          gravity: ToastGravity.TOP
         );
       }
     } catch (e) {
@@ -2138,7 +2131,6 @@ class DmtWalletController extends GetxController {
       Fluttertoast.showToast(
         msg: "Failed to share: ${e.toString()}",
         backgroundColor: Colors.red,
-        gravity: ToastGravity.TOP
       );
     }
   }
@@ -2261,8 +2253,8 @@ class DmtWalletController extends GetxController {
             TextButton(
               onPressed: () => Get.back(),
               child: Text('Close', style: GoogleFonts.albertSans(
-                fontSize: 16,
-                fontWeight: FontWeight.w600)),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600)),
             ),
           ],
         );
@@ -2272,40 +2264,40 @@ class DmtWalletController extends GetxController {
   //endregion
 
   //region getAllBanks
-  Future<void> getAllBanks(BuildContext context) async {
-    try {
-      if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
-        ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
-        ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
-        return;
-      }
-      Map<String, dynamic> body = {
-        "request_id": generateRequestId(),
-        "lat": loginController.latitude.value.toString(),
-        "long": loginController.longitude.value.toString(),
-      };
-
-      var response = await ApiProvider().requestPostForApi(
-        context,
-        WebApiConstant.API_URL_GET_ALL_BANKS,
-        body,
-        userAuthToken.value,
-        userSignature.value,
-      );
-
-      if (response != null && response.statusCode == 200) {
-        GetAllBanksResponseModel banksResponse =
-        GetAllBanksResponseModel.fromJson(response.data);
-
-        if (banksResponse.respCode == "RCS" && banksResponse.data != null) {
-          banksList.value = banksResponse.data!;
-          ConsoleLog.printSuccess("Banks loaded: ${banksList.length}");
-        }
-      }
-    } catch (e) {
-      ConsoleLog.printError("GET ALL BANKS ERROR: $e");
-    }
-  }
+  // Future<void> getAllBanks(BuildContext context) async {
+  //   try {
+  //     if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
+  //       ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
+  //       ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
+  //       return;
+  //     }
+  //     Map<String, dynamic> body = {
+  //       "request_id": generateRequestId(),
+  //       "lat": loginController.latitude.value.toString(),
+  //       "long": loginController.longitude.value.toString(),
+  //     };
+  //
+  //     var response = await ApiProvider().requestPostForApi(
+  //       context,
+  //       WebApiConstant.API_URL_GET_ALL_BANKS,
+  //       body,
+  //       userAuthToken.value,
+  //       userSignature.value,
+  //     );
+  //
+  //     if (response != null && response.statusCode == 200) {
+  //       GetAllBanksResponseModel banksResponse =
+  //       GetAllBanksResponseModel.fromJson(response.data);
+  //
+  //       if (banksResponse.respCode == "RCS" && banksResponse.data != null) {
+  //         banksList.value = banksResponse.data!;
+  //         ConsoleLog.printSuccess("Banks loaded: ${banksList.length}");
+  //       }
+  //     }
+  //   } catch (e) {
+  //     ConsoleLog.printError("GET ALL BANKS ERROR: $e");
+  //   }
+  // }
   //endregion
 
   //region searchBeneficiaries
@@ -2588,5 +2580,5 @@ class DmtWalletController extends GetxController {
     deleteOtpController.value.dispose();
     super.onClose();
   }
-  //endregion
+//endregion
 }

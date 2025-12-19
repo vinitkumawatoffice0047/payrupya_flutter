@@ -744,7 +744,7 @@ class PayrupyaUPIScreen extends StatefulWidget {
 }
 
 class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
-  final DmtWalletController dmtController = Get.put(DmtWalletController());
+  final DmtWalletController upiWalletController = Get.put(DmtWalletController());
   final TextEditingController searchController = TextEditingController();
   final TextEditingController mobileController = TextEditingController();
 
@@ -754,8 +754,8 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
 
     // Load service type on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      dmtController.getAllowedServiceByType(context);
-      dmtController.getAllBanks(context);
+      upiWalletController.getAllowedServiceByType(context);
+      upiWalletController.getAllBanks(context);
       // // Fetch beneficiary list if sender is verified
       // if (dmtController.currentSender.value != null) {
       //   dmtController.getBeneficiaryList(
@@ -864,7 +864,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
             SizedBox(width: GlobalUtils.screenWidth * (14 / 393)),
           // ],
           Text(
-            "Payrupya Wallet",
+            "Payrupya UPI",
             style: GoogleFonts.albertSans(
               fontSize: GlobalUtils.screenWidth * (20 / 393),
               fontWeight: FontWeight.w600,
@@ -877,7 +877,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
   }
 
   Widget buildSenderCard(double screenWidth) {
-    var sender = dmtController.currentSender.value;
+    var sender = upiWalletController.currentSender.value;
 
     if (sender == null) {
       return Container(
@@ -928,7 +928,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                     width: GlobalUtils.screenWidth * 0.43,
                     child: Text(
                         // sender.name ?? "Unknown",
-                        dmtController.senderName.value ?? "Unknown",
+                        upiWalletController.senderName.value ?? "Unknown",
                         style: GoogleFonts.albertSans(
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
@@ -977,7 +977,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              '+91 ${dmtController.senderMobileNo.value}',
+              '+91 ${upiWalletController.senderMobileNo.value}',
               style: TextStyle(fontSize: 14, color: Color(0xff1B1C1C)),
             ),
           ),
@@ -1125,7 +1125,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                 ),
                 GestureDetector(
                   onTap: () {
-                    dmtController.showSortOptionsDialog(context);
+                    upiWalletController.showSortOptionsDialog(context);
                   },
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1181,7 +1181,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                   icon: Icon(Icons.clear, color: Colors.grey[600]),
                   onPressed: () {
                     searchController.clear();
-                    dmtController.searchBeneficiaries('');
+                    upiWalletController.searchBeneficiaries('');
                     setState(() {});
                   },
                 )
@@ -1190,7 +1190,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                 contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
               onChanged: (value) {
-                dmtController.searchBeneficiaries(value);
+                upiWalletController.searchBeneficiaries(value);
                 setState(() {});
               },
             ),
@@ -1199,7 +1199,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
 
           // Beneficiary List
           Obx(() {
-            if (dmtController.filteredBeneficiaryList.isEmpty) {
+            if (upiWalletController.filteredBeneficiaryList.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
@@ -1229,7 +1229,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8, left: 4),
                     child: Text(
-                      '${dmtController.filteredBeneficiaryList.length} result(s) found',
+                      '${upiWalletController.filteredBeneficiaryList.length} result(s) found',
                       style: GoogleFonts.albertSans(
                         fontSize: 12,
                         color: Color(0xff6B707E),
@@ -1240,10 +1240,10 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                 ListView.separated(
                   shrinkWrap: true,
                   physics: NeverScrollableScrollPhysics(),
-                  itemCount: dmtController.filteredBeneficiaryList.length,
+                  itemCount: upiWalletController.filteredBeneficiaryList.length,
                   itemBuilder: (context, index) {
                     return buildBeneficiaryCard(context,
-                      dmtController.filteredBeneficiaryList[index],
+                      upiWalletController.filteredBeneficiaryList[index],
                       screenWidth,
                     );
                   },
@@ -1449,7 +1449,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                               onTap: () {
                                 Navigator.of(context).pop();
                                 // await dmtController.deleteBeneficiary(context, beneId);
-                                  dmtController.deleteBeneficiaryRequestOtp(dialogContext, beneId ?? '');
+                                  upiWalletController.deleteBeneficiaryRequestOtp(dialogContext, beneId ?? '');
                               },
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: 14),
