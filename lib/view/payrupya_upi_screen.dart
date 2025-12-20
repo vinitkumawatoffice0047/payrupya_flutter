@@ -1292,15 +1292,13 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
   Widget buildBeneficiaryCard(BuildContext context, BeneficiaryUPIData beneficiary, double screenWidth) {
     return Container(
       margin: EdgeInsets.symmetric(vertical: 12),
+      height: 200,
+      width: 200,
       child: Row(
         children: [
           // Bank Logo
           Container(
-            child: Icon(
-              Icons.account_balance,
-              size: 28,
-              color: Color(0xFF4A90E2),
-            ),/*beneficiary.logo != null && beneficiary.logo!.isNotEmpty
+            child: Image.asset("assets/images/avatar.png", width: 50, height: 50,),/*beneficiary.logo != null && beneficiary.logo!.isNotEmpty
                 ? Image.network(
               beneficiary.logo!,
               width: 36,
@@ -1326,7 +1324,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                   children: [
                     Flexible(
                       child: Text(
-                        beneficiary.bankName ?? "Unknown Bank",
+                        beneficiary.benename ?? "Unknown Bank",
                         style: GoogleFonts.albertSans(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
@@ -1344,7 +1342,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                   ],
                 ),
                 Text(
-                  beneficiary.benename ?? "Unknown",
+                  beneficiary.upiBeneId ?? "Unknown",
                   style: GoogleFonts.albertSans(
                     fontSize: 12,
                     color: Color(0xff6B707E),
@@ -1352,24 +1350,24 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  beneficiary.accountNumber ?? "",
-                  style: GoogleFonts.albertSans(
-                    fontSize: 12,
-                    color: Color(0xff6B707E),
-                    fontWeight: FontWeight.w400,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  beneficiary.ifsc ?? "",
-                  style: GoogleFonts.albertSans(
-                    fontSize: 12,
-                    color: Color(0xff6B707E),
-                    fontWeight: FontWeight.w400,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                // Text(
+                //   beneficiary.accountNumber ?? "",
+                //   style: GoogleFonts.albertSans(
+                //     fontSize: 12,
+                //     color: Color(0xff6B707E),
+                //     fontWeight: FontWeight.w400,
+                //   ),
+                //   overflow: TextOverflow.ellipsis,
+                // ),
+                // Text(
+                //   beneficiary.ifsc ?? "",
+                //   style: GoogleFonts.albertSans(
+                //     fontSize: 12,
+                //     color: Color(0xff6B707E),
+                //     fontWeight: FontWeight.w400,
+                //   ),
+                //   overflow: TextOverflow.ellipsis,
+                // ),
               ],
             ),
           ),
