@@ -125,13 +125,16 @@ class PayrupyaHomeScreenController extends GetxController {
         return;
       }
 
-      // Auth credentials check
-      if (userAuthToken.value.isEmpty) {
-        ConsoleLog.printError("Auth token is empty");
+      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
+      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
+
+      // Auth credentials check with reload
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Auth credentials are empty");
         await loadAuthCredentials();
       }
 
-      if (userAuthToken.value.isEmpty) {
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
         CustomDialog.error(message: "Authentication required!");
         return;
       }
@@ -160,17 +163,24 @@ class PayrupyaHomeScreenController extends GetxController {
         GetWalletBalanceResponseModel apiResponse =
         GetWalletBalanceResponseModel.fromJson(response.data);
         CustomLoading.hideLoading();
+        ConsoleLog.printInfo("Loading hidden2");
 
         if (apiResponse.respCode == "RCS" && apiResponse.data != null) {
           walletBalance.value = apiResponse.data!.balance.toString();
+          ConsoleLog.printSuccess("Wallet balance: ₹${walletBalance.value}");
         } else {
+          // Error case properly handled
           ConsoleLog.printError("Get Wallet Balance Error: ${apiResponse.respDesc}");
+          CustomDialog.error(message: apiResponse.respDesc ?? "Failed to get wallet balance");
         }
       } else {
         ConsoleLog.printError("API Error: ${response?.statusCode}");
+        CustomDialog.error(message: "Failed to get wallet balance");
       }
     } catch (e) {
-      ConsoleLog.printError("GET ALLOWED SERVICE ERROR: $e");
+      // Exception handled
+      ConsoleLog.printError("GET WALLET BALANCE ERROR: $e");
+      CustomDialog.error(message: "Error: $e");
     }
   }
 //endregion

@@ -331,7 +331,7 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("Get Allowed Service By Type Api Request: ${jsonEncode(body)}", color: "yellow");
 
       if (response != null && response.statusCode == 200) {
-        ConsoleLog.printColor("GET ALLOWED SERVICE RESP: ${response.data}");
+        ConsoleLog.printColor("GET ALLOWED SERVICE RESP: ${jsonEncode(response.data)}");
 
         GetAllowedServiceByTypeResponseModel apiResponse =
         GetAllowedServiceByTypeResponseModel.fromJson(response.data);
@@ -754,7 +754,7 @@ class DmtWalletController extends GetxController {
         await refreshToken(context);
       }
     } catch (e) {
-      ConsoleLog.printError("GET BENEFICIARY LIST ERROR: $e");
+      ConsoleLog.printError("GET BENEFICIARY LIST DMT ERROR: $e");
     }
   }
   //endregion

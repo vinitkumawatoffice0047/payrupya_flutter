@@ -67,82 +67,115 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
       vsync: this,
       duration: const Duration(milliseconds: 600), // smooth 360°
     );
-    CustomLoading.showLoading();
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-      initialize();
-    // });
-  }
 
-  Future<void> initialize() async {
-    // if(mounted){
-      CustomLoading().show(context);
-    // }
+    // Initialize page controller pehle
     pageController = PageController(
       viewportFraction: 1,
       initialPage: _promoImages.length * 1000,
     );
     startAutoScroll();
 
-    await payrupyaHomeScreenController.getLocationAndLoadData();
-    await payrupyaHomeScreenController.loadAuthCredentials();
+    // Post frame callback se call - NO IMMEDIATE LOADING
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      initialize();
+    });
+  }
 
-    ConsoleLog.printInfo("Latitude: ${payrupyaHomeScreenController.latitude.value}");
-    ConsoleLog.printInfo("Longitude: ${payrupyaHomeScreenController.longitude.value}");
+  Future<void> initialize() async {
+    try{
+      // Better way to check location
+      // if(mounted){
+      CustomLoading().show(context);
+      ConsoleLog.printInfo("Loading shown");
+      // }
+      // pageController = PageController(
+      //   viewportFraction: 1,
+      //   initialPage: _promoImages.length * 1000,
+      // );
+      // startAutoScroll();
 
-    // ✅ Better way to check location
-    if (payrupyaHomeScreenController.latitude.value != 0.0 &&
-        payrupyaHomeScreenController.longitude.value != 0.0 &&
-        payrupyaHomeScreenController.userAuthToken.value.isNotEmpty) {
+      await payrupyaHomeScreenController.getLocationAndLoadData();
+      await payrupyaHomeScreenController.loadAuthCredentials();
 
-      await payrupyaHomeScreenController.getWalletBalance(context);
-      ConsoleLog.printInfo("Location available, loading services...");
-      await loadServices();
-    } else {
-      ConsoleLog.printWarning("Conditions not met for balance API:");
-      ConsoleLog.printWarning("Lat: ${payrupyaHomeScreenController.latitude.value}");
-      ConsoleLog.printWarning("Lng: ${payrupyaHomeScreenController.longitude.value}");
-      ConsoleLog.printWarning("Token: ${payrupyaHomeScreenController.userAuthToken.value.isNotEmpty}");
-      isServiceLoading = false;
+      ConsoleLog.printInfo("Latitude: ${payrupyaHomeScreenController.latitude.value}");
+      ConsoleLog.printInfo("Longitude: ${payrupyaHomeScreenController.longitude.value}");
+
+      // Better way to check location
+      if (payrupyaHomeScreenController.latitude.value != 0.0 &&
+          payrupyaHomeScreenController.longitude.value != 0.0 &&
+          payrupyaHomeScreenController.userAuthToken.value.isNotEmpty) {
+
+        await payrupyaHomeScreenController.getWalletBalance(context);
+        ConsoleLog.printInfo("Location available, loading services...");
+        await loadServices();
+      } else {
+        ConsoleLog.printWarning("Conditions not met for balance API:");
+        ConsoleLog.printWarning("Lat: ${payrupyaHomeScreenController.latitude.value}");
+        ConsoleLog.printWarning("Lng: ${payrupyaHomeScreenController.longitude.value}");
+        ConsoleLog.printWarning("Token: ${payrupyaHomeScreenController.userAuthToken.value.isNotEmpty}");
+        isServiceLoading = false;
+      }
+    } catch (e) {
+      ConsoleLog.printError("Initialize error: $e");
+    } finally {
+      // ALWAYS hide loading - success ya error dono cases mein
+      if (mounted) {
+        CustomLoading.hideLoading();
+        ConsoleLog.printInfo("Loading hidden");
+      }
     }
   }
 
   Future<void> loadServices() async {
     try {
-      setState(() {
-        isServiceLoading = true;
-      });
+      // Check mounted before setState
+      if (mounted) {
+        setState(() {
+          isServiceLoading = true;
+        });
+      }
 
-      // ✅ Wait for service to load
+      // Wait for service to load
       // await dmtController.getAllowedServiceByType(context);
 
-      // ✅ Check if service code was loaded
+      // Check if service code was loaded
       if (dmtController.serviceCode.value.isNotEmpty) {
-        setState(() {
-          isServiceLoaded = true;
-          isServiceLoading = false;
-        });
+        // Check mounted before setState
+        if (mounted) {
+          setState(() {
+            isServiceLoaded = true;
+            isServiceLoading = false;
+          });
+        }
         ConsoleLog.printSuccess("Service loaded successfully: ${dmtController.serviceCode.value}");
       } else {
-        setState(() {
-          isServiceLoaded = false;
-          isServiceLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isServiceLoaded = false;
+            isServiceLoading = false;
+          });
+        }
         ConsoleLog.printWarning("Service code empty after loading");
       }
     } catch (e) {
-      setState(() {
-        isServiceLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isServiceLoading = false;
+        });
+      }
       ConsoleLog.printError("Failed to load services: $e");
     }
   }
 
   void startAutoScroll() {
     timer = Timer.periodic(Duration(seconds: 3), (timer) {
-      pageController.nextPage(
-        duration: Duration(milliseconds: 500),
-        curve: Curves.easeIn,
-      );
+      // Check if pageController has clients before using
+      if (pageController.hasClients) {
+        pageController.nextPage(
+          duration: Duration(milliseconds: 500),
+          curve: Curves.easeIn,
+        );
+      }
     });
   }
 

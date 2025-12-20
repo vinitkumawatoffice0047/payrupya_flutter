@@ -39,9 +39,11 @@ import 'package:flutter_native_html_to_pdf/pdf_page_size.dart'; // optional
 enum BeneficiarySortOption {
   nameAsc,      // A to Z
   nameDesc,     // Z to A
-  bankAsc,      // Bank A to Z
-  bankDesc,     // Bank Z to A
-  recent,       // Recently Added (if having any timestamp)
+  vpaAsc,       // VPA A to Z
+  vpaDesc       // VPA A to Z
+  // bankAsc,      // Bank A to Z
+  // bankDesc,     // Bank Z to A
+  // recent,       // Recently Added (if having any timestamp)
 }
 //endregion
 
@@ -254,8 +256,10 @@ class UPIWalletController extends GetxController {
 
   // Search
   RxString searchQuery = ''.obs;
-  Rx<BeneficiarySortOption> currentSortOption = BeneficiarySortOption.recent.obs;
-  RxString currentSortLabel = 'Recently Added'.obs;
+  Rx<BeneficiarySortOption> currentSortOption = BeneficiarySortOption.nameAsc.obs;
+  RxString currentSortLabel = 'Name A-Z'.obs;
+  // Rx<BeneficiarySortOption> currentSortOption = BeneficiarySortOption.recent.obs;
+  // RxString currentSortLabel = 'Recently Added'.obs;
 
   RxString serviceCode = ''.obs;
   RxBool isServiceLoaded = false.obs;
@@ -334,7 +338,7 @@ class UPIWalletController extends GetxController {
       ConsoleLog.printColor("Get Allowed Service By Type Api Request: ${jsonEncode(body)}", color: "yellow");
 
       if (response != null && response.statusCode == 200) {
-        ConsoleLog.printColor("GET ALLOWED SERVICE RESP: ${response.data}");
+        ConsoleLog.printColor("GET ALLOWED SERVICE RESP: ${jsonEncode(response.data)}");
 
         GetAllowedServiceByTypeResponseModel apiResponse =
         GetAllowedServiceByTypeResponseModel.fromJson(response.data);
@@ -724,11 +728,11 @@ class UPIWalletController extends GetxController {
         "sender": senderMobile,
       };
 
-      ConsoleLog.printColor("GET BENEFICIARY LIST REQ: $body");
+      ConsoleLog.printColor("GET BENEFICIARY LIST UPI REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
         context,
-        WebApiConstant.API_URL_GET_BENEFICIARY_LIST,
+        WebApiConstant.API_URL_GET_UPI_BENEFICIARY_LIST,
         body,
         userAuthToken.value,
         userSignature.value,
@@ -747,7 +751,7 @@ class UPIWalletController extends GetxController {
           // Current sort after loading
           applySortOption(currentSortOption.value);
 
-          ConsoleLog.printSuccess("Beneficiaries loaded: ${beneficiaryList.length}");
+          ConsoleLog.printSuccess("UPI Beneficiaries loaded: ${beneficiaryList.length}");
 
         } else {
           beneficiaryList.clear();
@@ -757,7 +761,7 @@ class UPIWalletController extends GetxController {
         await refreshToken(context);
       }
     } catch (e) {
-      ConsoleLog.printError("GET BENEFICIARY LIST ERROR: $e");
+      ConsoleLog.printError("GET BENEFICIARY LIST UPI ERROR: $e");
     }
   }
   //endregion
@@ -984,7 +988,7 @@ class UPIWalletController extends GetxController {
   //endregion
 
   //region addBeneficiary
-  Future<void> addBeneficiary(BuildContext context) async {
+  Future<void> addBeneficiaryUPI(BuildContext context) async {
     try {
       String beneName = beneNameController.value.text.trim();
       String accountNumber = beneAccountController.value.text.trim();
@@ -2311,15 +2315,37 @@ class UPIWalletController extends GetxController {
     } else {
       // Convert query to lowercase ONCE for comparison
       String lowerQuery = query.toLowerCase();
+      // ✅ Remove special characters for flexible matching
+      // This helps match "9875462130@ybl" even if user types "9875462130", "@ybl", etc.
+      String cleanQuery = query.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+      String cleanLowerQuery = cleanQuery.toLowerCase();
 
       filteredBeneficiaryList.value = beneficiaryList.where((bene) {
         // Convert each field to lowercase and compare
         bool nameMatch = (bene.benename?.toLowerCase().contains(lowerQuery) ?? false);
-        bool accountMatch = (bene.accountNumber?.contains(query) ?? false); // Account numbers are exact
-        bool bankMatch = (bene.bankName?.toLowerCase().contains(lowerQuery) ?? false);
-        bool ifscMatch = (bene.ifsc?.toLowerCase().contains(lowerQuery) ?? false);
+        // ✅ VPA SEARCH - Enhanced multi-strategy matching
+        bool vpaMatch = false;
+        if (bene.vpa != null && bene.vpa!.isNotEmpty) {
+          String vpaLower = bene.vpa!.toLowerCase();
 
-        return nameMatch || accountMatch || bankMatch || ifscMatch;
+          // Strategy 1: Direct contains (matches "9875462130@ybl" when searching "9875")
+          vpaMatch = vpaLower.contains(lowerQuery);
+
+          // // Strategy 2: Clean match (matches "9875462130@ybl" when searching "9875462130ybl")
+          // if (!vpaMatch && cleanQuery.isNotEmpty) {
+          //   vpaMatch = vpaClean.contains(cleanLowerQuery);
+          // }
+
+          // // Strategy 3: Starts with (matches "9875462130@ybl" when searching "987")
+          // if (!vpaMatch) {
+          //   vpaMatch = vpaLower.startsWith(lowerQuery);
+          // }
+        }
+        // bool accountMatch = (bene.accountNumber?.contains(query) ?? false); // Account numbers are exact
+        // bool bankMatch = (bene.bankName?.toLowerCase().contains(lowerQuery) ?? false);
+        // bool ifscMatch = (bene.ifsc?.toLowerCase().contains(lowerQuery) ?? false);
+
+        return nameMatch || vpaMatch;
       }).toList();
     }
 
@@ -2335,20 +2361,20 @@ class UPIWalletController extends GetxController {
 
     // Update sort label
     switch (option) {
-      case BeneficiarySortOption.recent:
-        currentSortLabel.value = 'Recently Added';
-        break;
+      // case BeneficiarySortOption.recent:
+      //   currentSortLabel.value = 'Recently Added';
+      //   break;
       case BeneficiarySortOption.nameAsc:
         currentSortLabel.value = 'Name A-Z';
         break;
       case BeneficiarySortOption.nameDesc:
         currentSortLabel.value = 'Name Z-A';
         break;
-      case BeneficiarySortOption.bankAsc:
-        currentSortLabel.value = 'Bank A-Z';
+      case BeneficiarySortOption.vpaAsc:
+        currentSortLabel.value = 'VPA A-Z';
         break;
-      case BeneficiarySortOption.bankDesc:
-        currentSortLabel.value = 'Bank Z-A';
+      case BeneficiarySortOption.vpaDesc:
+        currentSortLabel.value = 'VPA Z-A';
         break;
     }
   }
@@ -2377,22 +2403,21 @@ class UPIWalletController extends GetxController {
         );
         break;
 
-      case BeneficiarySortOption.bankAsc:
+      case BeneficiarySortOption.vpaAsc:
         listToSort.sort((a, b) =>
-            (a.bankName ?? '').toLowerCase().compareTo((b.bankName ?? '').toLowerCase())
+            (a.vpa ?? '').toLowerCase().compareTo((b.vpa ?? '').toLowerCase())
         );
         break;
 
-      case BeneficiarySortOption.bankDesc:
+      case BeneficiarySortOption.vpaDesc:
         listToSort.sort((a, b) =>
-            (b.bankName ?? '').toLowerCase().compareTo((a.bankName ?? '').toLowerCase())
+            (b.vpa ?? '').toLowerCase().compareTo((a.vpa ?? '').toLowerCase())
         );
         break;
-      case BeneficiarySortOption.recent:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+      // case BeneficiarySortOption.recent:
+      //   // TODO: Handle this case.
+      //   throw UnimplementedError();
     }
-
     filteredBeneficiaryList.value = listToSort;
   }
   //endregion
@@ -2466,17 +2491,17 @@ class UPIWalletController extends GetxController {
                     ),
                     buildSortOption(
                       context,
-                      'Bank A-Z',
-                      Icons.account_balance,
-                      BeneficiarySortOption.bankAsc,
-                      currentSortOption.value == BeneficiarySortOption.bankAsc,
+                      'VPA A-Z',
+                      Icons.badge,
+                      BeneficiarySortOption.vpaAsc,
+                      currentSortOption.value == BeneficiarySortOption.vpaAsc,
                     ),
                     buildSortOption(
                       context,
-                      'Bank Z-A',
-                      Icons.account_balance,
-                      BeneficiarySortOption.bankDesc,
-                      currentSortOption.value == BeneficiarySortOption.bankDesc,
+                      'VPA Z-A',
+                      Icons.badge,
+                      BeneficiarySortOption.vpaDesc,
+                      currentSortOption.value == BeneficiarySortOption.vpaDesc,
                     ),
                   ],
                 )),

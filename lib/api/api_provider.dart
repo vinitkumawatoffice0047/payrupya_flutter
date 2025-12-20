@@ -200,9 +200,7 @@ class ApiProvider {
       // dictParameter["versionNew"] = 1;
       ConsoleLog.printColor("=== API REQUEST ===", color: "blue");
       ConsoleLog.printColor("URL: $url", color: "yellow");
-      ConsoleLog.printColor("Headers: $headers", color: "cyan");
       ConsoleLog.printColor("Json Headers: ${jsonEncode(headers)}", color: "cyan");
-      ConsoleLog.printColor("Body: $dictParameter", color: "yellow");
       ConsoleLog.printColor("Json Body: ${jsonEncode(dictParameter)}", color: "yellow");
       ConsoleLog.printColor("=== END REQUEST ===", color: "blue");
 
@@ -222,36 +220,42 @@ class ApiProvider {
           headers: headers,
         ),
       );
+
       ConsoleLog.printColor("=== API RESPONSE ===", color: "green");
+      ConsoleLog.printColor("Response_realUri: ${response.realUri}", color: "yellow");
+      ConsoleLog.printColor("Response_headers: ${response.headers}", color: "yellow");
       ConsoleLog.printColor("Status: ${jsonEncode(response.statusCode)}", color: "yellow");
-      ConsoleLog.printColor("Data: ${jsonEncode(response.data)}", color: "yellow");
+      ConsoleLog.printColor("Response : ${jsonEncode(response.data)}", color: "yellow");
       ConsoleLog.printColor("=== END RESPONSE ===", color: "green");
 
-      ConsoleLog.printJsonResponse("Response21: ${response.data}", color: "yellow", tag: "Response");
-      // Parse response if it's a string
-      dynamic parsedData = response.data;
-      if (response.data is String) {
-        try {
-          parsedData = jsonDecode(response.data);
-          ConsoleLog.printInfo("Parsed JSON string to Map");
-        } catch (e) {
-          ConsoleLog.printError("Failed to parse JSON: $e");
-        }
-      }
+      // ConsoleLog.printJsonResponse("Response21: ${response.data}", color: "yellow", tag: "Response");
+      // // Parse response if it's a string
+      // dynamic parsedData = response.data;
+      // if (response.data is String) {
+      //   try {
+      //     parsedData = jsonDecode(response.data);
+      //     ConsoleLog.printInfo("Parsed JSON string to Map");
+      //   } catch (e) {
+      //     ConsoleLog.printError("Failed to parse JSON: $e");
+      //   }
+      // }
 
       // Safe access to errorCode
-      if (parsedData is Map) {
-        ConsoleLog.printColor("Response1: ${parsedData["errorCode"]}", color: "yellow");
+      // if (parsedData is Map) {
+      //   ConsoleLog.printColor("Response1: ${parsedData["errorCode"]}", color: "yellow");
+      //
+      //   // Update response.data with parsed data
+      //   if (response.data is String) {
+      //     response.data = parsedData;
+      //   }
+      // }
 
-        // Update response.data with parsed data
-        if (response.data is String) {
-          response.data = parsedData;
-        }
-      }
-      ConsoleLog.printColor("Response_headers: ${response.headers}", color: "yellow");
-      ConsoleLog.printColor("Response_realUri: ${response.realUri}", color: "yellow");
-      ConsoleLog.printColor("Response: ${response.data}", color: "yellow");
-      ConsoleLog.printColor("Status: ${response.statusCode}", color: "yellow");
+      // ConsoleLog.printColor("Response_headers: ${jsonEncode(response.headers)}", color: "yellow");
+      // ConsoleLog.printColor("Response_realUri: ${response.realUri}", color: "yellow");
+      // ConsoleLog.printColor("Response: ${jsonEncode(response.data)}", color: "yellow");
+      // ConsoleLog.printColor("Status: ${response.statusCode}", color: "yellow");
+
+
       // if(response.data != null && response.data["status"] == "error"){
       //   response.data["data"] = null;
       //   return response;

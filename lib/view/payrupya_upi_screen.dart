@@ -1198,7 +1198,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
               ),
               cursorColor: Colors.black54,
               decoration: InputDecoration(
-                hintText: 'Search Bank or Account or Name',
+                hintText: 'Search Name or VPA',
                 hintStyle: GoogleFonts.albertSans(
                   fontSize: 14,
                   color: Color(0xff6B707E),
@@ -1292,8 +1292,6 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
   Widget buildBeneficiaryCard(BuildContext context, BeneficiaryUPIData beneficiary, double screenWidth) {
     return Container(
       margin: EdgeInsets.symmetric(vertical: 12),
-      height: 200,
-      width: 200,
       child: Row(
         children: [
           // Bank Logo
@@ -1342,7 +1340,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                   ],
                 ),
                 Text(
-                  beneficiary.upiBeneId ?? "Unknown",
+                  beneficiary.vpa ?? "Unknown",
                   style: GoogleFonts.albertSans(
                     fontSize: 12,
                     color: Color(0xff6B707E),

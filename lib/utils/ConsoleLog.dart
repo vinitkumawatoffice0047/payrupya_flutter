@@ -201,10 +201,10 @@ class ConsoleLog {
   };
 
   /// General colored print
-  static void printColor(String text, {String color = 'white'}) {
+  static void printColor(String text, {String color = 'yellow'}) {
     if (!enableLogs) return; // ❌ Agar OFF hai to print nahi karega
 
-    final colorCode = _colors[color.toLowerCase()] ?? _colors['white']!;
+    final colorCode = _colors[color.toLowerCase()] ?? _colors['yellow']!;
     log('$colorCode$text${_colors['reset']}');
   }
 

@@ -11,7 +11,16 @@ class GetWalletBalanceResponseModel {
     respCode = json['Resp_code'];
     respDesc = json['Resp_desc'];
     requestId = json['request_id'];
-    data = json['data'] != null ? new Data.fromJson(json['data']) : null;
+    // Handle both empty array [] and object {}
+    if (json['data'] != null) {
+      if (json['data'] is Map) {
+        data = Data.fromJson(json['data']);
+      } else if (json['data'] is List) {
+        data = null;
+      }
+    } else {
+      data = null;
+    }
   }
 
   Map<String, dynamic> toJson() {

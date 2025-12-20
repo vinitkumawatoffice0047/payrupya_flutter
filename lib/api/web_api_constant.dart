@@ -32,6 +32,7 @@ class WebApiConstant{
   static const String API_URL_ADD_SENDER_UPI = "${BASE_URL}Action/process_remit_action";
   // static const String API_URL_VERIFY_SENDER_OTP = "${BASE_URL}Action/process_remit_action_new";
   static const String API_URL_GET_BENEFICIARY_LIST = "${BASE_URL}Fetch/getBeneList";
+  static const String API_URL_GET_UPI_BENEFICIARY_LIST = "${BASE_URL}Fetch/get_upi_benelist";
   static const String API_URL_ADD_BENEFICIARY = "${BASE_URL}Action/addBeneData";
   static const String API_URL_DELETE_BENEFICIARY = "${BASE_URL}Action/delete_beneficiary";
   static const String API_URL_VERIFY_ACCOUNT = "${BASE_URL}Action/getAccountHolderName";
