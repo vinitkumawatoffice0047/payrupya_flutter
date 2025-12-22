@@ -52,6 +52,23 @@ class UPIWalletController extends GetxController {
   bool externalLoaderVisible = false;
   bool pendingExternalReturnCleanup = false;
 
+  // Payment Mode & VPA
+  RxString selectedPaymentMode = 'Paytm'.obs;
+  RxString selectedVPA = ''.obs;
+  RxBool verifyButton = false.obs;
+
+  // VPA Providers Map
+  Map<String, List<String>> vpaProviders = {
+    'Paytm': ['paytm', 'ptyes'],
+    'Googlepay': ['okaxis', 'oksbi', 'okhdfcbank'],
+    'Phonepe': ['ybl', 'ibl', 'axl'],
+  };
+
+  //region getVPAListForMode
+  List<String> getVPAListForMode(String mode) {
+    return vpaProviders[mode] ?? [];
+  }
+
   //region showExternalSafeLoader
   void showExternalSafeLoader(BuildContext context) {
     if (externalLoaderVisible) return;
@@ -213,6 +230,9 @@ class UPIWalletController extends GetxController {
   Rx<TextEditingController> senderOtpController = TextEditingController().obs;
 
   Rx<TextEditingController> beneNameController = TextEditingController().obs;
+  Rx<TextEditingController> beneVPAController = TextEditingController().obs;
+  Rx<TextEditingController> upiMobileController = TextEditingController().obs;
+  RxBool isVPAVerified = false.obs;
   Rx<TextEditingController> beneAccountController = TextEditingController().obs;
   Rx<TextEditingController> beneIfscController = TextEditingController().obs;
   Rx<TextEditingController> beneMobileController = TextEditingController().obs;
@@ -766,70 +786,498 @@ class UPIWalletController extends GetxController {
   }
   //endregion
 
-  //region isValidAccountNumber
-  /// Bank account number:
-  /// - Sirf digits allowed
-  /// - Length: 9 se 18 digits (India me common range)
-  bool isValidAccountNumber(String? accountNumber) {
-    if (accountNumber == null) return false;
 
-    final trimmed = accountNumber.trim();
+  // ============================================
+  // VALIDATION METHODS
+  // ============================================
 
-    // Regex: 9–18 digits
-    final regExp = RegExp(r'^[0-9]{9,18}$');
+  //region isValidVPA
+  /// UPI VPA validation
+  /// Format: username@bankname
+  /// Example: 9876543210@paytm, user123@ybl
+  bool isValidVPA(String? vpa) {
+    if (vpa == null || vpa.isEmpty) return false;
+
+    final trimmed = vpa.trim();
+
+    // VPA regex: alphanumeric + dots/underscores + @ + provider name
+    final regExp = RegExp(r'^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$');
     return regExp.hasMatch(trimmed);
   }
   //endregion
 
-  //region isValidIFSC
-  /// IFSC code validation (Indian):
-  /// - 4 capital letters (bank code)
-  /// - 1 zero (0)
-  /// - 6 alphanumeric (branch code)
-  /// Example: SBIN0001234
-  bool isValidIFSC(String? ifsc) {
-    if (ifsc == null) return false;
+  // ============================================
+  // UPDATED VERIFY UPI VPA METHOD
+  // ============================================
 
-    final trimmed = ifsc.trim().toUpperCase();
-
-    // Regex: 4 letters + 0 + 6 alphanumeric
-    final regExp = RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$');
-    return regExp.hasMatch(trimmed);
-  }
-  //endregion
-
-  //region getBeneficiaryName
-  Future<void> getBeneficiaryName(BuildContext context) async {
+  //region verifyUPIVPA (Updated with Verification Modal)
+  Future<void> verifyUPIVPA(BuildContext context) async {
     try {
-      String accountNumber = beneAccountController.value.text.trim();
-      String ifsc = beneIfscController.value.text.trim();
+      String vpa = '';
       String beneName = beneNameController.value.text.trim();
 
+      // Determine VPA based on mode
+      if (selectedPaymentMode.value == 'Others') {
+        vpa = beneVPAController.value.text.trim();
+
+        if (vpa.isEmpty) {
+          Fluttertoast.showToast(msg: "Please fill the UPI ID");
+          return;
+        }
+      } else {
+        String mobile = upiMobileController.value.text.trim();
+
+        if (mobile.isEmpty || mobile.length != 10) {
+          Fluttertoast.showToast(msg: "Please fill the UPI ID");
+          return;
+        }
+
+        // Auto-select first VPA if not selected
+        if (selectedVPA.value.isEmpty) {
+          List<String> vpaList = getVPAListForMode(selectedPaymentMode.value);
+          if (vpaList.isNotEmpty) {
+            vpa = '$mobile@${vpaList[0]}';
+            selectedVPA.value = vpa;
+            beneVPAController.value.text = vpa;
+          }
+        } else {
+          vpa = selectedVPA.value;
+        }
+      }
+
+      if (!isValidVPA(vpa)) {
+        Fluttertoast.showToast(msg: "Please enter valid VPA!");
+        return;
+      }
+
+      if (senderId.value.isEmpty || senderMobileNo.value.isEmpty) {
+        Fluttertoast.showToast(msg: "Sender details not found");
+        return;
+      }
+
+      // Show warning alert if TPIN is required
+      if (txnPin.value == "1") {
+        bool? confirmed = await _showVerificationAlert(context);
+        if (confirmed != true) return;
+      }
+
+      verifyButton.value = true;
+      CustomLoading().show(context);
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+        "sender": senderMobileNo.value,
+        "sendername": senderName.value,
+        "reqfor": "UPIVALIDATE",
+        "handleradio": selectedPaymentMode.value,
+        "custom_vpa": vpa,
+        "request_type": "CONFIRM",
+        "vpa_mobile": vpa,
+        "mode": selectedPaymentMode.value,
+        "benename": beneName.isNotEmpty ? beneName : "",
+        "txnpin": "1234", // Dummy TPIN for verification
+      };
+
+      ConsoleLog.printColor("VERIFY UPI VPA REQ: $body");
+
+      var response = await ApiProvider().requestPostForApi(
+        context,
+        WebApiConstant.API_URL_INIT_UPI_TRANSACT_PROCESS,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      CustomLoading().hide(context);
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+
+        ConsoleLog.printColor("VERIFY UPI VPA RESPONSE: $data");
+
+        if (data['Resp_code'] == 'RCS') {
+          // Show verification modal with charges
+          await _showVerificationChargesModal(context, data['data'], vpa, beneName);
+        } else {
+          verifyButton.value = false;
+          CustomDialog.error(
+            message: data['Resp_desc'] ?? "VPA verification failed",
+          );
+        }
+      } else {
+        verifyButton.value = false;
+      }
+    } catch (e) {
+      CustomLoading().hide(context);
+      verifyButton.value = false;
+      ConsoleLog.printError("VERIFY VPA ERROR: $e");
+      CustomDialog.error(message: "Technical issue!");
+    }
+  }
+  //endregion
+
+  //region _showVerificationAlert
+  Future<bool?> _showVerificationAlert(BuildContext context) async {
+    return await Get.dialog<bool>(
+      AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 12),
+            Text(
+              'Alert',
+              style: GoogleFonts.albertSans(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'For bene verification ₹ 1 will be debited from your balance',
+          style: GoogleFonts.albertSans(
+            fontSize: 14,
+            color: Colors.black87,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.albertSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: Text(
+              'Submit',
+              style: GoogleFonts.albertSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0054D3),
+              ),
+            ),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+  }
+  //endregion
+
+  //region _showVerificationChargesModal
+  Future<void> _showVerificationChargesModal(
+      BuildContext context,
+      Map<String, dynamic> chargesData,
+      String vpa,
+      String beneName,
+      ) async {
+    // Parse charges
+    String commission = (chargesData['commission'] ?? '0').toString();
+    String tds = (chargesData['tds'] ?? '0').toString();
+    String totalCharge = (chargesData['totalcharge'] ?? '0').toString();
+    String totalCcf = (chargesData['totalccf'] ?? '0').toString();
+    String trasamt = (chargesData['trasamt'] ?? '1').toString();
+    String chargedAmt = (chargesData['chargedamt'] ?? '1').toString();
+    String txnPinStatus = (chargesData['txn_pin_status'] ?? '0').toString();
+
+    await Get.dialog(
+      WillPopScope(
+        onWillPop: () async => false,
+        child: Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Verification Charges',
+                      style: GoogleFonts.albertSans(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xff0F0F0F),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: Colors.grey[600]),
+                      onPressed: () {
+                        Get.back();
+                        verifyButton.value = false;
+                      },
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 20),
+
+                // Charges Details
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildChargeRow('Amount', '₹$trasamt'),
+                      Divider(height: 24),
+                      _buildChargeRow('Commission', '₹$commission'),
+                      _buildChargeRow('TDS', '₹$tds'),
+                      _buildChargeRow('Total CCF', '₹$totalCcf'),
+                      _buildChargeRow('Total Charge', '₹$totalCharge'),
+                      Divider(height: 24, thickness: 2),
+                      _buildChargeRow('Total Amount', '₹$chargedAmt', isTotal: true),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 24),
+
+                // Info Text
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFE3F2FD),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Color(0xFF0054D3), size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'This amount will be deducted for VPA verification',
+                          style: GoogleFonts.albertSans(
+                            fontSize: 12,
+                            color: Color(0xFF0054D3),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 24),
+
+                // Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Get.back();
+                          verifyButton.value = false;
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[700],
+                          side: BorderSide(color: Colors.grey[300]!),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: GoogleFonts.albertSans(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Get.back();
+                          await _initiateVPAVerification(context, vpa, beneName);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF0054D3),
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Confirm',
+                          style: GoogleFonts.albertSans(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+  //endregion
+
+  //region _buildChargeRow
+  Widget _buildChargeRow(String label, String value, {bool isTotal = false}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.albertSans(
+              fontSize: isTotal ? 16 : 14,
+              fontWeight: isTotal ? FontWeight.w700 : FontWeight.w500,
+              color: isTotal ? Colors.black : Colors.grey[700],
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.albertSans(
+              fontSize: isTotal ? 16 : 14,
+              fontWeight: isTotal ? FontWeight.w700 : FontWeight.w600,
+              color: isTotal ? Color(0xFF0054D3) : Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  //endregion
+
+  //region _initiateVPAVerification (TRANSACT Request)
+  Future<void> _initiateVPAVerification(
+      BuildContext context,
+      String vpa,
+      String beneName,
+      ) async {
+    try {
+      CustomLoading().show(context);
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+        "sender": senderMobileNo.value,
+        "sendername": senderName.value,
+        "reqfor": "UPIVALIDATE",
+        "handleradio": selectedPaymentMode.value,
+        "custom_vpa": vpa,
+        "request_type": "TRANSACT", // Changed from CONFIRM to TRANSACT
+        "vpa_mobile": vpa,
+        "mode": selectedPaymentMode.value,
+        "benename": beneName.isNotEmpty ? beneName : "",
+        "txnpin": "1234",
+      };
+
+      ConsoleLog.printColor("INITIATE VPA VERIFICATION REQ: $body");
+
+      var response = await ApiProvider().requestPostForApi(
+        context,
+        WebApiConstant.API_URL_INIT_UPI_TRANSACT_PROCESS,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      CustomLoading().hide(context);
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+
+        ConsoleLog.printColor("INITIATE VPA VERIFICATION RESP: $data");
+
+        if (data['Resp_code'] == 'RCS') {
+          String txnStatus = data['data']?['txn_status'] ?? '';
+          String txnDesc = data['Resp_desc'] ?? '';
+          String fetchedName = data['data']?['benename'] ?? '';
+
+          if (txnStatus == 'SUCCESS') {
+            isVPAVerified.value = true;
+            verifyButton.value = false;
+
+            if (fetchedName.isNotEmpty) {
+              beneNameController.value.text = fetchedName;
+            }
+
+            Fluttertoast.showToast(
+              msg: "VPA verified successfully!",
+              backgroundColor: Colors.green,
+              gravity: ToastGravity.TOP,
+            );
+          } else if (txnStatus == 'PENDING') {
+            verifyButton.value = false;
+            CustomDialog.error(message: txnDesc);
+          } else {
+            verifyButton.value = false;
+            CustomDialog.error(message: txnDesc);
+          }
+        } else {
+          verifyButton.value = false;
+          CustomDialog.error(
+            message: data['Resp_desc'] ?? "Verification failed",
+          );
+        }
+      } else {
+        verifyButton.value = false;
+      }
+    } catch (e) {
+      CustomLoading().hide(context);
+      verifyButton.value = false;
+      ConsoleLog.printError("INITIATE VPA VERIFICATION ERROR: $e");
+      CustomDialog.error(message: "Technical issue!");
+    }
+  }
+  //endregion
+
+  // ============================================
+  // UPDATED ADD UPI BENEFICIARY METHOD
+  // ============================================
+
+  //region addUPIBeneficiary (Updated)
+  Future<void> addUPIBeneficiary(BuildContext context) async {
+    try {
+      String beneName = beneNameController.value.text.trim();
+      String vpa = beneVPAController.value.text.trim();
+      String ifsc = beneIfscController.value.text.trim();
+
       // Validation
-      if (accountNumber.isEmpty) {
-        Fluttertoast.showToast(msg: "Account number required!");
-        return;
-      }
-      if (!isValidAccountNumber(accountNumber)) {
-        Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
+      if (beneName.isEmpty) {
+        Fluttertoast.showToast(msg: "Beneficiary name required!");
         return;
       }
 
-      if (ifsc.isEmpty) {
-        Fluttertoast.showToast(msg: "IFSC code required!");
-        return;
-      }
-      if (!isValidIFSC(ifsc)) {
-        Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
+      if (vpa.isEmpty) {
+        Fluttertoast.showToast(msg: "UPI VPA/UPI ID required!");
         return;
       }
 
-      if (selectedBank.value.isEmpty || selectedBank.value == "Select Bank") {
-        Fluttertoast.showToast(msg: "Please select bank first", backgroundColor: Colors.red);
+      if (!isValidVPA(vpa)) {
+        Fluttertoast.showToast(msg: "Please enter valid VPA!");
         return;
       }
-
-      ConsoleLog.printColor("===>>> senderId.value.isEmpty: ${senderId.value.isEmpty}, senderMobileNo.value.isEmpty: ${senderMobileNo.value.isEmpty}\n");
 
       if (senderId.value.isEmpty || senderMobileNo.value.isEmpty) {
         Fluttertoast.showToast(msg: "Sender details not found");
@@ -842,21 +1290,24 @@ class UPIWalletController extends GetxController {
         "request_id": generateRequestId(),
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
-        "senderid": senderId.value,
         "sender": senderMobileNo.value,
-        "request_type": "INITIATE BENEVALIDATION",
-        "service": serviceCode.value,
-        "account": accountNumber,
-        "banksel": selectedBank.value,
-        "bankifsc": ifsc,
-        "benename": beneName.isNotEmpty ? beneName : "",
+        "sendername": senderName.value,
+        "handleradio": selectedPaymentMode.value,
+        "custom_vpa": vpa,
+        "benename": beneName,
+        "is_verified": isVPAVerified.value ? '1' : '0',
       };
 
-      ConsoleLog.printColor("GET BENEFICIARY NAME REQ: $body");
+      // Add IFSC if provided
+      if (ifsc.isNotEmpty) {
+        body['ifsc'] = ifsc;
+      }
+
+      ConsoleLog.printColor("ADD UPI BENEFICIARY REQ: $body", color: "yellow");
 
       var response = await ApiProvider().requestPostForApi(
         context,
-        WebApiConstant.API_URL_ADD_SENDER,
+        WebApiConstant.API_URL_ADD_UPI_BENEFICIARY,
         body,
         userAuthToken.value,
         userSignature.value,
@@ -865,127 +1316,69 @@ class UPIWalletController extends GetxController {
       CustomLoading().hide(context);
 
       if (response != null && response.statusCode == 200) {
+        ConsoleLog.printColor("ADD UPI BENEFICIARY RESP: ${jsonEncode(response.data)}", color: "green");
+
         var data = response.data;
 
-        if (data['Resp_code'] == 'RCS') {
-          if (data['data']?['txn_status'] == 'SUCCESS') {
-            isAccountVerified.value = true;
+        if (data['Resp_code'] == "RCS") {
+          ConsoleLog.printSuccess("✅ UPI Beneficiary added successfully");
 
-            // Auto-fill beneficiary name
-            if (data['data']?['benename'] != null &&
-                data['data']['benename'].toString().isNotEmpty) {
-              String fetchedName = data['data']['benename'].toString();
-              beneNameController.value.text = fetchedName;
+          Fluttertoast.showToast(
+            msg: "Beneficiary added successfully!",
+            backgroundColor: Colors.green,
+          );
 
-              ConsoleLog.printSuccess("✅ Beneficiary name fetched: $fetchedName");
-              // Fluttertoast.showToast(
-              //   msg: "Name fetched: $fetchedName",
-              //   backgroundColor: Colors.green,
-              //   toastLength: Toast.LENGTH_LONG,
-              //   gravity: ToastGravity.TOP,
-              // );
-            }
-          } else if (data['data']?['txn_status'] == 'FAILED') {
-            isAccountVerified.value = false;
-            CustomDialog.error(
-              message: data['Resp_desc'] ?? "Failed to fetch name",
-            );
-          }
+          // Refresh beneficiary list
+          await getBeneficiaryList(context, senderMobileNo.value);
+
+          // Reset form
+          _resetAddBeneficiaryForm();
+
+          // Close screen
+          Get.back();
+
+        } else if (data['Resp_code'] == "ERR") {
+          String errorMsg = data['Resp_desc'] ?? "Failed to add beneficiary";
+
+          ConsoleLog.printError("❌ ADD UPI BENEFICIARY ERROR: $errorMsg");
+
+          CustomDialog.error(message: errorMsg);
         } else {
           CustomDialog.error(
-            message: data['Resp_desc'] ?? "Unable to fetch beneficiary name",
+            message: data['Resp_desc'] ?? "Unexpected response",
           );
         }
+      } else if (response?.statusCode == 401) {
+        await refreshToken(context);
+      } else {
+        CustomDialog.error(message: "No response from server");
       }
     } catch (e) {
       CustomLoading().hide(context);
-      ConsoleLog.printError("GET BENEFICIARY NAME ERROR: $e");
-      CustomDialog.error(message: "Technical issue!");
+      ConsoleLog.printError("❌ ADD UPI BENEFICIARY ERROR: $e");
+      CustomDialog.error(message: "Technical issue occurred!");
     }
   }
   //endregion
 
-  //region verifyAccount
-  Future<void> verifyAccount(BuildContext context) async {
-    try {
-      String accountNumber = beneAccountController.value.text.trim();
-      String ifsc = beneIfscController.value.text.trim();
-      String beneName = beneNameController.value.text.trim();
-
-      ConsoleLog.printColor(
-          "========>>>>>> Selected Bank: ${selectedBank.value}, \nIFSC: $ifsc, \nAccount: $accountNumber, \nName: $beneName, \nSender: ${currentSender.value?.mobile}, \nSender ID: ${senderId.value}, \nSender Name: ${currentSender.value?.name}"
-      );
-      if (senderId.value.isEmpty || currentSender.value?.mobile == null) {
-        Fluttertoast.showToast(msg: "Sender details not found");
-        return;
-      }
-
-      CustomLoading().show(context);
-
-      Map<String, dynamic> body = {
-        "request_id": generateRequestId(),
-        "lat": loginController.latitude.value.toString(),
-        "long": loginController.longitude.value.toString(),
-        "senderid": senderId.value,
-        "sender": currentSender.value!.mobile,
-        "request_type": "INITIATE BENEVALIDATION",
-        "service": serviceCode.value,
-        "account": accountNumber,
-        "banksel": selectedBank.value,
-        "bankifsc": ifsc,
-        "benename": beneName.isNotEmpty ? beneName : "",
-      };
-
-      ConsoleLog.printColor("VERIFY ACCOUNT REQ: $body");
-
-      var response = await ApiProvider().requestPostForApi(
-        context,
-        WebApiConstant.API_URL_ADD_SENDER, // ✅ Uses process_remit_action_new
-        body,
-        userAuthToken.value,
-        userSignature.value,
-      );
-
-      CustomLoading().hide(context);
-
-      if (response != null && response.statusCode == 200) {
-        CustomLoading().hide(context);
-        var data = response.data;
-
-        if (data['Resp_code'] == 'RCS') {
-          if (data['data']?['txn_status'] == 'SUCCESS') {
-            isAccountVerified.value = true;
-
-            // Auto-fill beneficiary name
-            if (data['data']?['benename'] != null) {
-              beneNameController.value.text = data['data']['benename'];
-            }
-
-            ConsoleLog.printSuccess("Account verified: ${data['data']?['benename']}");
-            Fluttertoast.showToast(msg: "Account verified successfully");
-
-          } else if (data['data']?['txn_status'] == 'PENDING') {
-            Fluttertoast.showToast(msg: "Verification pending");
-          } else if (data['data']?['txn_status'] == 'FAILED') {
-            isAccountVerified.value = false;
-            CustomDialog.error(
-              message: data['Resp_desc'] ?? "Verification failed",
-            );
-          }
-        } else {
-          isAccountVerified.value = false;
-          CustomDialog.error(
-            message: data['Resp_desc'] ?? "Account verification failed",
-          );
-        }
-      }
-    } catch (e) {
-      CustomLoading().hide(context);
-      ConsoleLog.printError("VERIFY ACCOUNT ERROR: $e");
-      CustomDialog.error(message: "Technical issue!");
-    }
+  //region _resetAddBeneficiaryForm
+  void _resetAddBeneficiaryForm() {
+    beneNameController.value.clear();
+    beneVPAController.value.clear();
+    beneIfscController.value.clear();
+    upiMobileController.value.clear();
+    isVPAVerified.value = false;
+    selectedPaymentMode.value = 'Paytm';
+    selectedVPA.value = '';
+    verifyButton.value = false;
   }
-  //endregion
+//endregion
+
+
+
+
+
+
 
   //region addBeneficiary
   Future<void> addBeneficiaryUPI(BuildContext context) async {
@@ -2607,6 +3000,9 @@ class UPIWalletController extends GetxController {
     transferModeController.value.dispose();
     txnPinController.value.dispose();
     deleteOtpController.value.dispose();
+    beneVPAController.value.dispose();
+    upiMobileController.value.dispose();
+    beneIfscController.value.dispose();
     super.onClose();
   }
 //endregion
