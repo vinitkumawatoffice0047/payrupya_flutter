@@ -478,17 +478,19 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:payrupya/utils/ConsoleLog.dart';
 import '../controllers/dmt_wallet_controller.dart';
+import '../controllers/upi_wallet_controller.dart';
 import '../utils/global_utils.dart';
 
-class AddBeneficiaryScreen extends StatefulWidget {
-  const AddBeneficiaryScreen({super.key});
+class AddBeneficiaryUPIScreen extends StatefulWidget {
+  const AddBeneficiaryUPIScreen({super.key});
 
   @override
-  State<AddBeneficiaryScreen> createState() => _AddBeneficiaryScreenState();
+  State<AddBeneficiaryUPIScreen> createState() => _AddBeneficiaryUPIScreenState();
 }
 
-class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
-  final DmtWalletController dmtController = Get.put(DmtWalletController());
+class _AddBeneficiaryUPIScreenState extends State<AddBeneficiaryUPIScreen> {
+  // final DmtWalletController upiWalletController = Get.put(DmtWalletController());
+  final UPIWalletController upiWalletController = Get.put(UPIWalletController());
   final ValueNotifier<int> charCountNotifier = ValueNotifier<int>(0);
   final ValueNotifier<bool> isLoadingName = ValueNotifier<bool>(false);
 
@@ -496,17 +498,18 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
   void initState() {
     super.initState();
     // Clear form
-    dmtController.selectedBank.value = "Select Bank";
-    dmtController.beneIfscController.value.clear();
-    dmtController.beneMobileController.value.clear();
-    dmtController.beneAccountController.value.clear();
-    dmtController.beneNameController.value.clear();
-    dmtController.isAccountVerified.value = false;
+    upiWalletController.selectedPaymentMode.value = "Phonepay";
+    upiWalletController.selectedBank.value = "Select Bank";
+    upiWalletController.beneIfscController.value.clear();
+    upiWalletController.beneMobileController.value.clear();
+    upiWalletController.beneAccountController.value.clear();
+    upiWalletController.beneNameController.value.clear();
+    upiWalletController.isAccountVerified.value = false;
 
     // Fetch banks list
     Future.delayed(Duration(milliseconds: 300), () {
       if (mounted) {
-        dmtController.getAllBanks(context);
+        upiWalletController.getAllBanks(context);
       }
     });
   }
@@ -586,6 +589,72 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
     );
   }
 
+  Widget buildToggleButton(String imgPath, String text, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: isSelected ? Color(0xFF2E5BFF) : Colors.grey[300]!,
+            width: 1,
+          ),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: Color(0xFF0054D3).withOpacity(0.15),
+              spreadRadius: 3,
+              blurRadius: 0,
+            ),
+          ] : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 30,
+              height: 30,
+              child: Image.asset(imgPath),
+            ),
+            // Container(
+            //   width: 20,
+            //   height: 20,
+            //   decoration: BoxDecoration(
+            //     shape: BoxShape.circle,
+            //     border: Border.all(
+            //       color: isSelected ? Color(0xFF0054D3) : Colors.grey[400]!,
+            //       width: 1,
+            //     ),
+            //   ),
+            //   child: isSelected
+            //       ? Center(
+            //     child: Container(
+            //       width: 10,
+            //       height: 10,
+            //       decoration: BoxDecoration(
+            //         color: Color(0xFF0054D3),
+            //         shape: BoxShape.circle,
+            //       ),
+            //     ),
+            //   )
+            //       : null,
+            // ),
+            SizedBox(width: 8),
+            Text(
+              text,
+              style: GoogleFonts.albertSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: isSelected ? Color(0xFF2E5BFF) : Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget buildBeneficiaryForm() {
     return Obx(() => Column(
       children: [
@@ -602,386 +671,294 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Beneficiary Details',
-                style: GoogleFonts.albertSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xff1B1C1C),
-                ),
-              ),
-              SizedBox(height: 20),
-
-              // Bank Selection
-              buildLabelText('Bank Name'),
-              SizedBox(height: 8),
-              GestureDetector(
-                onTap: () {
-                  if (dmtController.banksList.isEmpty) {
-                    Fluttertoast.showToast(msg: "Loading banks...");
-                    dmtController.getAllBanks(context);
-                    return;
-                  }
-                  showBankSelectionBottomSheet();
-                },
-                child: Container(
-                  height: GlobalUtils.screenWidth * (60 / 393),
-                  width: GlobalUtils.screenWidth * 0.9,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Color(0xffE2E5EC)),
-                  ),
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Icon(Icons.account_balance,
-                          color: Color(0xFF6B707E), size: 20),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          dmtController.selectedBank.value.isEmpty
-                              ? "Select Bank"
-                              : dmtController.selectedBank.value,
-                          style: GoogleFonts.albertSans(
-                            fontSize: GlobalUtils.screenWidth * (14 / 393),
-                            color: dmtController.selectedBank.value.isEmpty
-                                ? Color(0xFF6B707E)
-                                : Color(0xFF1B1C1C),
-                          ),
-                        ),
-                      ),
-                      Icon(Icons.keyboard_arrow_down,
-                          color: Color(0xFF6B707E)),
-                    ],
+          child:
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Mode :',
+                  style: GoogleFonts.albertSans(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xff1B1C1C),
                   ),
                 ),
-              ),
-              SizedBox(height: 16),
+                SizedBox(height: 20),
 
-              // IFSC Code
-              SizedBox(child: Row(
-                children: [
-                  buildLabelText('IFSC'),
-                  Text("*", style: TextStyle(color: Colors.red, fontSize: 12,),),
-                ],
-              )),
-              SizedBox(height: 8),
-              GlobalUtils.CustomTextField(
-                label: "IFSC Code",
-                showLabel: false,
-                controller: dmtController.beneIfscController.value,
-                placeholder: "IFSC Code",
-                height: GlobalUtils.screenWidth * (60 / 393),
-                width: GlobalUtils.screenWidth * 0.9,
-                backgroundColor: Colors.white,
-                borderColor: Color(0xffE2E5EC),
-                borderRadius: 16,
-                placeholderStyle: GoogleFonts.albertSans(
-                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  color: Color(0xFF6B707E),
-                ),
-                inputTextStyle: GoogleFonts.albertSans(
-                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  color: Color(0xFF1B1C1C),
-                ),
-                prefixIcon: Icon(Icons.code,
-                    color: Color(0xFF6B707E), size: 20),
-                /*suffixIcon: TextButton(
-                  onPressed: () async {
-                    String account = dmtController.beneAccountController.value.text.trim();
-                    String ifsc = dmtController.beneIfscController.value.text.trim();
-
-                    if (account.isEmpty) {
-                      Fluttertoast.showToast(msg: "Account number required!");
-                      return;
-                    }
-                    if (!dmtController.isValidAccountNumber(account)) {
-                      Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
-                      return;
-                    }
-                    if (ifsc.isEmpty) {
-                      Fluttertoast.showToast(msg: "IFSC code required!");
-                      return;
-                    }
-                    if (!dmtController.isValidIFSC(ifsc)) {
-                      Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
-                      return;
-                    }
-                    if(dmtController.beneNameController.value.text.trim().isEmpty){
-                      Fluttertoast.showToast(msg: "Please enter beneficiary name!");
-                      return;
-                    }
-                    if (dmtController.selectedBank.value.isEmpty || dmtController.selectedBank.value == "Select Bank") {
-                      Fluttertoast.showToast(msg: "Please select bank first", backgroundColor: Colors.red);
-                      return;
-                    }
-
-                    // Verify account
-                    await dmtController.verifyAccount(context);
-                  },
-                  child: dmtController.isAccountVerified.value ?
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+                //region Payment Toggles
+                SizedBox(
+                  height: 60,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
                       children: [
-                      Image.asset("assets/images/verified_icon.png",
-                      height: 20,
-                      ),
-                      SizedBox(width: 2,),
-                      Text("Verified", style: GoogleFonts.albertSans(
-                        fontSize: GlobalUtils.screenWidth * (14 / 393),
-                        color: Color(0xFF0054D3),
-                        fontWeight: FontWeight.w500,
-                      ),),
-                      SizedBox(width: 12,),
-                    ],) :
-                    Text(
-                      "Verify",
-                      style: GoogleFonts.albertSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF0054D3),
-                      ),
+                        SizedBox(width: 3),
+                        SizedBox(
+                          width: GlobalUtils.screenWidth * (155 / 393),
+                          height: 55,
+                          child: buildToggleButton("assets/icons/phonepe.png", "Phone Pay",
+                            upiWalletController.selectedPaymentMode.value == 'Phonepay',
+                                () {
+                              upiWalletController.selectedPaymentMode.value = 'Phonepay';
+                            },),
+                        ),
+                        SizedBox(width: 10),
+                        SizedBox(
+                          width: GlobalUtils.screenWidth * (155 / 393),
+                          height: 55,
+                          child: buildToggleButton("assets/icons/gpay.png", "Google Pay",
+                            upiWalletController.selectedPaymentMode.value == 'Googlepay',
+                                () {
+                              upiWalletController.selectedPaymentMode.value = 'Googlepay';
+                            },),
+                        ),
+                        SizedBox(width: 10),
+                        SizedBox(
+                          width: GlobalUtils.screenWidth * (155 / 393),
+                          height: 55,
+                          child: buildToggleButton("assets/icons/paytm.png", "Paytm",
+                            upiWalletController.selectedPaymentMode.value == 'Paytm',
+                                () {
+                              upiWalletController.selectedPaymentMode.value = 'Paytm';
+                            },),
+                        ),
+                        SizedBox(width: 10),
+                        SizedBox(
+                          width: GlobalUtils.screenWidth * (155 / 393),
+                          height: 53,
+                          child: buildToggleButton("assets/icons/other_icon.png", "Other",
+                            upiWalletController.selectedPaymentMode.value == 'Others',
+                                () {
+                              upiWalletController.selectedPaymentMode.value = 'Others';
+                            },),
+                        ),
+                        SizedBox(width: 3),
+                      ],
                     ),
-                ),*/
-              ),
+                  ),
+                ),
+                //endregion
 
-              SizedBox(height: 16),
+                SizedBox(height: 16),
 
-              // Account Number
-              buildLabelText('Account Number'),
-              SizedBox(height: 8),
-              GlobalUtils.CustomTextField(
-                onChanged: (value) {
-                  charCountNotifier.value = value.length;
-                },
-                label: "Account Number",
-                showLabel: false,
-                controller: dmtController.beneAccountController.value,
-                placeholder: "Account Number",
-                height: GlobalUtils.screenWidth * (60 / 393),
-                width: GlobalUtils.screenWidth * 0.9,
-                backgroundColor: Colors.white,
-                borderColor: Color(0xffE2E5EC),
-                borderRadius: 16,
-                keyboardType: TextInputType.number,
-                suffixIcon: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  margin: EdgeInsets.only(right: 8),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ValueListenableBuilder<int>(
-                        valueListenable: charCountNotifier,
-                        builder: (context, count, child) {
-                          return Padding(
-                            padding: const EdgeInsets.all(15.0),
-                            child: Text(
-                              '$count',
-                              style: GoogleFonts.albertSans(
-                                color: Color(0xFF0054D3),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                // Beneficiary Name
+                buildLabelText('UPI ID'),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    GlobalUtils.CustomTextField(
+                      label: "UPI ID",
+                      showLabel: false,
+                      controller: upiWalletController.beneVPAController.value,
+                      placeholder: upiWalletController.selectedPaymentMode.value == "Phonepay" ? "Enter Phone Pay UPI ID" :
+                      upiWalletController.selectedPaymentMode.value == "Googlepay" ? "Enter Google Pay UPI ID" :
+                      upiWalletController.selectedPaymentMode.value == "Paytm" ? "Enter Paytm UPI ID" :
+                      "Enter UPI ID",
+                      height: GlobalUtils.screenWidth * (60 / 393),
+                      width: GlobalUtils.screenWidth * 0.7,
+                      backgroundColor: Colors.white,
+                      borderColor: Color(0xffE2E5EC),
+                      borderRadius: 16,
+                      keyboardType: TextInputType.emailAddress,
+                      suffixIcon: ValueListenableBuilder<bool>(
+                        valueListenable: isLoadingName,
+                        builder: (context, loading, child) {
+                          return TextButton(
+                            onPressed: upiWalletController.verifyButton.value
+                                ? null
+                                : () => upiWalletController.verifyUPIVPA(context),
+                            child: loading
+                                ? SizedBox(  // ✅ Show loading indicator
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0054D3)),
+                              ),
+                            )
+                                : Container(  // ✅ Show "Get Name" text
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Verify',
+                                    style: GoogleFonts.albertSans(
+                                      color: Color(0xFF0054D3),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           );
                         },
                       ),
-                    ],
-                  ),
-                ),
-                placeholderStyle: GoogleFonts.albertSans(
-                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  color: Color(0xFF6B707E),
-                ),
-                inputTextStyle: GoogleFonts.albertSans(
-                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  color: Color(0xFF1B1C1C),
-                ),
-                prefixIcon: Icon(Icons.account_balance_wallet,
-                    color: Color(0xFF6B707E), size: 20),
-              ),
+                      maxLength: upiWalletController.selectedPaymentMode.value == "Others" ? null : 10,
+                      // inputFormatters: isOthers
+                      //     ? null
+                      //     : [FilteringTextInputFormatter.digitsOnly],
+                      buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
+                        return null;
+                      },
+                      onChanged: (value) {
+                        if (upiWalletController.isVPAVerified.value) {
+                          upiWalletController.isVPAVerified.value = false;
+                        }
+                        // Auto-clear VPA selection when mobile changes
+                        if (upiWalletController.selectedPaymentMode.value != "Others" && upiWalletController.selectedVPA.value.isNotEmpty) {
+                          upiWalletController.selectedVPA.value = '';
+                        }
+                      },
+                      // onSubmitted: (value){
+                      //   if(value.isNotEmpty){
+                      //     upiWalletController.currentSender.value?.name = value;
+                      //   }
+                      // },
+                      placeholderStyle: GoogleFonts.albertSans(
+                        fontSize: GlobalUtils.screenWidth * (14 / 393),
+                        color: Color(0xFF6B707E),
+                      ),
+                      inputTextStyle: GoogleFonts.albertSans(
+                        fontSize: GlobalUtils.screenWidth * (14 / 393),
+                        color: Color(0xFF1B1C1C),
+                      ),
+                      enabled: !upiWalletController.isAccountVerified.value,
+                      readOnly: upiWalletController.isAccountVerified.value,
+                    ),
 
-              SizedBox(height: 16),
+                    Spacer(),
 
-              // Account verification status
-              if (dmtController.isAccountVerified.value) ...[
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Color(0xFFE8F5E9),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Color(0xFF4CAF50)),
-                  ),
-                  child: Row(
+                    GlobalUtils.CustomButton(
+                      onPressed: (){},
+                      height: GlobalUtils.screenWidth * (60 / 393),
+                      width: GlobalUtils.screenWidth * (60 / 393),
+                      backgroundColor: Colors.white,
+                      borderColor: Color(0xffE2E5EC),
+                      borderRadius: 16,
+                      borderWidth: 1,
+                      padding: EdgeInsets.all(13),
+                      child: Image.asset("assets/icons/scan_icon.png")
+                    )
+                  ],
+                ),
+
+                SizedBox(height: 16),
+
+                // VPA Provider Selection (Only for Paytm, Googlepay, Phonepe)
+                Obx(() {
+                  bool showVPASelection = upiWalletController.selectedPaymentMode.value != 'Others' &&
+                      upiWalletController.beneVPAController.value.text.isNotEmpty;
+
+                  if (!showVPASelection) return SizedBox.shrink();
+
+                  List<String> vpaList = upiWalletController.getVPAListForMode(
+                      upiWalletController.selectedPaymentMode.value
+                  );
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.check_circle,
-                          color: Color(0xFF4CAF50), size: 20),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Account verified successfully',
-                          style: GoogleFonts.albertSans(
-                            fontSize: 14,
-                            color: Color(0xFF2E7D32),
-                            fontWeight: FontWeight.w500,
-                          ),
+                      Text(
+                        'Choose VPA *',
+                        style: GoogleFonts.albertSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xff1B1C1C),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 16),
-              ],
+                      SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: vpaList.map((vpaProvider) {
+                          String mobileNumber = upiWalletController.upiMobileController.value.text;
+                          String fullVPA = '$mobileNumber@$vpaProvider';
 
-              // Beneficiary Name
-              buildLabelText('Account Holder Name'),
-              SizedBox(height: 8),
-              GlobalUtils.CustomTextField(
-                label: "Account Holder Name",
-                showLabel: false,
-                controller: dmtController.beneNameController.value,
-                placeholder: "Account Holder Name",
-                height: GlobalUtils.screenWidth * (60 / 393),
-                width: GlobalUtils.screenWidth * 0.9,
-                backgroundColor: Colors.white,
-                borderColor: Color(0xffE2E5EC),
-                borderRadius: 16,
-                isName: true,
-                suffixIcon: ValueListenableBuilder<bool>(
-                  valueListenable: isLoadingName,
-                  builder: (context, loading, child) {
-                    return TextButton(
-                      onPressed: loading ? null : () async{
-                        String account = dmtController.beneAccountController.value.text.trim();
-                        String ifsc = dmtController.beneIfscController.value.text.trim();
-                        if (account.isEmpty) {
-                          Fluttertoast.showToast(msg: "Account number required!");
-                          return;
-                        }
-                        if (!dmtController.isValidAccountNumber(account)) {
-                          Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
-                          return;
-                        }
-                        if (ifsc.isEmpty) {
-                          Fluttertoast.showToast(msg: "IFSC code required!");
-                          return;
-                        }
-                        if (!dmtController.isValidIFSC(ifsc)) {
-                          Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
-                          return;
-                        }
-                        if (dmtController.selectedBank.value.isEmpty || dmtController.selectedBank.value == "Select Bank") {
-                          Fluttertoast.showToast(msg: "Please select bank first", backgroundColor: Colors.red);
-                          return;
-                        }
-                        isLoadingName.value = true;
-                        await dmtController.getBeneficiaryName(context);
-                        isLoadingName.value = false;
-                        // dmtController.getBeneficiaryName(context);
-                      },
-                      child: loading
-                          ? SizedBox(  // ✅ Show loading indicator
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0054D3)),
-                        ),
-                      )
-                          : Container(  // ✅ Show "Get Name" text
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Get Name',
-                              style: GoogleFonts.albertSans(
-                                color: Color(0xFF0054D3),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                          return Obx(() => GestureDetector(
+                            onTap: () {
+                              upiWalletController.selectedVPA.value = fullVPA;
+                              upiWalletController.beneVPAController.value.text = fullVPA;
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: upiWalletController.selectedVPA.value == fullVPA
+                                    ? Color(0xFF0054D3).withOpacity(0.1)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: upiWalletController.selectedVPA.value == fullVPA
+                                      ? Color(0xFF0054D3)
+                                      : Colors.grey[300]!,
+                                  width: upiWalletController.selectedVPA.value == fullVPA ? 2 : 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (upiWalletController.selectedVPA.value == fullVPA)
+                                    Padding(
+                                      padding: EdgeInsets.only(right: 6),
+                                      child: Icon(
+                                        Icons.radio_button_checked,
+                                        color: Color(0xFF0054D3),
+                                        size: 18,
+                                      ),
+                                    ),
+                                  Text(
+                                    fullVPA,
+                                    style: GoogleFonts.albertSans(
+                                      fontSize: 13,
+                                      color: upiWalletController.selectedVPA.value == fullVPA
+                                          ? Color(0xFF0054D3)
+                                          : Colors.black87,
+                                      fontWeight: upiWalletController.selectedVPA.value == fullVPA
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
+                          ));
+                        }).toList(),
                       ),
-                    );
-                  },
+                      SizedBox(height: 20),
+                    ],
+                  );
+                }),
+
+                GlobalUtils.CustomTextField(
+                  label: "Beneficiary Name",
+                  showLabel: false,
+                  controller: upiWalletController.beneNameController.value,
+                  placeholder: "Beneficiary Name",
+                  height: GlobalUtils.screenWidth * (60 / 393),
+                  width: GlobalUtils.screenWidth * 0.9,
+                  backgroundColor: Colors.white,
+                  borderColor: Color(0xffE2E5EC),
+                  borderRadius: 16,
+                  // isName: true,
+                  // onSubmitted: (value){
+                  //   if(value.isNotEmpty){
+                  //     upiWalletController.currentSender.value?.name = value;
+                  //   }
+                  // },
+                  placeholderStyle: GoogleFonts.albertSans(
+                    fontSize: GlobalUtils.screenWidth * (14 / 393),
+                    color: Color(0xFF6B707E),
+                  ),
+                  inputTextStyle: GoogleFonts.albertSans(
+                    fontSize: GlobalUtils.screenWidth * (14 / 393),
+                    color: Color(0xFF1B1C1C),
+                  ),
+                  enabled: !upiWalletController.isAccountVerified.value,
+                  readOnly: upiWalletController.isAccountVerified.value,
                 ),
-                // onSubmitted: (value){
-                //   if(value.isNotEmpty){
-                //     dmtController.currentSender.value?.name = value;
-                //   }
-                // },
-                placeholderStyle: GoogleFonts.albertSans(
-                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  color: Color(0xFF6B707E),
-                ),
-                inputTextStyle: GoogleFonts.albertSans(
-                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                  color: Color(0xFF1B1C1C),
-                ),
-                prefixIcon: Icon(Icons.person,
-                    color: Color(0xFF6B707E), size: 20),
-                enabled: !dmtController.isAccountVerified.value,
-                readOnly: dmtController.isAccountVerified.value,
-              ),
-              // SizedBox(height: 16),
-              //
-              // // Mobile Number (Optional)
-              // buildLabelText('Mobile Number (Optional)'),
-              // SizedBox(height: 8),
-              // GlobalUtils.CustomTextField(
-              //   label: "Mobile Number",
-              //   showLabel: false,
-              //   controller: dmtController.beneMobileController.value,
-              //   placeholder: "Mobile Number",
-              //   height: GlobalUtils.screenWidth * (60 / 393),
-              //   width: GlobalUtils.screenWidth * 0.9,
-              //   backgroundColor: Colors.white,
-              //   borderColor: Color(0xffE2E5EC),
-              //   borderRadius: 16,
-              //   isMobileNumber: true,
-              //   onSubmitted: (value) {
-              //     if (value.isNotEmpty && !value.startsWith('+91')) {
-              //       dmtController.currentSender.value?.mobile = value;
-              //     }
-              //   },
-              //   placeholderStyle: GoogleFonts.albertSans(
-              //     fontSize: GlobalUtils.screenWidth * (14 / 393),
-              //     color: Color(0xFF6B707E),
-              //   ),
-              //   inputTextStyle: GoogleFonts.albertSans(
-              //     fontSize: GlobalUtils.screenWidth * (14 / 393),
-              //     color: Color(0xFF1B1C1C),
-              //   ),
-              //   prefixIcon: Icon(Icons.phone,
-              //       color: Color(0xFF6B707E), size: 20),
-              // ),
-              // SizedBox(height: 8),
-              //
-              // // Info text
-              // Row(
-              //   children: [
-              //     Icon(Icons.info_outline,
-              //         size: 16, color: Color(0xFF6B707E)),
-              //     SizedBox(width: 6),
-              //     Expanded(
-              //       child: Text(
-              //         'Make sure all details are correct before adding',
-              //         style: GoogleFonts.albertSans(
-              //           fontSize: 12,
-              //           color: Color(0xFF6B707E),
-              //         ),
-              //       ),
-              //     ),
-              //   ],
-              // ),
-            ],
-          ),
+              ],
+            ),
         ),
         SizedBox(height: 24),
 
@@ -989,50 +966,53 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
         GlobalUtils.CustomButton(
           text: "Save",
           onPressed: () async {
-            if (dmtController.selectedBank.value.isEmpty || dmtController.selectedBank.value == "Select Bank") {
+            if (upiWalletController.selectedBank.value.isEmpty || upiWalletController.selectedBank.value == "Select Bank") {
               Fluttertoast.showToast(msg: "Please select bank");
               return;
             }
 
-            if (dmtController.beneAccountController.value.text.trim().isEmpty) {
+            if (upiWalletController.beneAccountController.value.text.trim().isEmpty) {
               Fluttertoast.showToast(msg: "Account number required!");
               return;
             }
-            if (!dmtController.isValidAccountNumber(dmtController.beneAccountController.value.text.trim())) {
-              Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
-              return;
-            }
+            // if (!upiWalletController.isValidAccountNumber(upiWalletController.beneAccountController.value.text.trim())) {
+            //   Fluttertoast.showToast(msg: "Please enter valid Account number! (9-18 digits)");
+            //   return;
+            // }
 
-            if (dmtController.beneIfscController.value.text.trim().isEmpty) {
+            if (upiWalletController.beneIfscController.value.text.trim().isEmpty) {
               Fluttertoast.showToast(msg: "IFSC code required!");
               return;
             }
-            if (!dmtController.isValidIFSC(dmtController.beneIfscController.value.text.trim())) {
-              Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
-              return;
-            }
-            // if (dmtController.beneAccountController.value.text.trim().isEmpty) {
+            // if (!upiWalletController.isValidIFSC(upiWalletController.beneIfscController.value.text.trim())) {
+            //   Fluttertoast.showToast(msg: "Please enter valid IFSC! (e.g. SBIN0001234)");
+            //   return;
+            // }
+
+
+
+            // if (upiWalletController.beneAccountController.value.text.trim().isEmpty) {
             //   Fluttertoast.showToast(msg: "Please enter account number");
             //   return;
             // }
             //
-            // if (dmtController.beneIfscController.value.text.trim().isEmpty) {
+            // if (upiWalletController.beneIfscController.value.text.trim().isEmpty) {
             //   Fluttertoast.showToast(msg: "Please enter IFSC code");
             //   return;
             // }
 
-            if (dmtController.beneNameController.value.text.trim().isEmpty) {
+            if (upiWalletController.beneNameController.value.text.trim().isEmpty) {
               Fluttertoast.showToast(msg: "Please enter beneficiary name");
               return;
             }
 
-            if (!dmtController.isAccountVerified.value) {
+            if (!upiWalletController.isAccountVerified.value) {
               Fluttertoast.showToast(msg: "Please verify account first");
               return;
             }
 
             // Add beneficiary
-            await dmtController.addBeneficiary(context);
+            await upiWalletController.addUPIBeneficiary(context);
           },
           textStyle: GoogleFonts.albertSans(
             fontSize: 16,
@@ -1068,7 +1048,7 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
 
   void showBankSelectionBottomSheet() {
     TextEditingController searchController = TextEditingController();
-    RxList filteredBanks = RxList.from(dmtController.banksList);
+    RxList filteredBanks = RxList.from(upiWalletController.banksList);
 
     showModalBottomSheet(
       context: context,
@@ -1134,9 +1114,9 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
                       ),
                       onChanged: (value) {
                         if (value.isEmpty) {
-                          filteredBanks.value = dmtController.banksList;
+                          filteredBanks.value = upiWalletController.banksList;
                         } else {
-                          filteredBanks.value = dmtController.banksList
+                          filteredBanks.value = upiWalletController.banksList
                               .where((bank) => bank.bankName!
                               .toLowerCase()
                               .contains(value.toLowerCase()))
@@ -1234,18 +1214,18 @@ class _AddBeneficiaryScreenState extends State<AddBeneficiaryScreen> {
                           color: Color(0xFF6B707E),
                         ),
                         onTap: () {
-                          dmtController.selectedBank.value =
+                          upiWalletController.selectedBank.value =
                               bank.bankName ?? "";
-                          dmtController.selectedBankId.value =
+                          upiWalletController.selectedBankId.value =
                               bank.bankId ?? "";
-                          dmtController.selectedIfsc.value =
+                          upiWalletController.selectedIfsc.value =
                               bank.ifsc ?? "";
 
                           ConsoleLog.printColor("Selected Bank: ${bank.bankName}, IFSC: ${bank.ifsc}");
 
                           // Auto-fill IFSC if available
                           if (bank.ifsc != null && bank.ifsc!.isNotEmpty) {
-                            dmtController.beneIfscController.value.text =
+                            upiWalletController.beneIfscController.value.text =
                             bank.ifsc!;
                           }
 

@@ -734,6 +734,7 @@ import 'package:payrupya/view/transfer_money_upi_screen.dart';
 import '../controllers/dmt_wallet_controller.dart';
 import '../models/get_beneficiary_list_response_model.dart';
 import '../utils/global_utils.dart';
+import 'add_beneficiary_upi_screen.dart';
 import 'add_sender_screen.dart';
 import 'add_beneficiary_screen.dart';
 import 'transfer_money_screen.dart';
@@ -837,7 +838,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                         GlobalUtils.CustomButton(
                           text: "Add Beneficiary",
                           onPressed: () {
-                            Get.to(() => AddBeneficiaryScreen());
+                            Get.to(() => AddBeneficiaryUPIScreen());
                           },
                           textStyle: GoogleFonts.albertSans(
                             fontSize: GlobalUtils.screenWidth * (16 / 393),

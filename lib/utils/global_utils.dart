@@ -898,6 +898,7 @@ class GlobalUtils {
     int? maxLines,
     bool autoValidate = false,
     bool shouldValidate = false,
+    InputCounterWidgetBuilder? buildCounter
   }) {
     // State management for password visibility
     final ValueNotifier<bool> obscureTextNotifier = ValueNotifier<bool>(true);
@@ -1030,6 +1031,7 @@ class GlobalUtils {
                       },
                       cursorColor: defaultFocusedBorderColor,
                       keyboardType: getKeyboardType(),
+                      buildCounter: buildCounter,
                       textInputAction: textInputAction,
                       focusNode: focusNode,
                       onEditingComplete: onEditingComplete,

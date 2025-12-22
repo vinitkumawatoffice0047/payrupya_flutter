@@ -53,7 +53,7 @@ class UPIWalletController extends GetxController {
   bool pendingExternalReturnCleanup = false;
 
   // Payment Mode & VPA
-  RxString selectedPaymentMode = 'Paytm'.obs;
+  RxString selectedPaymentMode = 'Phonepay'.obs;
   RxString selectedVPA = ''.obs;
   RxBool verifyButton = false.obs;
 
