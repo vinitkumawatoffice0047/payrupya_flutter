@@ -820,9 +820,6 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
           child: SafeArea(
             child: Column(
               children: [
-                // if (!widget.showBackButton) ...[
-                //   SizedBox(height: GlobalUtils.screenHeight * (12 / 393)),
-                // ],
                 buildCustomAppBar(),
                 Expanded(
                   child: SingleChildScrollView(
@@ -833,35 +830,36 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                         SizedBox(height: 20),
                         buildBeneficiarySection(GlobalUtils.screenWidth),
                         SizedBox(height: 16),
-
-                        // Add Beneficiary Button
-                        GlobalUtils.CustomButton(
-                          text: "Add Beneficiary",
-                          onPressed: () {
-                            Get.to(() => AddBeneficiaryUPIScreen());
-                          },
-                          textStyle: GoogleFonts.albertSans(
-                            fontSize: GlobalUtils.screenWidth * (16 / 393),
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          icon: Icon(Icons.add, color: Colors.white, size: 20),
-                          width: GlobalUtils.screenWidth * 0.9,
-                          height: GlobalUtils.screenWidth * (60 / 393),
-                          backgroundGradient: GlobalUtils.blueBtnGradientColor,
-                          borderColor: Color(0xFF71A9FF),
-                          showShadow: false,
-                          textColor: Colors.white,
-                          animation: ButtonAnimation.fade,
-                          animationDuration: const Duration(milliseconds: 150),
-                          buttonType: ButtonType.elevated,
-                          borderRadius: 16,
-                        ),
-                        SizedBox(height: 16),
                       ],
                     )),
                   ),
                 ),
+                SizedBox(height: 16),
+
+                // Add Beneficiary Button
+                GlobalUtils.CustomButton(
+                  text: "Add Beneficiary",
+                  onPressed: () {
+                    Get.to(() => AddBeneficiaryUPIScreen());
+                  },
+                  textStyle: GoogleFonts.albertSans(
+                    fontSize: GlobalUtils.screenWidth * (16 / 393),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  icon: Icon(Icons.add, color: Colors.white, size: 20),
+                  width: GlobalUtils.screenWidth * 0.9,
+                  height: GlobalUtils.screenWidth * (60 / 393),
+                  backgroundGradient: GlobalUtils.blueBtnGradientColor,
+                  borderColor: Color(0xFF71A9FF),
+                  showShadow: false,
+                  textColor: Colors.white,
+                  animation: ButtonAnimation.fade,
+                  animationDuration: const Duration(milliseconds: 150),
+                  buttonType: ButtonType.elevated,
+                  borderRadius: 16,
+                ),
+                SizedBox(height: 16),
               ],
             ),
           ),
