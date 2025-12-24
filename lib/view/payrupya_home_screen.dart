@@ -33,10 +33,12 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
     {'img': 'assets/icons/dmtkyc.png', 'label': 'DMT KYC'},
     {'img': 'assets/icons/wallet.png', 'label': 'Payrupya\nWallet'},
     {'img': 'assets/icons/upi.png', 'label': 'Payrupya\nUPI'},
+    {'img': 'assets/icons/aeps.png', 'label': 'AEPS One'},
+    {'img': 'assets/icons/aeps.png', 'label': 'AEPS Three'},
     {'img': 'assets/icons/nepal.png', 'label': 'Indo Nepal\nDMT'},
     {'img': 'assets/icons/paybills.png', 'label': 'Pay Bills'},
     {'img': 'assets/icons/offline.png', 'label': 'Offline\nBills'},
-    {'img': 'assets/icons/aeps.png', 'label': 'AEPS'},
+    // {'img': 'assets/icons/aeps.png', 'label': 'AEPS'},
     {'img': 'assets/icons/card.png', 'label': 'Credit Card\nBill'},
     {'img': 'assets/icons/cms.png', 'label': 'CMS'},
   ];
