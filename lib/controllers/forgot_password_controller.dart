@@ -49,7 +49,6 @@ class ForgotPasswordController extends GetxController {
       ConsoleLog.printInfo("Sending OTP for password reset: $dict");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_FORGOT_PASSWORD_SEND_OTP,
         dict,
         "",
@@ -106,7 +105,6 @@ class ForgotPasswordController extends GetxController {
       ConsoleLog.printInfo("Verifying OTP: $dict");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_FORGOT_PASSWORD_VERIFY_OTP,
         dict,
         "",
@@ -174,7 +172,6 @@ class ForgotPasswordController extends GetxController {
       ConsoleLog.printInfo("Changing password: $dict");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_FORGOT_PASSWORD_CHANGE,
         dict,
         "",
@@ -249,7 +246,6 @@ class ForgotPasswordController extends GetxController {
       ConsoleLog.printInfo("Resending OTP: $dict");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_FORGOT_PASSWORD_RESEND_OTP,
         dict,
         "",

@@ -23,6 +23,7 @@ import '../utils/global_utils.dart';
 import '../utils/otp_input_fields.dart';
 import '../utils/transfer_success_dialog.dart';
 import '../view/onboarding_screen.dart';
+import '../view/transaction_confirmation_screen.dart';
 import 'login_controller.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:open_filex/open_filex.dart';
@@ -308,8 +309,8 @@ class DmtWalletController extends GetxController {
         CustomDialog.error(message: "No Internet Connection!");
         return;
       }
-
-      CustomLoading().show(context);
+      
+      CustomLoading.showLoading();
 
       isServiceLoaded.value = false;
 
@@ -321,7 +322,6 @@ class DmtWalletController extends GetxController {
       };
 
       var response = await ApiProvider().requestPostForApi(
-          context,
           WebApiConstant.API_URL_GET_SERVICE_TYPE,
           body,
           userAuthToken.value,
@@ -350,15 +350,15 @@ class DmtWalletController extends GetxController {
           if (dmtService.serviceCode != null && dmtService.serviceCode!.isNotEmpty) {
             serviceCode.value = dmtService.serviceCode!;
             ConsoleLog.printSuccess("✅ Service Code Loaded: ${serviceCode.value}");
-            CustomLoading().hide(context);
+            CustomLoading.hideLoading();
           } else if (apiResponse.data![0].serviceCode != null) {
             // Fallback to first service
             serviceCode.value = apiResponse.data![0].serviceCode!;
             ConsoleLog.printSuccess("✅ Using first service: ${serviceCode.value}");
-            CustomLoading().hide(context);
+            CustomLoading.hideLoading();
           } else {
             ConsoleLog.printWarning("⚠️ Using default service code: DMTRZP");
-            CustomLoading().hide(context);
+            CustomLoading.hideLoading();
           }
 
           isServiceLoaded.value = true;
@@ -370,7 +370,7 @@ class DmtWalletController extends GetxController {
           }
         } else {
           ConsoleLog.printWarning("⚠️ No services found or empty response");
-          CustomLoading().hide(context);
+          CustomLoading.hideLoading();
         }
       } else {
         ConsoleLog.printError("❌ API Error: ${response?.statusCode}");
@@ -430,7 +430,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -444,7 +444,6 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("CHECK SENDER REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_CHECK_SENDER,
         body,
         userAuthToken.value,
@@ -459,7 +458,7 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("CHECK SENDER RESPONSE: ${response?.data}");
 
       if (response.statusCode == 200) {
-        CustomLoading().hide(context);
+        CustomLoading.hideLoading();
         CheckSenderResponseModel checkSenderResponse =
             CheckSenderResponseModel.fromJson(response.data);
 
@@ -513,7 +512,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("CHECK SENDER ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
     }
@@ -554,7 +553,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -575,14 +574,13 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("ADD SENDER REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_ADD_SENDER,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         ConsoleLog.printColor("ADD SENDER RESPONSE: ${response?.data}");
@@ -695,7 +693,7 @@ class DmtWalletController extends GetxController {
         );
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("ADD SENDER ERROR: $e");
       String errorMessage = "Technical issue occurred";
       if (e.toString().contains('not a subtype')) {
@@ -724,14 +722,13 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("GET BENEFICIARY LIST REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_BENEFICIARY_LIST,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         GetBeneficiaryListResponseModel beneListResponse =
@@ -829,7 +826,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -848,14 +845,13 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("GET BENEFICIARY NAME REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_ADD_SENDER,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
@@ -891,7 +887,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("GET BENEFICIARY NAME ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
     }
@@ -913,7 +909,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -932,17 +928,16 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("VERIFY ACCOUNT REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_ADD_SENDER, // ✅ Uses process_remit_action_new
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
-        CustomLoading().hide(context);
+        CustomLoading.hideLoading();
         var data = response.data;
 
         if (data['Resp_code'] == 'RCS') {
@@ -973,7 +968,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("VERIFY ACCOUNT ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
     }
@@ -1004,7 +999,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
       
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -1027,17 +1022,16 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("ADD BENEFICIARY REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_ADD_BENEFICIARY,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
-        CustomLoading().hide(context);
+        CustomLoading.hideLoading();
         AddBeneficiaryResponseModel addBeneResponse =
         AddBeneficiaryResponseModel.fromJson(response.data);
 
@@ -1065,7 +1059,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("ADD BENEFICIARY ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
     }
@@ -1081,7 +1075,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -1095,14 +1089,13 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("DELETE BENE REQUEST OTP: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_DELETE_BENEFICIARY,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
@@ -1121,7 +1114,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("DELETE BENEFICIARY REQUEST OTP ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
     }
@@ -1136,7 +1129,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -1150,14 +1143,13 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("RESEND DELETE BENE OTP: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_DELETE_BENEFICIARY,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
@@ -1175,7 +1167,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("RESEND DELETE BENEFICIARY OTP ERROR: $e");
       Fluttertoast.showToast(
         msg: "Failed to resend OTP",
@@ -1199,7 +1191,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -1214,14 +1206,13 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("DELETE BENE VALIDATE: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_DELETE_BENEFICIARY,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         DeleteBeneficiaryResponseModel deleteResponse =
@@ -1244,7 +1235,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("DELETE BENEFICIARY VALIDATE ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
     }
@@ -1423,7 +1414,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(transferMoneyContext);
+      CustomLoading.showLoading();
 
       // Step 1: CONFIRM - Get charges
       Map<String, dynamic> body = {
@@ -1448,14 +1439,13 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("CONFIRM TRANSFER REQ: ${jsonEncode(body)}");
 
       var response = await ApiProvider().requestPostForApi(
-        transferMoneyContext,
         WebApiConstant.API_URL_ADD_SENDER, // Uses process_remit_action_new
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(transferMoneyContext);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         ConfirmTransferResponseModel confirmResponse = ConfirmTransferResponseModel.fromJson(response.data);
@@ -1488,7 +1478,7 @@ class DmtWalletController extends GetxController {
 
           ConsoleLog.printSuccess("Transfer charges fetched");
 
-          // Get.to(()=>TransactionConfirmationScreen());
+          Get.to(()=>TransactionConfirmationScreen());
           // Show confirmation dialog
           // showTransferConfirmationDialog(transferMoneyContext, beneficiary, chargesData);
 
@@ -1502,7 +1492,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(transferMoneyContext);
+      CustomLoading.hideLoading();
       showConfirmation.value = false;
       ConsoleLog.printError("CONFIRM TRANSFER ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
@@ -1511,14 +1501,14 @@ class DmtWalletController extends GetxController {
   //endregion
 
   //region initiateTransfer
-  Future<void> initiateTransfer(BuildContext context) async {
+  Future<void> initiateTransfer(BuildContext context, String tpin) async {
     try {
       // String tpin = tpinController.value.text.trim();
-      String tpin = txnPinController.value.text.trim();
+      // String tpin = txnPinController.value.text.trim();
 
       if(txnPin.value == "1"){
-        if (tpin.isEmpty) {
-          Fluttertoast.showToast(msg: "Please enter TPIN");
+        if (tpin.isEmpty || tpin.length != 4) {
+          Fluttertoast.showToast(msg: "Please enter 4-digit TPIN");
           return;
         }
 
@@ -1529,7 +1519,7 @@ class DmtWalletController extends GetxController {
       }
 
       BuildContext? dialogContext = context;
-      CustomLoading().show(dialogContext);
+      CustomLoading.showLoading();
 
       // INITIATE TXN
       Map<String, dynamic> body = Map.from(confirmationData.value!['body']);
@@ -1540,7 +1530,6 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("INITIATE TRANSFER REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_ADD_SENDER, // Uses process_remit_action_new
         body,
         userAuthToken.value,
@@ -1550,7 +1539,7 @@ class DmtWalletController extends GetxController {
       // Hide loading safely
       try {
         if (dialogContext.mounted) {
-          CustomLoading().hide(dialogContext);
+          CustomLoading.hideLoading();
         }
       } catch (e) {
         ConsoleLog.printWarning("Context unmounted while hiding loading");
@@ -1560,6 +1549,7 @@ class DmtWalletController extends GetxController {
         // var data = response.data;
         TransferMoneyResponseModel transferResponse =
         TransferMoneyResponseModel.fromJson(response.data);
+        CustomLoading.hideLoading();
         ConsoleLog.printColor("INITIATE TRANSFER RESPONSE: ${response.data}");
         if (transferResponse.respCode == 'RCS' && transferResponse.data != null) {
           ConsoleLog.printSuccess("Transfer successful: ${transferResponse.data!.txnid}");
@@ -1584,14 +1574,7 @@ class DmtWalletController extends GetxController {
                 // Pop Transaction Confirmation Screen
                 Get.back();
                 // Pop Transfer Money Screen
-                Get.back();
-
-                // Show success message
-                Fluttertoast.showToast(
-                  msg: "Transaction successful!",
-                  backgroundColor: Colors.green,
-                  toastLength: Toast.LENGTH_SHORT,
-                );
+                // Get.back();
               },
             ),
             barrierDismissible: false,
@@ -1637,7 +1620,7 @@ class DmtWalletController extends GetxController {
                     onPressed: () {
                       Get.back(); // Close dialog
                       // Go back to Transfer Money screen (close confirmation screen too)
-                      Get.back();
+                      // Get.back();
                     },
                     child: Text(
                       'OK',
@@ -1676,6 +1659,7 @@ class DmtWalletController extends GetxController {
           );
         }
       } else {
+        CustomLoading.hideLoading();
         // No response
         Get.dialog(
           AlertDialog(
@@ -1705,7 +1689,7 @@ class DmtWalletController extends GetxController {
       // Safely hide loading
       try {
         if (context.mounted) {
-          CustomLoading().hide(context);
+          CustomLoading.hideLoading();
         }
       } catch (hideError) {
         ConsoleLog.printWarning("Could not hide loading: $hideError");
@@ -1770,7 +1754,6 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printInfo("Request: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_RECEIPT, // Fetch/TxnReceipt
         body,
         userAuthToken.value,
@@ -1991,7 +1974,6 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("GET RECEIPT FOR WHATSAPP SHARE");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_RECEIPT,
         body,
         userAuthToken.value,
@@ -2194,7 +2176,7 @@ class DmtWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -2210,14 +2192,13 @@ class DmtWalletController extends GetxController {
       ConsoleLog.printColor("SEARCH TXN REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         "${WebApiConstant.BASE_URL}Fetch/search_txn",
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
@@ -2232,7 +2213,7 @@ class DmtWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("SEARCH TRANSACTION ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
     }
@@ -2286,7 +2267,6 @@ class DmtWalletController extends GetxController {
       };
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_ALL_BANKS,
         body,
         userAuthToken.value,
@@ -2558,7 +2538,6 @@ class DmtWalletController extends GetxController {
     };
 
     var response = await ApiProvider().requestPostForApi(
-      context,
       WebApiConstant.API_URL_GET_ALL_BENEFICIARY_DETAILS,
       body,
       userAuthToken.value,

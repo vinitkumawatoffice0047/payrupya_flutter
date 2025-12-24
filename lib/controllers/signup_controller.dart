@@ -125,7 +125,6 @@ class SignupController extends GetxController {
       // ));
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_FORGOT_PASSWORD_SEND_OTP,
         dict,
         "",
@@ -193,7 +192,6 @@ class SignupController extends GetxController {
       ConsoleLog.printInfo("Resending OTP for signup: $dict");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_FORGOT_PASSWORD_SEND_OTP,
         dict,
         "",
@@ -261,7 +259,6 @@ class SignupController extends GetxController {
       isMobileVerified.value = true;
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_FORGOT_PASSWORD_VERIFY_OTP,
         dict,
         "",
@@ -395,7 +392,6 @@ class SignupController extends GetxController {
       ConsoleLog.printInfo("Fetching states with params: $dict");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_STATES,
         dict,
         "",
@@ -450,7 +446,6 @@ class SignupController extends GetxController {
       ConsoleLog.printInfo("Fetching cities with params: $dict");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_CITIES,
         dict,
         "",
@@ -533,7 +528,6 @@ class SignupController extends GetxController {
       ConsoleLog.printInfo("Fetching pincodes with params: $dict");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_PINCODES,
         dict,
         "",

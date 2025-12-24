@@ -828,29 +828,36 @@ class _TransferMoneyUPIScreenState extends State<TransferMoneyUPIScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFF0F4F8),
-      body: SafeArea(
-        child: Column(
-          children: [
-            buildCustomAppBar(),
-            Expanded(
-              child: SingleChildScrollView(
-                physics: BouncingScrollPhysics(),
-                padding: EdgeInsets.all(10),
-                child: Column(
-                  children: [
-                    buildBeneficiaryCard(),
-                    SizedBox(height: 16),
-                    buildTransferForm(),
-                    SizedBox(height: 24),
-                    buildTransferButton(context),
-                    SizedBox(height: 16),
-                  ],
+    return GestureDetector(
+      // for manage multiple text field keyboard and cursor
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      behavior: HitTestBehavior.translucent,
+      child: Scaffold(
+        backgroundColor: Color(0xFFF0F4F8),
+        body: SafeArea(
+          child: Column(
+            children: [
+              buildCustomAppBar(),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: BouncingScrollPhysics(),
+                  padding: EdgeInsets.all(10),
+                  child: Column(
+                    children: [
+                      buildBeneficiaryCard(),
+                      SizedBox(height: 16),
+                      buildTransferForm(),
+                      SizedBox(height: 24),
+                      buildTransferButton(context),
+                      SizedBox(height: 16),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -915,39 +922,7 @@ class _TransferMoneyUPIScreenState extends State<TransferMoneyUPIScreen> {
         children: [
           Row(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Color(0xFFF0F4F8),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: /*widget.beneficiary.logo != null &&
-                    widget.beneficiary.logo!.isNotEmpty
-                    ?*/ ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Icon(
-                    Icons.account_balance,
-                    color: Color(0xFF4A90E2),
-                    size: 28,
-                  ),/*Image.network(
-                    widget.beneficiary.logo!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stack) {
-                      return Icon(
-                        Icons.account_balance,
-                        color: Color(0xFF4A90E2),
-                        size: 28,
-                      );
-                    },
-                  ),*/
-                )
-                    /*: Icon(
-                  Icons.account_balance,
-                  color: Color(0xFF4A90E2),
-                  size: 28,
-                ),*/
-              ),
+              Image.asset("assets/images/avatar.png", width: 50, height: 50,),
               SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -974,7 +949,7 @@ class _TransferMoneyUPIScreenState extends State<TransferMoneyUPIScreen> {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      widget.beneficiary.bankName ?? "Unknown Bank",
+                      widget.beneficiary.vpa ?? "",
                       style: GoogleFonts.albertSans(
                         fontSize: 13,
                         color: Color(0xff6B707E),
@@ -986,60 +961,6 @@ class _TransferMoneyUPIScreenState extends State<TransferMoneyUPIScreen> {
                 ),
               ),
             ],
-          ),
-          SizedBox(height: 16),
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Color(0xFFE2E5EC)),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Account Number',
-                      style: GoogleFonts.albertSans(
-                        fontSize: 12,
-                        color: Color(0xff6B707E),
-                      ),
-                    ),
-                    Text(
-                      widget.beneficiary.accountNumber ?? "N/A",
-                      style: GoogleFonts.albertSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xff1B1C1C),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'IFSC Code',
-                      style: GoogleFonts.albertSans(
-                        fontSize: 12,
-                        color: Color(0xff6B707E),
-                      ),
-                    ),
-                    Text(
-                      widget.beneficiary.ifsc ?? "N/A",
-                      style: GoogleFonts.albertSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xff1B1C1C),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -1071,65 +992,7 @@ class _TransferMoneyUPIScreenState extends State<TransferMoneyUPIScreen> {
               color: Color(0xff1B1C1C),
             ),
           ),
-          SizedBox(height: 20),
-
-          // // Available Balance Info
-          // Obx(() {
-          //   var sender = dmtController.currentSender.value;
-          //   if (sender != null) {
-          //     double availableLimit =
-          //         double.tryParse(sender.availableLimit ?? "0") ?? 0;
-          //     return Container(
-          //       padding: EdgeInsets.all(12),
-          //       decoration: BoxDecoration(
-          //         color: Color(0xFFE3F2FD),
-          //         borderRadius: BorderRadius.circular(12),
-          //       ),
-          //       child: Row(
-          //         children: [
-          //           Icon(Icons.account_balance_wallet,
-          //               color: Color(0xFF1976D2), size: 20),
-          //           SizedBox(width: 8),
-          //           Text(
-          //             'Available Limit: ',
-          //             style: GoogleFonts.albertSans(
-          //               fontSize: 13,
-          //               color: Color(0xFF1565C0),
-          //             ),
-          //           ),
-          //           Text(
-          //             '₹${availableLimit.toStringAsFixed(2)}',
-          //             style: GoogleFonts.albertSans(
-          //               fontSize: 15,
-          //               fontWeight: FontWeight.w600,
-          //               color: Color(0xFF0D47A1),
-          //             ),
-          //           ),
-          //         ],
-          //       ),
-          //     );
-          //   }
-          //   return SizedBox.shrink();
-          // }),
-          // SizedBox(height: 16),
-
-          // Transfer Mode Selection
-          buildLabelText('Transfer Type'),
-          SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                // child: buildTransferModeOption("IMPS", "Instant"),
-                child: buildTransferModeOption("IMPS", ""),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                // child: buildTransferModeOption("NEFT", "Within 2 hrs"),
-                child: buildTransferModeOption("NEFT", ""),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
+          SizedBox(height: 10),
 
           // Amount Field
           buildLabelText('Enter Amount'),
@@ -1349,81 +1212,6 @@ class _TransferMoneyUPIScreenState extends State<TransferMoneyUPIScreen> {
     );
   }
 
-  Widget buildTransferModeOption(String mode, String description) {
-    bool isSelected = selectedTransferMode == mode;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedTransferMode = mode;
-        });
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? Color(0xFFE3F2FD) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? Color(0xFF2196F3) : Color(0xFFE2E5EC),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isSelected
-                          ? Color(0xFF2196F3)
-                          : Color(0xFFBDBDBD),
-                      width: 2,
-                    ),
-                  ),
-                  child: isSelected
-                      ? Center(
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: Color(0xFF2196F3),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  )
-                      : null,
-                ),
-                SizedBox(width: 8),
-                Text(
-                  mode,
-                  style: GoogleFonts.albertSans(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected
-                        ? Color(0xFF1976D2)
-                        : Color(0xFF1B1C1C),
-                  ),
-                ),
-              ],
-            ),
-            // SizedBox(height: 4),
-            // Text(
-            //   description,
-            //   style: GoogleFonts.albertSans(
-            //     fontSize: 11,
-            //     color: Color(0xFF6B707E),
-            //   ),
-            // ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget buildQuickAmountButton(String amount, String confirmAmount) {
     return Expanded(
       child: GestureDetector(
@@ -1508,25 +1296,25 @@ class _TransferMoneyUPIScreenState extends State<TransferMoneyUPIScreen> {
         // ✅ Call API and wait
         print("🔍 Calling confirmTransfer...");
         await upiWalletController.confirmTransfer(context, widget.beneficiary);
-        print("🔍 Back from confirmTransfer");
-
-        // ✅ Check if data is available
-        print("🔍 confirmationData: ${upiWalletController.confirmationData.value}");
-
-        if (upiWalletController.confirmationData.value != null) {
-          print("✅ Data available, navigating...");
-
-          // ✅ Navigate here
-          final result = await Get.to(() => TransactionConfirmationScreen());
-
-          print("✅ Back from confirmation screen");
-
-          // Clean up when back
-          upiWalletController.confirmationData.value = null;
-          upiWalletController.showConfirmation.value = false;
-        } else {
-          print("❌ No confirmation data");
-        }
+        // print("🔍 Back from confirmTransfer");
+        //
+        // // ✅ Check if data is available
+        // print("🔍 confirmationData: ${upiWalletController.confirmationData.value}");
+        //
+        // if (upiWalletController.confirmationData.value != null) {
+        //   print("✅ Data available, navigating...");
+        //
+        //   // ✅ Navigate here
+        //   await Get.to(() => TransactionConfirmationScreen());
+        //
+        //   print("✅ Back from confirmation screen");
+        //
+        //   // Clean up when back
+        //   upiWalletController.confirmationData.value = null;
+        //   upiWalletController.showConfirmation.value = false;
+        // } else {
+        //   print("❌ No confirmation data");
+        // }
       },
       textStyle: GoogleFonts.albertSans(
         fontSize: 16,

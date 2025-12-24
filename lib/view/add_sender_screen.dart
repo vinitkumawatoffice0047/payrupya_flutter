@@ -1102,9 +1102,9 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
   bool showOtpField = false;
   bool isOtpSent = false;
 
-  final DmtWalletController dmtController = Get.put(DmtWalletController());
-  final SignupController signupController = Get.put(SignupController());
-  final LoginController loginController = Get.put(LoginController());
+  late final DmtWalletController dmtController;
+  // final SignupController signupController = Get.put(SignupController());
+  // final LoginController loginController = Get.put(LoginController());
   bool _isInitialized = false;
   bool _isLoading = true;
 
@@ -1114,8 +1114,14 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
   void initState() {
     super.initState();
 
+    if (Get.isRegistered<DmtWalletController>()) {
+      Get.delete<DmtWalletController>(force: true);
+    }
+
+    dmtController = Get.put(DmtWalletController());
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeServices();
+      initializeServices();
     });
 
     // If initial mobile is provided, set it and check sender
@@ -1133,12 +1139,12 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
     // Fetch states for location dropdown
     Future.delayed(Duration(milliseconds: 500), () {
       if (mounted && Get.context != null) {
-        signupController.fetchStates(Get.context!);
+        // signupController.fetchStates(Get.context!);
       }
     });
   }
 
-  Future<void> _initializeServices() async {
+  Future<void> initializeServices() async {
     try {
       setState(() {
         _isLoading = true;
@@ -1149,28 +1155,28 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
       // 1. Load auth credentials first
       await dmtController.loadAuthCredentials();
 
-      // 2. Wait for location
-      int waitCount = 0;
-      while ((loginController.latitude.value == 0.0 ||
-          loginController.longitude.value == 0.0) &&
-          waitCount < 20) {
-        ConsoleLog.printWarning("Waiting for location in screen... ($waitCount/20)");
-        await Future.delayed(Duration(milliseconds: 500));
-        waitCount++;
-      }
-
-      if (loginController.latitude.value == 0.0 ||
-          loginController.longitude.value == 0.0) {
-        ConsoleLog.printError("❌ Location timeout");
-        Fluttertoast.showToast(
-          msg: "Unable to get location. Please enable GPS.",
-          backgroundColor: Colors.red,
-        );
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
+      // // 2. Wait for location
+      // int waitCount = 0;
+      // while ((loginController.latitude.value == 0.0 ||
+      //     loginController.longitude.value == 0.0) &&
+      //     waitCount < 20) {
+      //   ConsoleLog.printWarning("Waiting for location in screen... ($waitCount/20)");
+      //   await Future.delayed(Duration(milliseconds: 500));
+      //   waitCount++;
+      // }
+      //
+      // if (loginController.latitude.value == 0.0 ||
+      //     loginController.longitude.value == 0.0) {
+      //   ConsoleLog.printError("❌ Location timeout");
+      //   Fluttertoast.showToast(
+      //     msg: "Unable to get location. Please enable GPS.",
+      //     backgroundColor: Colors.red,
+      //   );
+      //   setState(() {
+      //     _isLoading = false;
+      //   });
+      //   return;
+      // }
 
       // 3. Check if service code is already loaded
       if (dmtController.serviceCode.value.isEmpty) {
@@ -1470,12 +1476,12 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                 dmtController.senderMobileController.value.clear();
                 otpKey.currentState?.clear();
                 dmtController.senderNameController.value.clear();
-                signupController.selectedState.value = "";
-                dmtController.selectedState.value = "";
-                signupController.selectedCity.value = "";
-                dmtController.selectedCity.value = "";
-                signupController.selectedPincode.value = "";
-                dmtController.selectedPincode.value = "";
+                // signupController.selectedState.value = "";
+                // dmtController.selectedState.value = "";
+                // signupController.selectedCity.value = "";
+                // dmtController.selectedCity.value = "";
+                // signupController.selectedPincode.value = "";
+                // dmtController.selectedPincode.value = "";
                 dmtController.senderAddressController.value.clear();
                 Get.back();
               },
@@ -2330,9 +2336,12 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
   @override
   void dispose() {
     super.dispose();
+    if (Get.isRegistered<DmtWalletController>()) {
+      Get.delete<DmtWalletController>(force: true);
+    }
     dmtController.dispose();
-    signupController.dispose();
-    loginController.dispose();
+    // signupController.dispose();
+    // loginController.dispose();
     otpKey.currentState?.dispose();
   }
 }

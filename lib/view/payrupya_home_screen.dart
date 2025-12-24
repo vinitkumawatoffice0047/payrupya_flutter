@@ -5,16 +5,8 @@ import 'package:payrupya/controllers/dmt_wallet_controller.dart';
 import 'package:payrupya/controllers/payrupya_home_screen_controller.dart';
 import 'package:payrupya/view/add_sender_screen.dart';
 import 'package:payrupya/controllers/login_controller.dart';
-import 'package:payrupya/view/categories_screen.dart';
-import 'package:payrupya/view/otp_verification_screen.dart';
 import 'dart:async';
-
-import 'package:payrupya/view/payrupya_wallet_screen.dart';
-
-import '../models/transfer_money_response_model.dart';
-import '../utils/ConsoleLog.dart';
 import '../utils/custom_loading.dart';
-import '../utils/transfer_success_dialog.dart';
 import 'add_sender_upi_screen.dart';
 
 class PayrupyaHomeScreen extends StatefulWidget {
@@ -29,7 +21,7 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
   String location = "Jaipur, Rajasthan";
   String coordinates = "26.912434, 75.787270";
 
-  final List<String> _promoImages = [
+  final List<String> promoImages = [
     "assets/images/banner.png",
     "assets/images/banner.png", // yahaan alag-alag image paths daal sakte hain
     "assets/images/banner.png",
@@ -71,100 +63,11 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
     // Initialize page controller pehle
     pageController = PageController(
       viewportFraction: 1,
-      initialPage: _promoImages.length * 1000,
+      initialPage: promoImages.length * 1000,
     );
     startAutoScroll();
 
-    // Post frame callback se call - NO IMMEDIATE LOADING
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      initialize();
-    });
-  }
-
-  Future<void> initialize() async {
-    try{
-      // Better way to check location
-      // if(mounted){
-      CustomLoading().show(context);
-      ConsoleLog.printInfo("Loading shown");
-      // }
-      // pageController = PageController(
-      //   viewportFraction: 1,
-      //   initialPage: _promoImages.length * 1000,
-      // );
-      // startAutoScroll();
-
-      await payrupyaHomeScreenController.getLocationAndLoadData();
-      await payrupyaHomeScreenController.loadAuthCredentials();
-
-      ConsoleLog.printInfo("Latitude: ${payrupyaHomeScreenController.latitude.value}");
-      ConsoleLog.printInfo("Longitude: ${payrupyaHomeScreenController.longitude.value}");
-
-      // Better way to check location
-      if (payrupyaHomeScreenController.latitude.value != 0.0 &&
-          payrupyaHomeScreenController.longitude.value != 0.0 &&
-          payrupyaHomeScreenController.userAuthToken.value.isNotEmpty) {
-
-        await payrupyaHomeScreenController.getWalletBalance(context);
-        ConsoleLog.printInfo("Location available, loading services...");
-        await loadServices();
-      } else {
-        ConsoleLog.printWarning("Conditions not met for balance API:");
-        ConsoleLog.printWarning("Lat: ${payrupyaHomeScreenController.latitude.value}");
-        ConsoleLog.printWarning("Lng: ${payrupyaHomeScreenController.longitude.value}");
-        ConsoleLog.printWarning("Token: ${payrupyaHomeScreenController.userAuthToken.value.isNotEmpty}");
-        isServiceLoading = false;
-      }
-    } catch (e) {
-      ConsoleLog.printError("Initialize error: $e");
-    } finally {
-      // ALWAYS hide loading - success ya error dono cases mein
-      if (mounted) {
-        CustomLoading.hideLoading();
-        ConsoleLog.printInfo("Loading hidden");
-      }
-    }
-  }
-
-  Future<void> loadServices() async {
-    try {
-      // Check mounted before setState
-      if (mounted) {
-        setState(() {
-          isServiceLoading = true;
-        });
-      }
-
-      // Wait for service to load
-      // await dmtController.getAllowedServiceByType(context);
-
-      // Check if service code was loaded
-      if (dmtController.serviceCode.value.isNotEmpty) {
-        // Check mounted before setState
-        if (mounted) {
-          setState(() {
-            isServiceLoaded = true;
-            isServiceLoading = false;
-          });
-        }
-        ConsoleLog.printSuccess("Service loaded successfully: ${dmtController.serviceCode.value}");
-      } else {
-        if (mounted) {
-          setState(() {
-            isServiceLoaded = false;
-            isServiceLoading = false;
-          });
-        }
-        ConsoleLog.printWarning("Service code empty after loading");
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          isServiceLoading = false;
-        });
-      }
-      ConsoleLog.printError("Failed to load services: $e");
-    }
+    CustomLoading.showLoading();
   }
 
   void startAutoScroll() {
@@ -182,6 +85,7 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xff80a8ff),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -322,7 +226,7 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
                           borderRadius: BorderRadius.circular(100),
                           onTap: () {
                             refreshController.forward(from: 0);
-                            payrupyaHomeScreenController.getWalletBalance(context);
+                            payrupyaHomeScreenController.getWalletBalance();
                           },
                           child: Container(
                             padding: EdgeInsets.all(10),
@@ -495,9 +399,9 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
         child: PageView.builder(
           controller: pageController,
           itemBuilder: (context, index) {
-            final imageIndex = index % _promoImages.length;
+            final imageIndex = index % promoImages.length;
             return Image.asset(
-              _promoImages[imageIndex],
+              promoImages[imageIndex],
               fit: BoxFit.fill,
               width: double.infinity,
             );

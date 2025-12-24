@@ -2,28 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 import 'package:payrupya/controllers/dmt_wallet_controller.dart';
+import 'package:payrupya/controllers/upi_wallet_controller.dart';
 import 'package:payrupya/utils/ConsoleLog.dart';
-import '../models/get_beneficiary_list_response_model.dart';
 import '../models/get_beneficiary_list_upi_response_model.dart';
 import '../models/transfer_money_response_model.dart';
 
-class TransferSuccessDialog extends StatefulWidget {
+class TransferSuccessDialogUPI extends StatefulWidget {
   final TransferData transferData;
   final VoidCallback onClose;
 
-  const TransferSuccessDialog({
+  const TransferSuccessDialogUPI({
     super.key,
     required this.transferData,
     required this.onClose,
   });
 
   @override
-  State<TransferSuccessDialog> createState() => _TransferSuccessDialogState();
+  State<TransferSuccessDialogUPI> createState() => _TransferSuccessDialogUPIState();
 }
 
-class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
-  DmtWalletController dmtController = Get.put(DmtWalletController());
-  BeneficiaryData beneficiary = BeneficiaryData();
+class _TransferSuccessDialogUPIState extends State<TransferSuccessDialogUPI> {
+  UPIWalletController upiWalletController = Get.put(UPIWalletController());
+  BeneficiaryUPIData beneficiary = BeneficiaryUPIData();
   bool _isDialogActive = true;
   @override
   void dispose() {
@@ -114,7 +114,7 @@ class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
                             SizedBox(height: 12),
 
                             buildDetailRow('Transaction ID', widget.transferData.txnid ?? 'N/A'),
-                            buildDetailRow('Beneficiary', widget.transferData.benename == "" ? beneficiary.name ?? 'N/A' : widget.transferData.benename.toString()),
+                            buildDetailRow('Beneficiary', widget.transferData.benename == "" ? beneficiary.benename ?? 'N/A' : widget.transferData.benename.toString()),
                             buildDetailRow('Amount', '₹${double.parse(widget.transferData.trasamt.toString()) ?? 0.toString()}'),
                             buildDetailRow('Charges', '₹${widget.transferData.totalcharge ?? 0}'),
                             buildDetailRow('Total Amount', '₹${double.parse(widget.transferData.chargedamt.toString())+double.parse(widget.transferData.totalcharge.toString())}'),
@@ -134,7 +134,7 @@ class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
                             child: GestureDetector(
                               onTap: () {
                                 BuildContext? currentContext = Get.context;
-                                dmtController.printReceipt(
+                                upiWalletController.printReceipt(
                                     currentContext!,
                                     // "W251216105122UBFT"
                                     widget.transferData.txnid ?? ''
@@ -189,12 +189,12 @@ class _TransferSuccessDialogState extends State<TransferSuccessDialog> {
                             child: GestureDetector(
                               onTap: () {
                                 BuildContext? currentContext = Get.context;
-                                dmtController.shareToWhatsApp(
+                                upiWalletController.shareToWhatsApp(
                                   currentContext!,
                                   // "W251216105122UBFT",
                                   // "7728869247",
                                   widget.transferData.txnid ?? '',
-                                  dmtController.senderMobileNo.value,
+                                  upiWalletController.senderMobileNo.value,
                                 ).then((_) {
                                   // Optional: Show toast when done
                                   if (_isDialogActive && mounted) {

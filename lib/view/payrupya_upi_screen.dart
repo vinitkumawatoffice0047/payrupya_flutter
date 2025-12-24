@@ -1476,7 +1476,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
                               onTap: () {
                                 Navigator.of(context).pop();
                                 // await dmtController.deleteBeneficiary(context, beneId);
-                                  upiWalletController.deleteBeneficiaryRequestOtp(dialogContext, beneId ?? '');
+                                  upiWalletController.deleteBeneficiaryRequestOtpUPI(dialogContext, beneId ?? '');
                               },
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: 14),

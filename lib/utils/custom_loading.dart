@@ -58,51 +58,51 @@ class CustomLoading{
     _overlayEntry = null;
   }
 
-  Future<bool> show(BuildContext context) async {
-    try {
-      if (!isDialogShoing) {
-        isDialogShoing = true;
-        showDialog(
-            context: context,
-            barrierDismissible: false,
-            // user must tap button for close dialog!
-            builder: (BuildContext context) {
-              contexDialog = context;
-              return WillPopScope(
-                onWillPop: () async => false,
-                child: Dialog(
-                  key: Key(getRandomString(10)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  elevation: 0,
-                  insetPadding: EdgeInsets.all(20),
-                  backgroundColor: Colors.transparent,
-                  child: LoaderTransparent(),
-                ),
-              );
-            });
-        return Future.value(true);
-      }
-    }catch(_){
-      return Future.value(true);
-    }
-    return Future.value(true);
-  }
-  Future<bool> hide(BuildContext context) async{
-    try {
-      if (isDialogShoing) {
-        isDialogShoing = false;
-        Get.back();
-        return Future.value(true);
-      }
-    }catch(_){
-      Get.back();
-      isDialogShoing = false;
-      return Future.value(true);
-    }
-    return Future.value(true);
-  }
+  // Future<bool> show(BuildContext context) async {
+  //   try {
+  //     if (!isDialogShoing) {
+  //       isDialogShoing = true;
+  //       showDialog(
+  //           context: context,
+  //           barrierDismissible: false,
+  //           // user must tap button for close dialog!
+  //           builder: (BuildContext context) {
+  //             contexDialog = context;
+  //             return WillPopScope(
+  //               onWillPop: () async => false,
+  //               child: Dialog(
+  //                 key: Key(getRandomString(10)),
+  //                 shape: RoundedRectangleBorder(
+  //                   borderRadius: BorderRadius.circular(20),
+  //                 ),
+  //                 elevation: 0,
+  //                 insetPadding: EdgeInsets.all(20),
+  //                 backgroundColor: Colors.transparent,
+  //                 child: LoaderTransparent(),
+  //               ),
+  //             );
+  //           });
+  //       return Future.value(true);
+  //     }
+  //   }catch(_){
+  //     return Future.value(true);
+  //   }
+  //   return Future.value(true);
+  // }
+  // Future<bool> hide(BuildContext context) async{
+  //   try {
+  //     if (isDialogShoing) {
+  //       isDialogShoing = false;
+  //       Get.back();
+  //       return Future.value(true);
+  //     }
+  //   }catch(_){
+  //     Get.back();
+  //     isDialogShoing = false;
+  //     return Future.value(true);
+  //   }
+  //   return Future.value(true);
+  // }
 
   String getRandomString(int length) => String.fromCharCodes(Iterable.generate(
       length, (_) => _chars.codeUnitAt(_rnd.nextInt(_chars.length))));

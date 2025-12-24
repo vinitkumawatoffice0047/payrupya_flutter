@@ -35,9 +35,11 @@ class WebApiConstant{
   static const String API_URL_GET_UPI_BENEFICIARY_LIST = "${BASE_URL}Fetch/get_upi_benelist";
   static const String API_URL_ADD_BENEFICIARY = "${BASE_URL}Action/addBeneData";
   static const String API_URL_ADD_UPI_BENEFICIARY = "${BASE_URL}Action/add_upi_bene";
-  static const String API_URL_INIT_UPI_TRANSACT_PROCESS = "${BASE_URL}Action/process_remit_action_new";
+  static const String API_URL_INIT_UPI_TRANSACT_PROCESS = "${BASE_URL}Action/init_upi_transact_process";
   static const String API_URL_DELETE_BENEFICIARY = "${BASE_URL}Action/delete_beneficiary";
+  static const String API_URL_UPI_DELETE_BENEFICIARY = "${BASE_URL}Action/delete_upi_bene";
   static const String API_URL_VERIFY_ACCOUNT = "${BASE_URL}Action/getAccountHolderName";
+  static const String API_URL_UPI_TRANSFER_MONEY = "${BASE_URL}Action/init_upi_transact_process";
   static const String API_URL_TRANSFER_MONEY = "${BASE_URL}Action/process_remit_action";
   static const String API_URL_GET_ALL_BANKS = "${BASE_URL}Fetch/getAllBanksList";
   static const String API_URL_GET_ALL_BENEFICIARY_DETAILS = "${BASE_URL}Fetch/getAllBeneficiaryDetails";

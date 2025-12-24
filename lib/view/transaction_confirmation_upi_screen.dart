@@ -2,22 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:payrupya/controllers/dmt_wallet_controller.dart';
+import 'package:payrupya/controllers/upi_wallet_controller.dart';
 import 'package:payrupya/models/confirm_transfer_response_model.dart';
 import 'package:payrupya/models/get_beneficiary_list_response_model.dart';
 
+import '../models/get_beneficiary_list_upi_response_model.dart';
 import '../utils/global_utils.dart';
 
-class TransactionConfirmationScreen extends StatefulWidget {
-  const TransactionConfirmationScreen({super.key});
+class TransactionConfirmationUPIScreen extends StatefulWidget {
+  const TransactionConfirmationUPIScreen({super.key});
 
   @override
-  State<TransactionConfirmationScreen> createState() => _TransactionConfirmationScreenState();
+  State<TransactionConfirmationUPIScreen> createState() => _TransactionConfirmationUPIScreenState();
 }
 
-class _TransactionConfirmationScreenState extends State<TransactionConfirmationScreen> {
+class _TransactionConfirmationUPIScreenState extends State<TransactionConfirmationUPIScreen> {
   // final TextEditingController txnPinController = TextEditingController();
-  DmtWalletController dmtWalletController = Get.put(DmtWalletController());
-  // BeneficiaryData beneficiary = BeneficiaryData();
+  UPIWalletController upiWalletController = Get.put(UPIWalletController());
+  BeneficiaryUPIData beneficiary = BeneficiaryUPIData();
   // ConfirmTransferData chargesData = ConfirmTransferData();
 
   String senderName = "Unknown";
@@ -27,12 +29,12 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
   @override
   void initState() {
     super.initState();
-    dmtWalletController.txnPinController.value.clear();
+    upiWalletController.txnPinController.value.clear();
   }
 
   @override
   void dispose(){
-    dmtWalletController.txnPinController.value.clear();
+    upiWalletController.txnPinController.value.clear();
     super.dispose();
   }
 
@@ -40,7 +42,7 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
   Widget build(BuildContext context) {
     return Obx((){
       // Get data from controller's confirmationData
-      final confirmData = dmtWalletController.confirmationData.value;
+      final confirmData = upiWalletController.confirmationData.value;
 
       // Check if data exists
       if (confirmData == null) {
@@ -52,7 +54,7 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
       }
 
       // Extract beneficiary and charges data
-      final BeneficiaryData beneficiary = confirmData['beneficiary'] as BeneficiaryData;
+      final BeneficiaryUPIData beneficiary = confirmData['beneficiary'] as BeneficiaryUPIData;
       final ConfirmTransferData charges = confirmData['charges'] as ConfirmTransferData;
 
       return GestureDetector(
@@ -107,9 +109,9 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
                                     SizedBox(height: 10),
                                     Image.asset("assets/images/dashed_line.png"),
                                     SizedBox(height: 10),
-                                    buildConfirmRow('Beneficiary Name', beneficiary.name ?? ''),
-                                    buildConfirmRow('Account Number', beneficiary.accountNo ?? ''),
-                                    buildConfirmRow('Mode', dmtWalletController.selectedTransferMode.value),
+                                    buildConfirmRow('Beneficiary Name', beneficiary.benename ?? ''),
+                                    buildConfirmRow('UPI ID', beneficiary.vpa ?? ''),
+                                    buildConfirmRow('Mode', "UPI"),
                                     buildConfirmRow('Amount', "${double.parse(charges.trasamt ?? 0.toString())}"),
                                     buildConfirmRow('Charges', charges.totalcharge.toString()),
                                     buildConfirmRow('Total Amount', '${double.parse(charges.chargedamt.toString())+double.parse(charges.totalcharge.toString())}'),
@@ -152,7 +154,7 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
                                    GlobalUtils.CustomTextField(
                                     label: "Enter Transaction PIN",
                                     showLabel: false,
-                                    controller: dmtWalletController.txnPinController.value,
+                                    controller: upiWalletController.txnPinController.value,
                                     placeholder: "Enter Transaction PIN",
                                     height: GlobalUtils.screenWidth * (60 / 393),
                                     width: GlobalUtils.screenWidth * 0.9,
@@ -220,7 +222,7 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
                             text: "Process",
                             onPressed: () {
                               Get.back();
-                              dmtWalletController.initiateTransfer(context, dmtWalletController.txnPinController.value.text.trim());
+                              upiWalletController.initiateTransfer(context, beneficiary, upiWalletController.txnPinController.value.text.trim());
                             },
                             textStyle: GoogleFonts.albertSans(
                               fontSize: GlobalUtils.screenWidth * (16 / 393),
@@ -264,8 +266,8 @@ class _TransactionConfirmationScreenState extends State<TransactionConfirmationS
           GestureDetector(
           onTap: () {
               // Clean up confirmation data when going back
-              dmtWalletController.confirmationData.value = null;
-              dmtWalletController.showConfirmation.value = false;
+              upiWalletController.confirmationData.value = null;
+              upiWalletController.showConfirmation.value = false;
               Get.back();
             },
             child: Container(

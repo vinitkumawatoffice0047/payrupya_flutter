@@ -194,7 +194,7 @@ class EditProfileController extends GetxController {
       }
     }
 
-    CustomLoading().show(Get.context!);
+    CustomLoading.showLoading();
     try {
       // Simulate API call delay
       await Future.delayed(Duration(seconds: 2));
@@ -213,7 +213,7 @@ class EditProfileController extends GetxController {
       accountScreenController.email.value = emailController.value.text.trim();
       accountScreenController.profileImagePath.value = profileImageUrl.value;
 
-      CustomLoading().hide(Get.context!);
+      CustomLoading.hideLoading();
       // Show success message
       Get.snackbar(
           'Success',
@@ -238,7 +238,7 @@ class EditProfileController extends GetxController {
           snackPosition: SnackPosition.BOTTOM
       );
     } finally {
-      CustomLoading().hide(Get.context!);
+      CustomLoading.hideLoading();
     }
   }
 

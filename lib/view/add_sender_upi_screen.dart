@@ -1105,8 +1105,8 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
   bool isOtpSent = false;
 
   final UPIWalletController upiWalletController = Get.put(UPIWalletController());
-  final SignupController signupController = Get.put(SignupController());
-  final LoginController loginController = Get.find<LoginController>();
+  // final SignupController signupController = Get.put(SignupController());
+  // final LoginController loginController = Get.find<LoginController>();
   bool isInitialized = false;
   bool isLoading = true;
 
@@ -1132,12 +1132,12 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
       });
     }
 
-    // Fetch states for location dropdown
-    Future.delayed(Duration(milliseconds: 500), () {
-      if (mounted && Get.context != null) {
-        signupController.fetchStates(Get.context!);
-      }
-    });
+    // // Fetch states for location dropdown
+    // Future.delayed(Duration(milliseconds: 500), () {
+    //   if (mounted && Get.context != null) {
+    //     signupController.fetchStates(Get.context!);
+    //   }
+    // });
   }
 
   Future<void> initializeServices() async {
@@ -1151,28 +1151,28 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
       // 1. Load auth credentials first
       await upiWalletController.loadAuthCredentials();
 
-      // 2. Wait for location
-      int waitCount = 0;
-      while ((loginController.latitude.value == 0.0 ||
-          loginController.longitude.value == 0.0) &&
-          waitCount < 20) {
-        ConsoleLog.printWarning("Waiting for location in screen... ($waitCount/20)");
-        await Future.delayed(Duration(milliseconds: 500));
-        waitCount++;
-      }
-
-      if (loginController.latitude.value == 0.0 ||
-          loginController.longitude.value == 0.0) {
-        ConsoleLog.printError("❌ Location timeout");
-        Fluttertoast.showToast(
-          msg: "Unable to get location. Please enable GPS.",
-          backgroundColor: Colors.red,
-        );
-        setState(() {
-          isLoading = false;
-        });
-        return;
-      }
+      // // 2. Wait for location
+      // int waitCount = 0;
+      // while ((loginController.latitude.value == 0.0 ||
+      //     loginController.longitude.value == 0.0) &&
+      //     waitCount < 20) {
+      //   ConsoleLog.printWarning("Waiting for location in screen... ($waitCount/20)");
+      //   await Future.delayed(Duration(milliseconds: 500));
+      //   waitCount++;
+      // }
+      //
+      // if (loginController.latitude.value == 0.0 ||
+      //     loginController.longitude.value == 0.0) {
+      //   ConsoleLog.printError("❌ Location timeout");
+      //   Fluttertoast.showToast(
+      //     msg: "Unable to get location. Please enable GPS.",
+      //     backgroundColor: Colors.red,
+      //   );
+      //   setState(() {
+      //     isLoading = false;
+      //   });
+      //   return;
+      // }
 
       // 3. Check if service code is already loaded
       if (upiWalletController.serviceCode.value.isEmpty) {
@@ -1396,11 +1396,11 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
                 upiWalletController.senderMobileController.value.clear();
                 otpKey.currentState?.clear();
                 upiWalletController.senderNameController.value.clear();
-                signupController.selectedState.value = "";
-                upiWalletController.selectedState.value = "";
-                signupController.selectedCity.value = "";
-                upiWalletController.selectedCity.value = "";
-                signupController.selectedPincode.value = "";
+                // signupController.selectedState.value = "";
+                // upiWalletController.selectedState.value = "";
+                // signupController.selectedCity.value = "";
+                // upiWalletController.selectedCity.value = "";
+                // signupController.selectedPincode.value = "";
                 upiWalletController.selectedPincode.value = "";
                 upiWalletController.senderAddressController.value.clear();
                 Get.back();
@@ -2184,8 +2184,8 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
   void dispose() {
     super.dispose();
     upiWalletController.dispose();
-    signupController.dispose();
-    loginController.dispose();
+    // signupController.dispose();
+    // loginController.dispose();
     otpKey.currentState?.dispose();
   }
 }

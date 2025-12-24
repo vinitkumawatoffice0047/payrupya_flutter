@@ -80,5 +80,8 @@
 
     <key>UIFileSharingEnabled</key>
     <true/>
+
+    <key>NSCameraUsageDescription</key>
+    <string>Camera access for QR scanning</string>
 	</dict>
 </plist>

@@ -17,6 +17,7 @@ import '../models/get_allowed_service_by_type_response_model.dart';
 import '../models/get_beneficiary_list_response_model.dart';
 import '../models/get_beneficiary_list_upi_response_model.dart';
 import '../models/transfer_money_response_model.dart';
+import '../models/verify_upi_vpa_response_model.dart';
 import '../utils/ConsoleLog.dart';
 import '../utils/CustomDialog.dart';
 import '../utils/app_shared_preferences.dart';
@@ -25,7 +26,9 @@ import '../utils/custom_loading.dart';
 import '../utils/global_utils.dart';
 import '../utils/otp_input_fields.dart';
 import '../utils/transfer_success_dialog.dart';
+import '../utils/transfer_success_dialog_upi.dart';
 import '../view/onboarding_screen.dart';
+import '../view/transaction_confirmation_upi_screen.dart';
 import 'login_controller.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:open_filex/open_filex.dart';
@@ -336,7 +339,7 @@ class UPIWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       isServiceLoaded.value = false;
 
@@ -348,7 +351,6 @@ class UPIWalletController extends GetxController {
       };
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_SERVICE_TYPE,
         body,
         userAuthToken.value,
@@ -377,15 +379,15 @@ class UPIWalletController extends GetxController {
           if (dmtService.serviceCode != null && dmtService.serviceCode!.isNotEmpty) {
             serviceCode.value = dmtService.serviceCode!;
             ConsoleLog.printSuccess("✅ Service Code Loaded: ${serviceCode.value}");
-            CustomLoading().hide(context);
+            CustomLoading.hideLoading();
           } else if (apiResponse.data![0].serviceCode != null) {
             // Fallback to first service
             serviceCode.value = apiResponse.data![0].serviceCode!;
             ConsoleLog.printSuccess("✅ Using first service: ${serviceCode.value}");
-            CustomLoading().hide(context);
+            CustomLoading.hideLoading();
           } else {
             ConsoleLog.printWarning("⚠️ Using default service code: DMTRZP");
-            CustomLoading().hide(context);
+            CustomLoading.hideLoading();
           }
 
           isServiceLoaded.value = true;
@@ -397,7 +399,7 @@ class UPIWalletController extends GetxController {
           }
         } else {
           ConsoleLog.printWarning("⚠️ No services found or empty response");
-          CustomLoading().hide(context);
+          CustomLoading.hideLoading();
         }
       } else {
         ConsoleLog.printError("❌ API Error: ${response?.statusCode}");
@@ -457,7 +459,7 @@ class UPIWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -471,7 +473,6 @@ class UPIWalletController extends GetxController {
       ConsoleLog.printColor("CHECK SENDER REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_CHECK_SENDER_UPI,
         body,
         userAuthToken.value,
@@ -486,7 +487,7 @@ class UPIWalletController extends GetxController {
       ConsoleLog.printColor("CHECK SENDER RESPONSE: ${response?.data}");
 
       if (response.statusCode == 200) {
-        CustomLoading().hide(context);
+        CustomLoading.hideLoading();
         CheckSenderUPIResponseModel checkSenderResponse =
         CheckSenderUPIResponseModel.fromJson(response.data);
 
@@ -540,7 +541,7 @@ class UPIWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("CHECK SENDER ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
     }
@@ -581,7 +582,7 @@ class UPIWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -602,14 +603,13 @@ class UPIWalletController extends GetxController {
       ConsoleLog.printColor("ADD SENDER UPI REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_ADD_SENDER_UPI,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         ConsoleLog.printColor("ADD SENDER UPI RESPONSE: ${jsonEncode(response?.data)}");
@@ -722,7 +722,7 @@ class UPIWalletController extends GetxController {
         );
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("ADD SENDER ERROR: $e");
       String errorMessage = "Technical issue occurred";
       if (e.toString().contains('not a subtype')) {
@@ -751,14 +751,13 @@ class UPIWalletController extends GetxController {
       ConsoleLog.printColor("GET BENEFICIARY LIST UPI REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_UPI_BENEFICIARY_LIST,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         GetBeneficiaryListUPIResponseModel beneListResponse =
@@ -786,11 +785,6 @@ class UPIWalletController extends GetxController {
   }
   //endregion
 
-
-  // ============================================
-  // VALIDATION METHODS
-  // ============================================
-
   //region isValidVPA
   /// UPI VPA validation
   /// Format: username@bankname
@@ -806,68 +800,49 @@ class UPIWalletController extends GetxController {
   }
   //endregion
 
-  // ============================================
-  // UPDATED VERIFY UPI VPA METHOD
-  // ============================================
-
-  //region verifyUPIVPA (Updated with Verification Modal)
+  //region verifyUPIVPA
   Future<void> verifyUPIVPA(BuildContext context) async {
     try {
-      String vpa = '';
+      String vpa = beneVPAController.value.text.trim();
       String beneName = beneNameController.value.text.trim();
 
-      // Determine VPA based on mode
-      if (selectedPaymentMode.value == 'Others') {
-        vpa = beneVPAController.value.text.trim();
-
-        if (vpa.isEmpty) {
-          Fluttertoast.showToast(msg: "Please fill the UPI ID");
-          return;
-        }
-      } else {
-        String mobile = upiMobileController.value.text.trim();
-
-        if (mobile.isEmpty || mobile.length != 10) {
-          Fluttertoast.showToast(msg: "Please fill the UPI ID");
-          return;
-        }
-
-        // Auto-select first VPA if not selected
-        if (selectedVPA.value.isEmpty) {
-          List<String> vpaList = getVPAListForMode(selectedPaymentMode.value);
-          if (vpaList.isNotEmpty) {
-            vpa = '$mobile@${vpaList[0]}';
-            selectedVPA.value = vpa;
-            beneVPAController.value.text = vpa;
-          }
-        } else {
-          vpa = selectedVPA.value;
-        }
-      }
-
-      if (!isValidVPA(vpa)) {
-        Fluttertoast.showToast(msg: "Please enter valid VPA!");
+      // Validate VPA is not empty
+      if (vpa.isEmpty) {
+        Fluttertoast.showToast(msg: "Please enter UPI ID");
         return;
       }
 
+      // Validate VPA format
+      if (!isValidVPA(vpa)) {
+        Fluttertoast.showToast(msg: "Please enter valid UPI ID format (e.g., 9876543210@ybl)");
+        return;
+      }
+
+      // Validate beneficiary name
+      if (beneName.isEmpty) {
+        Fluttertoast.showToast(msg: "Please enter beneficiary name");
+        return;
+      }
+
+      // Check sender details
       if (senderId.value.isEmpty || senderMobileNo.value.isEmpty) {
         Fluttertoast.showToast(msg: "Sender details not found");
         return;
       }
 
-      // Show warning alert if TPIN is required
-      if (txnPin.value == "1") {
-        bool? confirmed = await _showVerificationAlert(context);
-        if (confirmed != true) return;
-      }
+      // // Show warning alert if TPIN is required
+      // if (txnPin.value == "1") {
+      //   bool? confirmed = await _showVerificationAlert(context);
+      //   if (confirmed != true) return;
+      // }
 
       verifyButton.value = true;
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
-        "lat": loginController.latitude.value.toString(),
-        "long": loginController.longitude.value.toString(),
+        "lat": loginController.latitude.value,
+        "long": loginController.longitude.value,
         "sender": senderMobileNo.value,
         "sendername": senderName.value,
         "reqfor": "UPIVALIDATE",
@@ -877,40 +852,60 @@ class UPIWalletController extends GetxController {
         "vpa_mobile": vpa,
         "mode": selectedPaymentMode.value,
         "benename": beneName.isNotEmpty ? beneName : "",
-        "txnpin": "1234", // Dummy TPIN for verification
+        // "txnpin": "1234", // Dummy TPIN for verification
       };
 
-      ConsoleLog.printColor("VERIFY UPI VPA REQ: $body");
+      ConsoleLog.printColor("VERIFY UPI VPA REQ: ${jsonEncode(body)}");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_INIT_UPI_TRANSACT_PROCESS,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
-        var data = response.data;
+        VerifyUPIVPAResponseModel responseModel =
+        VerifyUPIVPAResponseModel.fromJson(response.data);
 
-        ConsoleLog.printColor("VERIFY UPI VPA RESPONSE: $data");
+        ConsoleLog.printColor("VERIFY UPI VPA RESPONSE: ${jsonEncode(responseModel)}");
 
-        if (data['Resp_code'] == 'RCS') {
-          // Show verification modal with charges
-          await _showVerificationChargesModal(context, data['data'], vpa, beneName);
+        if (responseModel.isSuccess) {
+          // SUCCESS: Show verification charges modal
+          if (responseModel.data != null) {
+            ConsoleLog.printColor("Charges Summary: ${responseModel.data!.chargesSummary}");
+              // await _initiateVPAVerification(context, vpa, beneName);
+            await showVerificationChargesModal(
+                context,
+                responseModel.data!.toJson(),
+                vpa,
+                beneName
+            );
+          } else {
+            verifyButton.value = false;
+            CustomDialog.error(message: "Invalid response data");
+          }
+        } else if (responseModel.isError) {
+          // ERROR: Show error message
+          verifyButton.value = false;
+          CustomDialog.error(message: responseModel.respDesc);
         } else {
+          // ✅ Unknown response code
           verifyButton.value = false;
           CustomDialog.error(
-            message: data['Resp_desc'] ?? "VPA verification failed",
+              message: responseModel.respDesc.isNotEmpty
+                  ? responseModel.respDesc
+                  : "VPA verification failed"
           );
         }
       } else {
         verifyButton.value = false;
+        CustomDialog.error(message: "Verification failed. Please try again.");
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       verifyButton.value = false;
       ConsoleLog.printError("VERIFY VPA ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
@@ -918,65 +913,8 @@ class UPIWalletController extends GetxController {
   }
   //endregion
 
-  //region _showVerificationAlert
-  Future<bool?> _showVerificationAlert(BuildContext context) async {
-    return await Get.dialog<bool>(
-      AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
-            SizedBox(width: 12),
-            Text(
-              'Alert',
-              style: GoogleFonts.albertSans(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'For bene verification ₹ 1 will be debited from your balance',
-          style: GoogleFonts.albertSans(
-            fontSize: 14,
-            color: Colors.black87,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.albertSans(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[600],
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Get.back(result: true),
-            child: Text(
-              'Submit',
-              style: GoogleFonts.albertSans(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF0054D3),
-              ),
-            ),
-          ),
-        ],
-      ),
-      barrierDismissible: false,
-    );
-  }
-  //endregion
-
-  //region _showVerificationChargesModal
-  Future<void> _showVerificationChargesModal(
+  //region showVerificationChargesModal
+  Future<void> showVerificationChargesModal(
       BuildContext context,
       Map<String, dynamic> chargesData,
       String vpa,
@@ -1035,14 +973,9 @@ class UPIWalletController extends GetxController {
                   ),
                   child: Column(
                     children: [
-                      _buildChargeRow('Amount', '₹$trasamt'),
-                      Divider(height: 24),
-                      _buildChargeRow('Commission', '₹$commission'),
-                      _buildChargeRow('TDS', '₹$tds'),
-                      _buildChargeRow('Total CCF', '₹$totalCcf'),
-                      _buildChargeRow('Total Charge', '₹$totalCharge'),
-                      Divider(height: 24, thickness: 2),
-                      _buildChargeRow('Total Amount', '₹$chargedAmt', isTotal: true),
+                      buildChargeRow('Total Charge', '₹$chargedAmt'),
+                      buildChargeRow('Tras Amount', '₹$trasamt'),
+                      buildChargeRow('Charged Amount', '₹$totalCharge'),
                     ],
                   ),
                 ),
@@ -1103,20 +1036,20 @@ class UPIWalletController extends GetxController {
                     ),
                     SizedBox(width: 12),
                     Expanded(
-                      child: ElevatedButton(
+                      child: GlobalUtils.CustomButton(
                         onPressed: () async {
                           Get.back();
-                          await _initiateVPAVerification(context, vpa, beneName);
+                          await initiateVPAVerification(context, vpa, beneName, txnPinController.value.text.trim());
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFF0054D3),
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
+                        backgroundGradient: GlobalUtils.blueBtnGradientColor,
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        borderRadius: 12,
+                        borderColor: Color(0xFF71A9FF),
+                        showShadow: false,
+                        elevation: 0,
+                        textColor: Colors.white,
+                        animation: ButtonAnimation.fade,
+                        animationDuration: const Duration(milliseconds: 150),
                         child: Text(
                           'Confirm',
                           style: GoogleFonts.albertSans(
@@ -1138,8 +1071,8 @@ class UPIWalletController extends GetxController {
   }
   //endregion
 
-  //region _buildChargeRow
-  Widget _buildChargeRow(String label, String value, {bool isTotal = false}) {
+  //region buildChargeRow
+  Widget buildChargeRow(String label, String value, {bool isTotal = false}) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -1167,14 +1100,15 @@ class UPIWalletController extends GetxController {
   }
   //endregion
 
-  //region _initiateVPAVerification (TRANSACT Request)
-  Future<void> _initiateVPAVerification(
+  //region initiateVPAVerification (TRANSACT Request)
+  Future<void> initiateVPAVerification(
       BuildContext context,
       String vpa,
       String beneName,
+      String tpin
       ) async {
     try {
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -1189,20 +1123,19 @@ class UPIWalletController extends GetxController {
         "vpa_mobile": vpa,
         "mode": selectedPaymentMode.value,
         "benename": beneName.isNotEmpty ? beneName : "",
-        "txnpin": "1234",
+        "txnpin": tpin,
       };
 
       ConsoleLog.printColor("INITIATE VPA VERIFICATION REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_INIT_UPI_TRANSACT_PROCESS,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
@@ -1244,7 +1177,7 @@ class UPIWalletController extends GetxController {
         verifyButton.value = false;
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       verifyButton.value = false;
       ConsoleLog.printError("INITIATE VPA VERIFICATION ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
@@ -1252,11 +1185,7 @@ class UPIWalletController extends GetxController {
   }
   //endregion
 
-  // ============================================
-  // UPDATED ADD UPI BENEFICIARY METHOD
-  // ============================================
-
-  //region addUPIBeneficiary (Updated)
+  //region addUPIBeneficiary
   Future<void> addUPIBeneficiary(BuildContext context) async {
     try {
       String beneName = beneNameController.value.text.trim();
@@ -1284,7 +1213,7 @@ class UPIWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -1306,14 +1235,13 @@ class UPIWalletController extends GetxController {
       ConsoleLog.printColor("ADD UPI BENEFICIARY REQ: $body", color: "yellow");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_ADD_UPI_BENEFICIARY,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         ConsoleLog.printColor("ADD UPI BENEFICIARY RESP: ${jsonEncode(response.data)}", color: "green");
@@ -1332,7 +1260,7 @@ class UPIWalletController extends GetxController {
           await getBeneficiaryList(context, senderMobileNo.value);
 
           // Reset form
-          _resetAddBeneficiaryForm();
+          resetAddBeneficiaryForm();
 
           // Close screen
           Get.back();
@@ -1354,15 +1282,15 @@ class UPIWalletController extends GetxController {
         CustomDialog.error(message: "No response from server");
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("❌ ADD UPI BENEFICIARY ERROR: $e");
       CustomDialog.error(message: "Technical issue occurred!");
     }
   }
   //endregion
 
-  //region _resetAddBeneficiaryForm
-  void _resetAddBeneficiaryForm() {
+  //region resetAddBeneficiaryForm
+  void resetAddBeneficiaryForm() {
     beneNameController.value.clear();
     beneVPAController.value.clear();
     beneIfscController.value.clear();
@@ -1374,6 +1302,317 @@ class UPIWalletController extends GetxController {
   }
 //endregion
 
+  // Step 1: Request OTP for deletion
+  //region deleteUPIBeneficiaryRequestOtp
+  Future<void> deleteBeneficiaryRequestOtpUPI(BuildContext context, String beneId) async {
+    try {
+      if (senderMobileNo.isEmpty) {
+        Fluttertoast.showToast(msg: "Sender details not found");
+        return;
+      }
+
+      CustomLoading.showLoading();
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+        "sender": senderMobileNo.value,
+        "beneid": beneId,
+        "request_type": "VERIFY",
+      };
+
+      ConsoleLog.printColor("DELETE UPI BENE REQUEST OTP: $body");
+
+      var response = await ApiProvider().requestPostForApi(
+        WebApiConstant.API_URL_UPI_DELETE_BENEFICIARY,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      CustomLoading.hideLoading();
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+
+        if (data['Resp_code'] == 'VRF') {
+          // OTP sent successfully
+          ConsoleLog.printSuccess("OTP sent for beneficiary deletion");
+
+          // Show OTP dialog
+          showDeleteOtpDialogUPI(context, beneId);
+
+        } else {
+          CustomDialog.error(
+            message: data['Resp_desc'] ?? "Failed to send OTP",
+          );
+        }
+      }
+    } catch (e) {
+      CustomLoading.hideLoading();
+      ConsoleLog.printError("DELETE UPI BENEFICIARY REQUEST OTP ERROR: $e");
+      CustomDialog.error(message: "Technical issue!");
+    }
+  }
+  //endregion
+
+  //region resendDeleteBeneficiaryOtpUPI
+  Future<void> resendDeleteBeneficiaryOtpUPI(BuildContext context, String beneId) async {
+    try {
+      if (senderMobileNo.isEmpty) {
+        Fluttertoast.showToast(msg: "Sender details not found");
+        return;
+      }
+
+      CustomLoading.showLoading();
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+        "sender": senderMobileNo.value,
+        "beneid": beneId,
+        "request_type": "VERIFY",
+      };
+
+      ConsoleLog.printColor("RESEND UPI DELETE BENE OTP: $body");
+
+      var response = await ApiProvider().requestPostForApi(
+        WebApiConstant.API_URL_UPI_DELETE_BENEFICIARY,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      CustomLoading.hideLoading();
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+
+        if (data['Resp_code'] == 'VRF') {
+          ConsoleLog.printSuccess("OTP resent for beneficiary deletion");
+          Fluttertoast.showToast(msg: "OTP sent successfully");
+          // NO dialog opening here!
+
+        } else {
+          Fluttertoast.showToast(
+            msg: data['Resp_desc'] ?? "Failed to send OTP",
+            backgroundColor: Colors.red,
+          );
+        }
+      }
+    } catch (e) {
+      CustomLoading.hideLoading();
+      ConsoleLog.printError("RESEND UPI DELETE BENEFICIARY OTP ERROR: $e");
+      Fluttertoast.showToast(
+        msg: "Failed to resend OTP",
+        backgroundColor: Colors.red,
+      );
+    }
+  }
+  //endregion
+
+  // Step 2: Validate OTP and delete beneficiary
+  //region deleteBeneficiaryValidate
+  Future<void> deleteBeneficiaryValidateUPI(BuildContext context, String beneId, String otp) async {
+    try {
+      if (otp.isEmpty) {
+        Fluttertoast.showToast(msg: "Please enter OTP");
+        return;
+      }
+
+      if (senderMobileNo.isEmpty) {
+        Fluttertoast.showToast(msg: "Sender details not found");
+        return;
+      }
+
+      CustomLoading.showLoading();
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+        "sender": senderMobileNo.value,
+        "beneid": beneId,
+        "otp": otp,
+        "request_type": "VALIDATE",
+      };
+
+      ConsoleLog.printColor("DELETE UPI BENE VALIDATE: $body");
+
+      var response = await ApiProvider().requestPostForApi(
+        WebApiConstant.API_URL_UPI_DELETE_BENEFICIARY,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      CustomLoading.hideLoading();
+
+      if (response != null && response.statusCode == 200) {
+        DeleteBeneficiaryResponseModel deleteResponse =
+        DeleteBeneficiaryResponseModel.fromJson(response.data);
+
+        if (deleteResponse.respCode == "RCS") {
+          ConsoleLog.printSuccess("Beneficiary deleted successfully");
+          Fluttertoast.showToast(msg: "Beneficiary deleted successfully");
+
+          // Remove from list
+          beneficiaryList.removeWhere((bene) => bene.upiBeneId == beneId);
+          filteredBeneficiaryList.removeWhere((bene) => bene.upiBeneId == beneId);
+
+          Get.back(); // Close OTP dialog
+
+        } else {
+          CustomDialog.error(
+            message: deleteResponse.respDesc ?? "Failed to delete beneficiary",
+          );
+        }
+      }
+    } catch (e) {
+      CustomLoading.hideLoading();
+      ConsoleLog.printError("DELETE UPI BENEFICIARY VALIDATE ERROR: $e");
+      CustomDialog.error(message: "Technical issue!");
+    }
+  }
+  //endregion
+
+  //region showDeleteOtpDialog
+  void showDeleteOtpDialogUPI(BuildContext context, String beneId) {
+    deleteOtpController.value.clear();
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          return Material(
+            type: MaterialType.transparency,
+            child: Container(
+              color: Colors.black54,
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Container(
+                    margin: EdgeInsets.symmetric(horizontal: 10),
+                    padding: EdgeInsets.symmetric(horizontal: 17, vertical: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Enter Verification Code',
+                              style: GoogleFonts.albertSans(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xff0F0F0F),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                Get.back();
+                                // setState(() => showOtpDialog = false);
+                              },
+                              child: Icon(Icons.close, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+                        RichText(
+                          text: TextSpan(
+                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                            children: [
+                              TextSpan(text: 'We sent a verification code to '),
+                              TextSpan(
+                                text: '+91 ${senderMobileController.value.text}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 24),
+
+                        // OTP Input Fields
+                        OtpInputFields(
+                          key: deleteOtpKey,
+                          length: 6,
+                          onChanged: (otp) {
+                            deleteOtpController.value.text = otp;
+                          },
+                        ),
+
+                        SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Didn\'t receive the code? ',
+                              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                            ),
+                            GestureDetector(
+                              onTap: () async {
+                                await resendDeleteBeneficiaryOtpUPI(context, beneId);
+                                deleteOtpKey.currentState?.clear();
+                                deleteOtpKey.currentState?.focusFirst();
+                                Fluttertoast.showToast(msg: "OTP sent successfully");
+                              },
+                              child: Text(
+                                'Click to resend',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF2E5BFF),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 24),
+
+                        // Verify Button
+                        GlobalUtils.CustomButton(
+                          text: "VERIFY",
+                          onPressed: () async {
+                            String otp = deleteOtpController.value.text.trim();
+                            if (otp.isEmpty || otp.length != 6) {
+                              Fluttertoast.showToast(msg: "Please enter 6-digit OTP");
+                              return;
+                            }
+                            deleteBeneficiaryValidateUPI(context, beneId, otp);
+                          },
+                          textStyle: GoogleFonts.albertSans(
+                            fontSize: 16,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          width: GlobalUtils.screenWidth * 0.9,
+                          height: GlobalUtils.screenWidth * (60 / 393),
+                          backgroundGradient: GlobalUtils.blueBtnGradientColor,
+                          borderColor: Color(0xFF71A9FF),
+                          showShadow: false,
+                          textColor: Colors.white,
+                          animation: ButtonAnimation.fade,
+                          animationDuration: const Duration(milliseconds: 150),
+                          buttonType: ButtonType.elevated,
+                          borderRadius: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );}
+    );
+  }
+  //endregion
 
 
 
@@ -1404,7 +1643,7 @@ class UPIWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -1427,17 +1666,16 @@ class UPIWalletController extends GetxController {
       ConsoleLog.printColor("ADD BENEFICIARY REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_ADD_BENEFICIARY,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
-        CustomLoading().hide(context);
+        CustomLoading.hideLoading();
         AddBeneficiaryResponseModel addBeneResponse =
         AddBeneficiaryResponseModel.fromJson(response.data);
 
@@ -1465,7 +1703,7 @@ class UPIWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("ADD BENEFICIARY ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
     }
@@ -1481,7 +1719,7 @@ class UPIWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -1495,14 +1733,13 @@ class UPIWalletController extends GetxController {
       ConsoleLog.printColor("DELETE BENE REQUEST OTP: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_DELETE_BENEFICIARY,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
@@ -1521,7 +1758,7 @@ class UPIWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("DELETE BENEFICIARY REQUEST OTP ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
     }
@@ -1536,7 +1773,7 @@ class UPIWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -1550,14 +1787,13 @@ class UPIWalletController extends GetxController {
       ConsoleLog.printColor("RESEND DELETE BENE OTP: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_DELETE_BENEFICIARY,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
@@ -1575,7 +1811,7 @@ class UPIWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("RESEND DELETE BENEFICIARY OTP ERROR: $e");
       Fluttertoast.showToast(
         msg: "Failed to resend OTP",
@@ -1587,7 +1823,7 @@ class UPIWalletController extends GetxController {
 
   // Step 2: Validate OTP and delete beneficiary
   //region deleteBeneficiaryValidate
-  Future<void> deleteBeneficiaryValidateUPI(BuildContext context, String beneId, String otp) async {
+  Future<void> deleteBeneficiaryValidate(BuildContext context, String beneId, String otp) async {
     try {
       if (otp.isEmpty) {
         Fluttertoast.showToast(msg: "Please enter OTP");
@@ -1599,7 +1835,7 @@ class UPIWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -1614,14 +1850,13 @@ class UPIWalletController extends GetxController {
       ConsoleLog.printColor("DELETE BENE VALIDATE: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_DELETE_BENEFICIARY,
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         DeleteBeneficiaryResponseModel deleteResponse =
@@ -1644,7 +1879,7 @@ class UPIWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("DELETE BENEFICIARY VALIDATE ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
     }
@@ -1823,39 +2058,33 @@ class UPIWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(transferMoneyContext);
+      CustomLoading.showLoading();
 
       // Step 1: CONFIRM - Get charges
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
         "lat": loginController.latitude.value.toString(),
         "long": loginController.longitude.value.toString(),
-        "senderid": senderId.value,
-        "sender": /*currentSender.value!.mobile*/senderMobileNo.value,
-        "service": serviceCode.value,
-        "request_type": "CONFIRM",
-        "amount": amount,
-        "cnfamount": confirmAmount,
-        "mode": mode, // (IMPS/NEFT)
+        "sender": senderMobileNo.value,
         "sendername": senderName.value,
-        "beneid": beneficiary.upiBeneId,
+        "vpa_mobile": beneficiary.vpa,
         "benename": beneficiary.benename,
-        "account": beneficiary.accountNumber,
-        "banksel": beneficiary.bankName,
-        "bankifsc": beneficiary.ifsc,
+        "mode": "UPI",
+        "amount": amount,
+        "request_type": "CONFIRM",
+        "reqfor": "UPITRANSFER",
       };
 
-      ConsoleLog.printColor("CONFIRM TRANSFER REQ: ${jsonEncode(body)}");
+      ConsoleLog.printColor("CONFIRM UPI TRANSFER REQ: ${jsonEncode(body)}");
 
       var response = await ApiProvider().requestPostForApi(
-        transferMoneyContext,
-        WebApiConstant.API_URL_ADD_SENDER, // Uses process_remit_action_new
+        WebApiConstant.API_URL_UPI_TRANSFER_MONEY, // Uses process_remit_action_new
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(transferMoneyContext);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         ConfirmTransferResponseModel confirmResponse = ConfirmTransferResponseModel.fromJson(response.data);
@@ -1865,12 +2094,12 @@ class UPIWalletController extends GetxController {
 
           // Log parsed data
           ConsoleLog.printSuccess("Transfer details fetched:");
-          ConsoleLog.printInfo("Beneficiary Name: ${senderName.value}");
-          ConsoleLog.printInfo("Account Number: ${beneficiary.accountNumber!}");
-          ConsoleLog.printInfo("Mode: $mode");
-          ConsoleLog.printInfo("Amount: ${chargesData.trasamt!}");
-          ConsoleLog.printInfo("Charged Amount: ${chargesData.chargedamt!.toString()}");
-          ConsoleLog.printInfo("Total Charge: ${chargesData.totalcharge!.toString()}");
+          ConsoleLog.printInfo("Beneficiary Name: ${beneficiary.benename}");
+          ConsoleLog.printInfo("UPI ID: ${beneficiary.vpa}");
+          // ConsoleLog.printInfo("Mode: $mode");
+          // ConsoleLog.printInfo("Amount: ${chargesData.trasamt!}");
+          // ConsoleLog.printInfo("Charged Amount: ${chargesData.chargedamt!.toString()}");
+          // ConsoleLog.printInfo("Total Charge: ${chargesData.totalcharge!.toString()}");
           ConsoleLog.printInfo("TPIN Status: ${chargesData.txnPinStatus}");
           ConsoleLog.printInfo("TPIN: ${txnPin.value}");
           // Store confirmation data
@@ -1888,7 +2117,7 @@ class UPIWalletController extends GetxController {
 
           ConsoleLog.printSuccess("Transfer charges fetched");
 
-          // Get.to(()=>TransactionConfirmationScreen());
+          Get.to(()=>TransactionConfirmationUPIScreen());
           // Show confirmation dialog
           // showTransferConfirmationDialog(transferMoneyContext, beneficiary, chargesData);
 
@@ -1902,7 +2131,7 @@ class UPIWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(transferMoneyContext);
+      CustomLoading.hideLoading();
       showConfirmation.value = false;
       ConsoleLog.printError("CONFIRM TRANSFER ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
@@ -1911,10 +2140,11 @@ class UPIWalletController extends GetxController {
   //endregion
 
   //region initiateTransfer
-  Future<void> initiateTransfer(BuildContext context) async {
+  Future<void> initiateTransfer(BuildContext context, BeneficiaryUPIData beneficiary, String tpin) async {
     try {
       // String tpin = tpinController.value.text.trim();
-      String tpin = txnPinController.value.text.trim();
+      // String tpin = txnPinController.value.text.trim();
+      String amount = transferAmountController.value.text.trim();
 
       if(txnPin.value == "1"){
         if (tpin.isEmpty) {
@@ -1929,19 +2159,29 @@ class UPIWalletController extends GetxController {
       }
 
       BuildContext? dialogContext = context;
-      CustomLoading().show(dialogContext);
+      CustomLoading.showLoading();
 
       // INITIATE TXN
       Map<String, dynamic> body = Map.from(confirmationData.value!['body']);
       body['request_id'] = generateRequestId();
-      body['request_type'] = 'INITIATE TXN';
-      body['txnpin'] = tpin;
+      body['lat'] = loginController.latitude.value.toString();
+      body['long'] = loginController.longitude.value.toString();
+      body['sender'] = senderMobileNo.value;
+      body['sendername'] = senderName.value;
+      body['vpa_mobile'] = beneficiary.vpa;
+      body['benename'] = beneficiary.benename;
+      body['mode'] = "UPI";
+      body['amount'] = amount;
+      body['request_type'] = 'TRANSACT';
+      body['reqfor'] = 'UPITRANSFER';
+      if(txnPin.value == "1"){
+        body['txnpin'] = tpin;
+      }
 
       ConsoleLog.printColor("INITIATE TRANSFER REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
-        WebApiConstant.API_URL_ADD_SENDER, // Uses process_remit_action_new
+        WebApiConstant.API_URL_UPI_TRANSFER_MONEY, // Uses process_remit_action_new
         body,
         userAuthToken.value,
         userSignature.value,
@@ -1950,7 +2190,7 @@ class UPIWalletController extends GetxController {
       // Hide loading safely
       try {
         if (dialogContext.mounted) {
-          CustomLoading().hide(dialogContext);
+          CustomLoading.hideLoading();
         }
       } catch (e) {
         ConsoleLog.printWarning("Context unmounted while hiding loading");
@@ -1960,9 +2200,10 @@ class UPIWalletController extends GetxController {
         // var data = response.data;
         TransferMoneyResponseModel transferResponse =
         TransferMoneyResponseModel.fromJson(response.data);
-        ConsoleLog.printColor("INITIATE TRANSFER RESPONSE: ${response.data}");
+        ConsoleLog.printColor("INITIATE UPI TRANSFER RESPONSE: ${response.data}");
+        CustomLoading.hideLoading();
         if (transferResponse.respCode == 'RCS' && transferResponse.data != null) {
-          ConsoleLog.printSuccess("Transfer successful: ${transferResponse.data!.txnid}");
+          ConsoleLog.printSuccess("UPI Payment Transfer successful: ${transferResponse.data!.txnid}");
 
           // Clear form
           transferAmountController.value.clear();
@@ -1973,7 +2214,7 @@ class UPIWalletController extends GetxController {
 
           // Success dialog (no context issues)
           Get.dialog(
-            TransferSuccessDialog(
+            TransferSuccessDialogUPI(
               transferData: transferResponse.data!,
               onClose: () async {
                 Get.back(); // Close dialog
@@ -1984,7 +2225,7 @@ class UPIWalletController extends GetxController {
                 // Pop Transaction Confirmation Screen
                 Get.back();
                 // Pop Transfer Money Screen
-                Get.back();
+                // Get.back();
 
                 // Show success message
                 Fluttertoast.showToast(
@@ -2037,7 +2278,7 @@ class UPIWalletController extends GetxController {
                     onPressed: () {
                       Get.back(); // Close dialog
                       // Go back to Transfer Money screen (close confirmation screen too)
-                      Get.back();
+                      // Get.back();
                     },
                     child: Text(
                       'OK',
@@ -2105,7 +2346,7 @@ class UPIWalletController extends GetxController {
       // Safely hide loading
       try {
         if (context.mounted) {
-          CustomLoading().hide(context);
+          CustomLoading.hideLoading();
         }
       } catch (hideError) {
         ConsoleLog.printWarning("Could not hide loading: $hideError");
@@ -2170,7 +2411,6 @@ class UPIWalletController extends GetxController {
       ConsoleLog.printInfo("Request: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_RECEIPT, // Fetch/TxnReceipt
         body,
         userAuthToken.value,
@@ -2389,7 +2629,6 @@ class UPIWalletController extends GetxController {
       ConsoleLog.printColor("GET RECEIPT FOR WHATSAPP SHARE");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_RECEIPT,
         body,
         userAuthToken.value,
@@ -2584,7 +2823,7 @@ class UPIWalletController extends GetxController {
         return;
       }
 
-      CustomLoading().show(context);
+      CustomLoading.showLoading();
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -2600,14 +2839,13 @@ class UPIWalletController extends GetxController {
       ConsoleLog.printColor("SEARCH TXN REQ: $body");
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         "${WebApiConstant.BASE_URL}Fetch/search_txn",
         body,
         userAuthToken.value,
         userSignature.value,
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       if (response != null && response.statusCode == 200) {
         var data = response.data;
@@ -2622,7 +2860,7 @@ class UPIWalletController extends GetxController {
         }
       }
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("SEARCH TRANSACTION ERROR: $e");
       CustomDialog.error(message: "Technical issue!");
     }
@@ -2676,7 +2914,6 @@ class UPIWalletController extends GetxController {
       };
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_ALL_BANKS,
         body,
         userAuthToken.value,
@@ -2972,7 +3209,6 @@ class UPIWalletController extends GetxController {
     };
 
     var response = await ApiProvider().requestPostForApi(
-      context,
       WebApiConstant.API_URL_GET_ALL_BENEFICIARY_DETAILS,
       body,
       userAuthToken.value,

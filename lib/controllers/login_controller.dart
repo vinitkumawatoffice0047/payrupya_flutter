@@ -204,7 +204,7 @@ class LoginController extends GetxController {
     }
 
     // Show Loader
-    CustomLoading().show(context);
+    CustomLoading.showLoading();
 
     Map<String, dynamic> requestBody = {
       "login": mobile,
@@ -224,7 +224,7 @@ class LoginController extends GetxController {
         "",
       );
 
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printColor("LOGIN RESPONSE: $response");
 
       if (response == null) {

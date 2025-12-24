@@ -826,29 +826,36 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFF0F4F8),
-      body: SafeArea(
-        child: Column(
-          children: [
-            buildCustomAppBar(),
-            Expanded(
-              child: SingleChildScrollView(
-                physics: BouncingScrollPhysics(),
-                padding: EdgeInsets.all(10),
-                child: Column(
-                  children: [
-                    buildBeneficiaryCard(),
-                    SizedBox(height: 16),
-                    buildTransferForm(),
-                    SizedBox(height: 24),
-                    buildTransferButton(context),
-                    SizedBox(height: 16),
-                  ],
+    return GestureDetector(
+      // for manage multiple text field keyboard and cursor
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      behavior: HitTestBehavior.translucent,
+      child: Scaffold(
+        backgroundColor: Color(0xFFF0F4F8),
+        body: SafeArea(
+          child: Column(
+            children: [
+              buildCustomAppBar(),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: BouncingScrollPhysics(),
+                  padding: EdgeInsets.all(10),
+                  child: Column(
+                    children: [
+                      buildBeneficiaryCard(),
+                      SizedBox(height: 16),
+                      buildTransferForm(),
+                      SizedBox(height: 24),
+                      buildTransferButton(context),
+                      SizedBox(height: 16),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1259,32 +1266,33 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
           // ),
           // SizedBox(height: 16),
 
-          // // Show TPIN field after amount is entered
-          // if (showTPINField) ...[
+          // Show TPIN field after amount is entered
+          // if (dmtController.txnPin.value == "1") ...[
+          //   SizedBox(height: 16),
           //   buildLabelText('Enter TPIN *'),
           //   SizedBox(height: 8),
           //   GlobalUtils.CustomTextField(
           //     label: "TPIN",
           //     showLabel: false,
-          //     controller: dmtController.tpinController.value,
+          //     controller: dmtController.txnPinController.value,
           //     placeholder: "Enter 4-digit TPIN",
           //     height: GlobalUtils.screenWidth * (60 / 393),
           //     width: GlobalUtils.screenWidth * 0.9,
           //     backgroundColor: Colors.white,
           //     borderColor: Color(0xffE2E5EC),
           //     borderRadius: 16,
+          //     isTxnPin: true,
           //     keyboardType: TextInputType.number,
-          //     isObscure: true,
+          //     // isObscure: true,
           //     maxLength: 4,
           //     placeholderStyle: GoogleFonts.albertSans(
           //       fontSize: GlobalUtils.screenWidth * (14 / 393),
           //       color: Color(0xFF6B707E),
           //     ),
           //     inputTextStyle: GoogleFonts.albertSans(
-          //       fontSize: GlobalUtils.screenWidth * (18 / 393),
+          //       fontSize: GlobalUtils.screenWidth * (14 / 393),
           //       fontWeight: FontWeight.w600,
           //       color: Color(0xFF1B1C1C),
-          //       letterSpacing: 8,
           //     ),
           //     prefixIcon: Icon(Icons.lock,
           //         color: Color(0xFF6B707E), size: 20),
@@ -1489,6 +1497,14 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
           return;
         }
 
+        // if(dmtController.txnPin.value == "1"){
+        //   String tpin = dmtController.txnPinController.value.text.trim();
+        //   if (tpin.isEmpty || tpin.length != 4) {
+        //     Fluttertoast.showToast(msg: "Please enter 4-digit TPIN");
+        //     return;
+        //   }
+        // }
+
         // if (!showTPINField) {
         //   // Show TPIN field
         //   setState(() {
@@ -1506,25 +1522,25 @@ class _TransferMoneyScreenState extends State<TransferMoneyScreen> {
         // ✅ Call API and wait
         print("🔍 Calling confirmTransfer...");
         await dmtController.confirmTransfer(context, widget.beneficiary);
-        print("🔍 Back from confirmTransfer");
-
-        // ✅ Check if data is available
-        print("🔍 confirmationData: ${dmtController.confirmationData.value}");
-
-        if (dmtController.confirmationData.value != null) {
-          print("✅ Data available, navigating...");
-
-          // ✅ Navigate here
-          final result = await Get.to(() => TransactionConfirmationScreen());
-
-          print("✅ Back from confirmation screen");
-
-          // Clean up when back
-          dmtController.confirmationData.value = null;
-          dmtController.showConfirmation.value = false;
-        } else {
-          print("❌ No confirmation data");
-        }
+        // print("🔍 Back from confirmTransfer");
+        //
+        // // ✅ Check if data is available
+        // print("🔍 confirmationData: ${dmtController.confirmationData.value}");
+        //
+        // if (dmtController.confirmationData.value != null) {
+        //   print("✅ Data available, navigating...");
+        //
+        //   // ✅ Navigate here
+        //   final result = await Get.to(() => TransactionConfirmationScreen());
+        //
+        //   print("✅ Back from confirmation screen");
+        //
+        //   // Clean up when back
+        //   dmtController.confirmationData.value = null;
+        //   dmtController.showConfirmation.value = false;
+        // } else {
+        //   print("❌ No confirmation data");
+        // }
       },
       textStyle: GoogleFonts.albertSans(
         fontSize: 16,

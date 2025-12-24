@@ -550,6 +550,18 @@ class GlobalUtils {
     return null;
   }
 
+  // Txn Pin Validation
+  static String? txnPinValidator(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your transaction pin.';
+    }
+    if (value.length < 4) {
+      return 'Transaction pin must be at least 4 digits long.';
+    }
+    return null;
+  }
+
+
 
   // 💰 Price Formatter
   static String formatPrice(double price, {String currency = '₹'}) {
@@ -826,6 +838,7 @@ class GlobalUtils {
     bool isName = false,
     bool isEmail = false,
     bool isPassword = false,
+    bool isTxnPin = false,
     bool isConfirmPassword = false,
     bool isMobileNumber = false,
     bool isAadharNumber = false,
@@ -917,6 +930,8 @@ class GlobalUtils {
         return emailValidator(value);
       } else if (isPassword) {
         return passwordValidator(value);
+      }else if (isTxnPin) {
+        return txnPinValidator(value);
       } else if (isConfirmPassword) {
         return confirmPasswordValidator(value, passwordToMatch);
       } else if (isMobileNumber) {
@@ -941,6 +956,8 @@ class GlobalUtils {
         return TextInputType.emailAddress;
       } else if (isPassword || isConfirmPassword) {
         return TextInputType.visiblePassword;
+      }else if (isTxnPin) {
+        return TextInputType.number;
       } else if (isAadharNumber) {
         return TextInputType.number;
       } else if (isNumber) {
@@ -1017,7 +1034,7 @@ class GlobalUtils {
                       controller: controller,
                       enabled: enabled,
                       readOnly: readOnly,
-                      obscureText: !isObscure ? ((isPassword || isConfirmPassword) && obscureValue) : isObscure,
+                      obscureText: !isObscure ? ((isPassword || isConfirmPassword || isTxnPin) && obscureValue) : isObscure,
                       validator: (value) {
                         if(shouldValidate){
                         final error = baseValidatorFunction(value);
@@ -1155,7 +1172,7 @@ class GlobalUtils {
                             : InputBorder.none,
 
                         // Suffix Icon (Password visibility toggle or custom)
-                        suffixIcon: (isPassword || isConfirmPassword)
+                        suffixIcon: (isPassword || isConfirmPassword || isTxnPin)
                             ? IconButton(
                           icon: Icon(
                             obscureValue ? Icons.visibility_off : Icons.visibility,

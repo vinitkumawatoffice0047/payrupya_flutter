@@ -23,12 +23,41 @@ class PayrupyaHomeScreenController extends GetxController {
   RxDouble latitude = 0.0.obs;
   RxDouble longitude = 0.0.obs;
 
+  // Services related variables
+  RxList<dynamic> services = <dynamic>[].obs;
+  RxBool isServicesLoading = false.obs;
+
   @override
   void onInit() {
     super.onInit();
 
     // _initWalletFlow();
-    getLocationAndLoadData();
+    // getLocationAndLoadData();
+    initializeHomeScreen();
+  }
+
+  // Initialize everything in sequence
+  Future<void> initializeHomeScreen() async {
+    try {
+      // 1. Get location first
+      await getLocationAndLoadData();
+
+      // 2. Then load services
+      if (latitude.value != 0.0 && longitude.value != 0.0) {
+        await loadAllowedServices();
+      } else {
+        CustomLoading.hideLoading();
+        ConsoleLog.printError("Location not available, cannot load services");
+        CustomDialog.error(message: "Location not available. Please enable location services.");
+      }
+
+    } catch (e) {
+      CustomLoading.hideLoading();
+      ConsoleLog.printError("Error initializing home screen: $e");
+      CustomDialog.error(message: "Error loading data: $e");
+    }finally{
+      CustomLoading.hideLoading();
+    }
   }
 
   // Future<void> _initWalletFlow() async {
@@ -46,7 +75,7 @@ class PayrupyaHomeScreenController extends GetxController {
 
         // Load auth credentials और balance
         await loadAuthCredentials();
-        // getWalletBalance(Get.context!);
+        getWalletBalance();
       } else {
         ConsoleLog.printError("Failed to get location");
       }
@@ -110,7 +139,7 @@ class PayrupyaHomeScreenController extends GetxController {
   //endregion
 
   //region getAllowedServiceByType
-  Future<void> getWalletBalance(BuildContext context) async {
+  Future<void> getWalletBalance() async {
     try {
       // if (latitude.value == 0.0 || longitude.value == 0.0) {
       //   ConsoleLog.printInfo("Latitude: ${latitude.value}");
@@ -146,7 +175,6 @@ class PayrupyaHomeScreenController extends GetxController {
       };
 
       var response = await ApiProvider().requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_WALLET_BALANCE,
         body,
         userAuthToken.value,
@@ -183,5 +211,70 @@ class PayrupyaHomeScreenController extends GetxController {
       CustomDialog.error(message: "Error: $e");
     }
   }
-//endregion
+  //endregion
+
+  //region loadAllowedServices
+  Future<void> loadAllowedServices() async {
+    try {
+      isServicesLoading.value = true;
+      ConsoleLog.printInfo("Loading services...");
+
+      // Check auth credentials
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        await loadAuthCredentials();
+      }
+
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Cannot load services - auth credentials missing");
+        isServicesLoading.value = false;
+        return;
+      }
+
+      // Check internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(message: "No Internet Connection!");
+        isServicesLoading.value = false;
+        return;
+      }
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": latitude.value,
+        "long": longitude.value,
+        "type": "REMITTANCE"
+      };
+
+      ConsoleLog.printColor("Services Request: ${jsonEncode(body)}", color: "yellow");
+
+      var response = await ApiProvider().requestPostForApi(
+        WebApiConstant.API_URL_GET_SERVICE_TYPE,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      if (response != null && response.statusCode == 200) {
+        ConsoleLog.printColor("Services Response: ${jsonEncode(response.data)}");
+
+        var responseData = response.data;
+        if (responseData['Resp_code'] == 'RCS' && responseData['data'] != null) {
+          services.value = responseData['data'];
+          ConsoleLog.printSuccess("Services loaded: ${services.length}");
+        } else {
+          ConsoleLog.printError("Services Error: ${responseData['Resp_desc']}");
+        }
+      } else {
+        ConsoleLog.printError("Services API Error: ${response?.statusCode}");
+      }
+
+    } catch (e) {
+      ConsoleLog.printError("Error loading services: $e");
+    } finally {
+      isServicesLoading.value = false;
+      CustomLoading.hideLoading();
+      ConsoleLog.printInfo("Services loading completed");
+    }
+  }
+  //endregion
 }

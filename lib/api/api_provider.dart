@@ -86,7 +86,7 @@ class ApiProvider {
   // String authKey = "DREAD*RK&Y&*T9KeykhfdiT";
 
   //Get API Request Method
-  Future<Response?> requestGetForApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
+  Future<Response?> requestGetForApi(String url, Map<String, dynamic> dictParameter, String token) async {
     try {
       Map<String, String> headers = {
         "Content-Type": "application/json",
@@ -169,7 +169,7 @@ class ApiProvider {
   // }
 
   //Post API Request Method
-  Future<Response?> requestPostForApi(BuildContext context, String url, Map<dynamic, dynamic> dictParameter, String token, [String signature = ""]) async {
+  Future<Response?> requestPostForApi(String url, Map<dynamic, dynamic> dictParameter, String token, [String signature = ""]) async {
     try {
       Map<String, String> headers = {
         "Content-Type": "application/json",
@@ -288,7 +288,7 @@ class ApiProvider {
   }
 
   //Other API Request Method
-  Future<Response?> requestMultipartApi(context, String url, formData, String token) async {
+  Future<Response?> requestMultipartApi(String url, formData, String token) async {
     try {
       Map<String, String> headers = {
         "Content-type": "application/json",
@@ -413,7 +413,6 @@ class ApiProvider {
       };
 
       var response = await requestPostForApi(
-        context,
         WebApiConstant.API_URL_GET_CITY_STATE_BY_PINCODE,
         body,
         userAuthToken.value,
@@ -466,17 +465,17 @@ class ApiProvider {
   Future<Map<String, dynamic>?> signupApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
     Map<String, dynamic>? result;
     try {
-      CustomLoading().show(context);
-      final Response? response = await requestPostForApi(context, url, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestPostForApi(url, dictParameter, token);
       ConsoleLog.printJsonResponse("ResponseNew..........$response.........", color: "green", tag: "Signup Api (Post");
       if (response != null && response.statusCode == 200) {
         result = Map<String, dynamic>.from(response.data);
         ConsoleLog.printSuccess("$result",);
       }
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       return result;
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("Exception..........$e.........");
       Fluttertoast.showToast(msg: WebApiConstant.ApiError);
       return result;
@@ -487,17 +486,17 @@ class ApiProvider {
   Future<Map<String, dynamic>?> loginApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
     Map<String, dynamic>? result;
     try {
-      CustomLoading().show(context);
-      final Response? response = await requestPostForApi(context, url, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestPostForApi(url, dictParameter, token);
       ConsoleLog.printJsonResponse("ResponseNew..........$response.........", color: "green", tag: "Login Api (Post)");
       if (response != null && response.statusCode == 200) {
         result = Map<String, dynamic>.from(response.data);
         ConsoleLog.printSuccess("$result",);
       }
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       return result;
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("Exception..........$e.........");
       Fluttertoast.showToast(msg: "Something went wrong");
       return result;
@@ -510,17 +509,17 @@ class ApiProvider {
       try{
         Map<String, dynamic> dictParameter = {
         };
-        CustomLoading().show(context);
-        final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_HOME_DETAIL, dictParameter, token);
+        CustomLoading.showLoading();
+        final Response? response = await requestGetForApi(WebApiConstant.API_URL_HOME_DETAIL, dictParameter, token);
         ConsoleLog.printJsonResponse("$response", tag: "Home Detail Api (Get)");
         if(response != null && response.statusCode == 200){
           result = HomeDetailsResponseModel.fromJson(response.data);
           ConsoleLog.printSuccess("$result",);
         }
-        CustomLoading().hide(context);
+        CustomLoading.hideLoading();
         return result;
       }catch(e){
-        CustomLoading().hide(context);
+        CustomLoading.hideLoading();
         ConsoleLog.printError("Exception..........$e.........");
         Fluttertoast.showToast(msg: "Something went wrong");
         return result;
@@ -530,17 +529,17 @@ class ApiProvider {
   Future<ProductDetailsResponseModel?> productDetailsAPI(context, String url, Map<String, dynamic> dictParameter, String token) async {
     ProductDetailsResponseModel? result;
     try{
-      // CustomLoading().show(context);
-      final Response? response = await requestPostForApi(context, url, dictParameter, token);
+      // CustomLoading.showLoading();
+      final Response? response = await requestPostForApi(url, dictParameter, token);
       ConsoleLog.printJsonResponse("ResponseNew..........$response.........", color: "green", tag: "Home Product Details Api (Post)");
       if(response != null && response.statusCode == 200){
         result = ProductDetailsResponseModel.fromJson(response.data);
         ConsoleLog.printSuccess("$result",);
       }
-      // CustomLoading().hide(context);
+      // CustomLoading.hideLoading();
       return result;
     }catch(e){
-      // CustomLoading().hide(context);
+      // CustomLoading.hideLoading();
       ConsoleLog.printError("Exception..........$e.........");
       Fluttertoast.showToast(msg: "Something went wrong");
       return result;
@@ -551,8 +550,8 @@ class ApiProvider {
   Future<Map<String, dynamic>?> addToCartApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
       Map<String, dynamic>? result;
       try{
-        CustomLoading().show(context);
-        final Response? response = await requestPostForApi(context, url, dictParameter, token);
+        CustomLoading.showLoading();
+        final Response? response = await requestPostForApi(url, dictParameter, token);
         ConsoleLog.printJsonResponse("ResponseNew..........$response.........", color: "green", tag: "Add to Cart Api (Post)");
         if(response != null && response.statusCode == 200){
           result = Map<String, dynamic>.from(response.data);
@@ -570,8 +569,8 @@ class ApiProvider {
   Future<Map<String, dynamic>?> deleteToCartApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
     Map<String, dynamic>? result;
     try{
-      CustomLoading().show(context);
-      final Response? response = await requestPostForApi(context, url, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestPostForApi(url, dictParameter, token);
       ConsoleLog.printJsonResponse("ResponseNew..........$response.........", color: "green", tag: "Delete Cart API (Post)");
       if(response != null && response.statusCode == 200){
         result = Map<String, dynamic>.from(response.data);
@@ -592,17 +591,17 @@ class ApiProvider {
     try{
       Map<String, dynamic> dictParameter = {
       };
-      CustomLoading().show(context);
-      final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_CART_LIST, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestGetForApi(WebApiConstant.API_URL_CART_LIST, dictParameter, token);
       ConsoleLog.printJsonResponse("ResponseNew..........$response.........", color: "green", tag: "Get Cart List API (Get)");
       if(response != null && response.statusCode == 200){
         result = CartListScreenResponseModel.fromJson(response.data);
         ConsoleLog.printSuccess("$result");
       }
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       return result;
     }catch(e){
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("Exception..........$e.........");
       Fluttertoast.showToast(msg: "Something went wrong");
       return result;
@@ -613,7 +612,7 @@ class ApiProvider {
   Future<ProductDetailsResponseModel?> categoryToProductApi(context,Map<String, dynamic> dictParameter,String token) async {
     ProductDetailsResponseModel? result;
     try{
-      final Response? response = await requestPostForApi(context, WebApiConstant.API_URL_CATEGORY_TO_PRODUCT, dictParameter, token);
+      final Response? response = await requestPostForApi(WebApiConstant.API_URL_CATEGORY_TO_PRODUCT, dictParameter, token);
       ConsoleLog.printJsonResponse("ResponseNew..........$response.........", color: "green", tag: "Category To Product Api (Post)");
       if(response != null && response.statusCode == 200){
         result = ProductDetailsResponseModel.fromJson(response.data);
@@ -621,7 +620,7 @@ class ApiProvider {
       }
       return result;
     }catch(e){
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("Exception..........$e.........");
       Fluttertoast.showToast(msg: "Something went wrong");
       return result;
@@ -634,17 +633,17 @@ class ApiProvider {
     try{
       Map<String, dynamic> dictParameter = {
       };
-      CustomLoading().show(context);
-      final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_PROFILE, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestGetForApi(WebApiConstant.API_URL_PROFILE, dictParameter, token);
       ConsoleLog.printJsonResponse("ResponseNew..........$response.........", color: "green", tag: "Get Profile Api (Get)");
       if(response != null && response.statusCode == 200){
         result = Map<String, dynamic>.from(response.data);
         ConsoleLog.printSuccess("$result");
       }
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       return result;
     }catch(e){
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("Exception..........$e.........");
       Fluttertoast.showToast(msg: "Something went wrong");
       return result;
@@ -655,8 +654,8 @@ class ApiProvider {
   Future<Map<String, dynamic>?> updateTPinApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
     Map<String, dynamic>? result;
     try{
-      CustomLoading().show(context);
-      final Response? response = await requestPostForApi(context, url, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestPostForApi(url, dictParameter, token);
       ConsoleLog.printJsonResponse("ResponseNew..........$response.........", color: "green", tag: "Update Password Api (Post)");
       if(response != null && response.statusCode == 200){
         result = Map<String, dynamic>.from(response.data);
@@ -675,17 +674,17 @@ class ApiProvider {
     Map<String, dynamic>? result;
     try{
       Map<String, dynamic> dictParameter = {};
-      CustomLoading().show(context);
-      final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_GET_ADDRESS, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestGetForApi(WebApiConstant.API_URL_GET_ADDRESS, dictParameter, token);
       ConsoleLog.printJsonResponse("ResponseNew..........$response.........", color: "green", tag: "Get Address Api (Get)");
       if(response != null && response.statusCode == 200){
         result = Map<String, dynamic>.from(response.data);
         ConsoleLog.printSuccess("$result");
       }
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       return result;
     }catch(e){
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("Exception..........$e.........");
       Fluttertoast.showToast(msg: "Something went wrong");
       return result;
@@ -696,8 +695,8 @@ class ApiProvider {
   Future<Map<String, dynamic>?> addAddressApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
     Map<String, dynamic>? result;
     try{
-      CustomLoading().show(context);
-      final Response? response = await requestPostForApi(context, url, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestPostForApi(url, dictParameter, token);
       ConsoleLog.printColor("ResponseNew..........$response.........", color: "green");
       if(response != null && response.statusCode == 200){
         result = Map<String, dynamic>.from(response.data);
@@ -715,14 +714,14 @@ class ApiProvider {
   Future<Map<String, dynamic>?> buyNowApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
     Map<String, dynamic>? result;
     try{
-      CustomLoading().show(context);
-      final Response? response = await requestPostForApi(context, url, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestPostForApi(url, dictParameter, token);
       ConsoleLog.printColor("ResponseNew..........$response.........", color: "green");
       if(response != null && response.statusCode == 200){
         result = Map<String, dynamic>.from(response.data);
         ConsoleLog.printSuccess("$result");
       }
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       return result;
     }catch(e) {
@@ -738,17 +737,17 @@ class ApiProvider {
     try{
       Map<String, dynamic> dictParameter = {
       };
-      CustomLoading().show(context);
-      final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_MY_ORDER, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestGetForApi(WebApiConstant.API_URL_MY_ORDER, dictParameter, token);
       ConsoleLog.printColor("ResponseNew..........$response.........", color: "green");
       if(response != null && response.statusCode == 200){
         result = MyOrderResponseApi.fromJson(response.data);
         ConsoleLog.printSuccess("$result");
       }
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       return result;
     }catch(e){
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("Exception..........$e.........");
       Fluttertoast.showToast(msg: "Something went wrong");
       return result;
@@ -759,14 +758,14 @@ class ApiProvider {
   Future<Map<String, dynamic>?> deleteOrderApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
     Map<String, dynamic>? result;
     try{
-      CustomLoading().show(context);
-      final Response? response = await requestPostForApi(context, url, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestPostForApi(url, dictParameter, token);
       ConsoleLog.printColor("ResponseNew..........$response.........", color: "green");
       if(response != null && response.statusCode == 200){
         result = Map<String, dynamic>.from(response.data);
         ConsoleLog.printSuccess("$result");
       }
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
 
       return result;
     }catch(e){
@@ -782,13 +781,13 @@ class ApiProvider {
     // if(await ConnectionValidator().check()){
     try{
 
-      // CustomLoading().show(context);
-      final Response? response = await requestPostForApi(context, url, dictParameter, token);
+      // CustomLoading.showLoading();
+      final Response? response = await requestPostForApi(url, dictParameter, token);
 
       if(response != null && response.statusCode == 200){
         result = SearchResponseApi.fromJson(response.data);
       }
-      // CustomLoading().hide(context);
+      // CustomLoading.hideLoading();
 
       return result;
     }catch(e) {
@@ -802,14 +801,14 @@ class ApiProvider {
   // Future<SearchResponseApi?> searchProductApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
   //   SearchResponseApi? result;
   //   try{
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //     ConsoleLog.printColor("ResponseNew..........$response.........", color: "green");
   //     if(response != null && response.statusCode == 200){
   //       result = SearchResponseApi.fromJson(response.data);
   //       // ConsoleLog.printSuccess("$result");
   //     }
-  //     // CustomLoading().hide(context);
+  //     // CustomLoading.hideLoading();
   //     return result;
   //   }catch(e) {
   //     ConsoleLog.printError("Exception..........$e.........");
@@ -822,17 +821,17 @@ class ApiProvider {
   Future<CategoriesResponseApi?> getSubCategorisAPI(context, Map<String, dynamic> dictParameter,String token) async {
     CategoriesResponseApi? result;
     try{
-      CustomLoading().show(context);
-      final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_CATEGORY, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestGetForApi(WebApiConstant.API_URL_CATEGORY, dictParameter, token);
       ConsoleLog.printColor("ResponseNew..........$response.........", color: "green");
       if(response != null && response.statusCode == 200){
         result = CategoriesResponseApi.fromJson(response.data);
         ConsoleLog.printSuccess("$result");
       }
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       return result;
     }catch(e){
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("Exception..........$e.........");
       Fluttertoast.showToast(msg: "Something went wrong");
       return result;
@@ -845,23 +844,23 @@ class ApiProvider {
     // if(await ConnectionValidator().check()){
     if(await ConnectionValidator.isConnected()){
       try{
-        CustomLoading().show(context);
-        final Response? response = await requestPostForApi(context, WebApiConstant.API_URL_RAZORPAY_DEPOSIT, dict, token);
+        CustomLoading.showLoading();
+        final Response? response = await requestPostForApi(WebApiConstant.API_URL_RAZORPAY_DEPOSIT, dict, token);
         ConsoleLog.printColor("loadWalletResponse: ${response?.data}");
         if(response != null && response.statusCode == 200){
           result = DepositResponse.fromJson(response.data);
           ConsoleLog.printSuccess("$result");
         }
-        CustomLoading().hide(context);
+        CustomLoading.hideLoading();
         return result;
       }catch(e){
-        CustomLoading().hide(context);
+        CustomLoading.hideLoading();
         ConsoleLog.printError("Exception..........$e.........");
         Fluttertoast.showToast(msg: "Something went wrong");
         return result;
       }
     }else{
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       // Navigator.pushNamed(context, networkErrorScreenRoute);
       // Fluttertoast.showToast( msg: 'Please check network connection and try again !');
     }
@@ -872,17 +871,17 @@ class ApiProvider {
   Future<OrderDetailsResponse?> getOrderDetailsList(context,String token,Map<String, dynamic> dictParameter) async {
     OrderDetailsResponse? result;
     try{
-      CustomLoading().show(context);
-      final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_OREDER_DETAILS_LIST, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestGetForApi(WebApiConstant.API_URL_OREDER_DETAILS_LIST, dictParameter, token);
       ConsoleLog.printColor("ResponseNew..........$response.........", color: "green");
       if(response != null && response.statusCode == 200){
         result = OrderDetailsResponse.fromJson(response.data);
         ConsoleLog.printSuccess("$result");
       }
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       return result;
     }catch(e){
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("Exception..........$e.........");
       Fluttertoast.showToast(msg: "Something went wrong");
       return result;
@@ -894,16 +893,16 @@ class ApiProvider {
     NotificationResponse? result;
     try {
       Map<String, dynamic> dictParameter = {};
-      CustomLoading().show(context);
-      final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_NOTIFICATION, dictParameter, token);
+      CustomLoading.showLoading();
+      final Response? response = await requestGetForApi(WebApiConstant.API_URL_NOTIFICATION, dictParameter, token);
       ConsoleLog.printJsonResponse("ResponseNew..........$response.........");
       if (response != null && response.statusCode == 200) {
         result = NotificationResponse.fromJson(response.data);
       }
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       return result; // Added missing return statement
     } catch (e) {
-      CustomLoading().hide(context);
+      CustomLoading.hideLoading();
       ConsoleLog.printError("Exception..........$e.........");
       Fluttertoast.showToast(msg: "Something went wrong");
       return result;
@@ -921,7 +920,7 @@ class ApiProvider {
   //     String token
   //     ) async {
   //   try {
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final response = await dio.post(
   //       WebApiConstant.API_URL_SEARCH_PRODUCT,
   //       data: {
@@ -935,12 +934,12 @@ class ApiProvider {
   //       ),
   //     );
   //
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     if (response.statusCode == 200) {
   //       return SearchResponseApi.fromJson(response.data);
   //     }
   //   } catch (e) {
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     print('API Error: $e');
   //   }
   //   return null;
@@ -951,22 +950,22 @@ class ApiProvider {
   //   DepositResponse? result;
   //   if(await ConnectionValidator().check()){
   //     try{
-  //       CustomLoading().show(context);
+  //       CustomLoading.showLoading();
   //       final Response? response = await requestPostForApi(context, WebApiConstant.API_URL_RAZORPAY_DEPOSIT, dict, token);
   //       log("loadwalletresponse: ${response?.data}");
   //       if(response != null && response.statusCode == 200){
   //         result = DepositResponse.fromJson(response.data);
   //       }
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       return result;
   //     }catch(e){
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       print("Exception..........$e.........");
   //       Fluttertoast.showToast(msg: "Something went wrong");
   //       return result;
   //     }
   //   }else{
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     // Navigator.pushNamed(context, networkErrorScreenRoute);
   //     // Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   }
@@ -978,23 +977,23 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   // if(await ConnectionValidator().check()){
   //     try{
-  //      CustomLoading().show(context);
+  //      CustomLoading.showLoading();
   //       final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //       if(response != null && response.statusCode == 200){
   //         result = Map<String, dynamic>.from(response.data);
   //       }
-  //      CustomLoading().hide(context);
+  //      CustomLoading.hideLoading();
   //       return result;
   //     }catch(e){
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       print("Exception..........$e.........");
   //       Fluttertoast.showToast(msg: "Something went wrong");
   //       return result;
   //     }
   //   //}
   //   // else{
-  //   //  CustomLoading().hide(context);
+  //   //  CustomLoading.hideLoading();
   //   //   // Navigator.pushNamed(context, networkErrorScreenRoute);
   //   //   Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   // }
@@ -1006,23 +1005,23 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   // if(await ConnectionValidator().check()){
   //     try{
-  //      CustomLoading().show(context);
+  //      CustomLoading.showLoading();
   //       final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //       if(response != null && response.statusCode == 200){
   //         result = Map<String, dynamic>.from(response.data);
   //       }
-  //      CustomLoading().hide(context);
+  //      CustomLoading.hideLoading();
   //       return result;
   //     }catch(e){
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       print("Exception..........$e.........");
   //       Fluttertoast.showToast(msg: "Something went wrong");
   //       return result;
   //     }
   //   //}
   //   // else{
-  //   //  CustomLoading().hide(context);
+  //   //  CustomLoading.hideLoading();
   //   //   // Navigator.pushNamed(context, networkErrorScreenRoute);
   //   //   Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   // }
@@ -1033,16 +1032,16 @@ class ApiProvider {
   //     try{
   //       Map<String, dynamic> dictParameter = {
   //       };
-  //       CustomLoading().show(context);
+  //       CustomLoading.showLoading();
   //       final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_HOME_DETAIL, dictParameter, token);
   //       print("ResponseNew..........$response.........");
   //       if(response != null && response.statusCode == 200){
   //         result = HomeDetailsResponseModel.fromJson(response.data);
   //       }
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       return result;
   //     }catch(e){
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       print("Exception..........$e.........");
   //       Fluttertoast.showToast(msg: "Something went wrong");
   //       return result;
@@ -1053,17 +1052,17 @@ class ApiProvider {
   //   ProductResponseModel? result;
   //     try{
   //
-  //       // CustomLoading().show(context);
+  //       // CustomLoading.showLoading();
   //       final Response? response = await requestPostForApi(context, WebApiConstant.API_URL_CATEGORY_TO_PRODUCT, dictParameter, token);
   //       print("ResponseNew..........$response.........");
   //       if(response != null && response.statusCode == 200){
   //         result = ProductResponseModel.fromJson(response.data);
   //       }
-  //       // CustomLoading().hide(context);
+  //       // CustomLoading.hideLoading();
   //       return result;
   //
   //     }catch(e){
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       print("Exception..........$e.........");
   //       Fluttertoast.showToast(msg: "Something went wrong");
   //       return result;
@@ -1076,24 +1075,24 @@ class ApiProvider {
   //   ProductDetailsResponseModel? result;
   //   // if(await ConnectionValidator().check()){
   //   try{
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //     if(response != null && response.statusCode == 200){
   //       result = ProductDetailsResponseModel.fromJson(response.data);
   //       print(result);
   //     }
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     return result;
   //   }catch(e){
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     print("Exception..........$e.........");
   //     Fluttertoast.showToast(msg: "Something went wrong");
   //     return result;
   //   }
   //   //}
   //   // else{
-  //   //  CustomLoading().hide(context);
+  //   //  CustomLoading.hideLoading();
   //   //   // Navigator.pushNamed(context, networkErrorScreenRoute);
   //   //   Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   // }
@@ -1104,16 +1103,16 @@ class ApiProvider {
   //   try{
   //     Map<String, dynamic> dictParameter = {
   //     };
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_CART_LIST, dictParameter, token);
   //     print("ResponseNew..........$response.........");
   //     if(response != null && response.statusCode == 200){
   //       result = CartListScreenResponseModel.fromJson(response.data);
   //     }
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     return result;
   //   }catch(e){
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     print("Exception..........$e.........");
   //     Fluttertoast.showToast(msg: "Something went wrong");
   //     return result;
@@ -1123,16 +1122,16 @@ class ApiProvider {
   // Future<OrderDetailsResponse?> getOrderDetailsList(context,String token,Map<String, dynamic> dictParameter) async {
   //   OrderDetailsResponse? result;
   //   try{
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_OREDER_DETAILS_LIST, dictParameter, token);
   //     print("ResponseNew..........$response.........");
   //     if(response != null && response.statusCode == 200){
   //       result = OrderDetailsResponse.fromJson(response.data);
   //     }
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     return result;
   //   }catch(e){
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     print("Exception..........$e.........");
   //     Fluttertoast.showToast(msg: "Something went wrong");
   //     return result;
@@ -1144,16 +1143,16 @@ class ApiProvider {
   //   try{
   //     Map<String, dynamic> dictParameter = {
   //     };
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_PROFILE, dictParameter, token);
   //     print("ResponseNew..........$response.........");
   //     if(response != null && response.statusCode == 200){
   //       result = Map<String, dynamic>.from(response.data);
   //     }
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     return result;
   //   }catch(e){
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     print("Exception..........$e.........");
   //     Fluttertoast.showToast(msg: "Something went wrong");
   //     return result;
@@ -1165,7 +1164,7 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   // if(await ConnectionValidator().check()){
   //   try{
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //     if(response != null && response.statusCode == 200){
@@ -1179,7 +1178,7 @@ class ApiProvider {
   //   }
   //   //}
   //   // else{
-  //   //  CustomLoading().hide(context);
+  //   //  CustomLoading.hideLoading();
   //   //   // Navigator.pushNamed(context, networkErrorScreenRoute);
   //   //   Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   // }
@@ -1189,7 +1188,7 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   // if(await ConnectionValidator().check()){
   //   try{
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //     if(response != null && response.statusCode == 200){
@@ -1203,7 +1202,7 @@ class ApiProvider {
   //   }
   //   //}
   //   // else{
-  //   //  CustomLoading().hide(context);
+  //   //  CustomLoading.hideLoading();
   //   //   // Navigator.pushNamed(context, networkErrorScreenRoute);
   //   //   Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   // }
@@ -1213,7 +1212,7 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   // if(await ConnectionValidator().check()){
   //   try{
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //     if(response != null && response.statusCode == 200){
@@ -1227,7 +1226,7 @@ class ApiProvider {
   //   }
   //   //}
   //   // else{
-  //   //  CustomLoading().hide(context);
+  //   //  CustomLoading.hideLoading();
   //   //   // Navigator.pushNamed(context, networkErrorScreenRoute);
   //   //   Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   // }
@@ -1237,7 +1236,7 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   // if(await ConnectionValidator().check()){
   //   try{
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //     if(response != null && response.statusCode == 200){
@@ -1254,7 +1253,7 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   // if(await ConnectionValidator().check()){
   //   try{
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //     if(response != null && response.statusCode == 200){
@@ -1274,16 +1273,16 @@ class ApiProvider {
   //   try{
   //     Map<String, dynamic> dictParameter = {
   //     };
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_GET_ADDRESS, dictParameter, token);
   //     print("ResponseNew..........$response.........");
   //     if(response != null && response.statusCode == 200){
   //       result = Map<String, dynamic>.from(response.data);
   //     }
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     return result;
   //   }catch(e){
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     print("Exception..........$e.........");
   //     Fluttertoast.showToast(msg: "Something went wrong");
   //     return result;
@@ -1294,13 +1293,13 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   // if(await ConnectionValidator().check()){
   //   try{
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //     if(response != null && response.statusCode == 200){
   //       result = Map<String, dynamic>.from(response.data);
   //     }
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //
   //     return result;
   //   }catch(e) {
@@ -1315,16 +1314,16 @@ class ApiProvider {
   //   try{
   //     Map<String, dynamic> dictParameter = {
   //     };
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_MY_ORDER, dictParameter, token);
   //     print("ResponseNew..........$response.........");
   //     if(response != null && response.statusCode == 200){
   //       result = MyOrderResponseApi.fromJson(response.data);
   //     }
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     return result;
   //   }catch(e){
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     print("Exception..........$e.........");
   //     Fluttertoast.showToast(msg: "Something went wrong");
   //     return result;
@@ -1336,13 +1335,13 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   // if(await ConnectionValidator().check()){
   //   try{
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //     if(response != null && response.statusCode == 200){
   //       result = Map<String, dynamic>.from(response.data);
   //     }
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //
   //     return result;
   //   }catch(e){
@@ -1352,7 +1351,7 @@ class ApiProvider {
   //   }
   //   //}
   //   // else{
-  //   //  CustomLoading().hide(context);
+  //   //  CustomLoading.hideLoading();
   //   //   // Navigator.pushNamed(context, networkErrorScreenRoute);
   //   //   Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   // }
@@ -1364,13 +1363,13 @@ class ApiProvider {
   //   // if(await ConnectionValidator().check()){
   //   try{
   //
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //     if(response != null && response.statusCode == 200){
   //       result = SearchResponseApi.fromJson(response.data);
   //     }
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //
   //     return result;
   //   }catch(e) {
@@ -1383,16 +1382,16 @@ class ApiProvider {
   // Future<CategoriesResponseApi?> getSubCategorisAPI(context, Map<String, dynamic> dictParameter,String token) async {
   //   CategoriesResponseApi? result;
   //   try{
-  //     CustomLoading().show(context);
+  //     CustomLoading.showLoading();
   //     final Response? response = await requestGetForApi(context, WebApiConstant.API_URL_CATEGORY, dictParameter, token);
   //     print("ResponseNew..........$response.........");
   //     if(response != null && response.statusCode == 200){
   //       result = CategoriesResponseApi.fromJson(response.data);
   //     }
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     return result;
   //   }catch(e){
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     print("Exception..........$e.........");
   //     Fluttertoast.showToast(msg: "Something went wrong");
   //     return result;
@@ -1405,16 +1404,16 @@ class ApiProvider {
   // // Future<Map<String, dynamic>?> updateTPinApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
   // //   Map<String, dynamic>? result;
   // //      try{
-  // //       //CustomLoading().show(context);
+  // //       //CustomLoading.showLoading();
   // //       final Response? response = await requestPostForApi(context, url, dictParameter, token);
   // //
   // //       if(response != null && response.statusCode == 200){
   // //         result = Map<String, dynamic>.from(response.data);
   // //       }
-  // //       CustomLoading().hide(context);
+  // //       CustomLoading.hideLoading();
   // //       return result;
   // //     }catch(e){
-  // //       CustomLoading().hide(context);
+  // //       CustomLoading.hideLoading();
   // //       print("Exception..........$e.........");
   // //       Fluttertoast.showToast(msg: "Something went wrong");
   // //       return result;
@@ -1427,23 +1426,23 @@ class ApiProvider {
   // //   Map<String, dynamic>? result;
   // //  // if(await ConnectionValidator().check()){
   // //     try{
-  // //       CustomLoading().show(context);
+  // //       CustomLoading.showLoading();
   // //       final Response? response = await requestPostForApi(context, url, dictParameter, token);
   // //
   // //       if(response != null && response.statusCode == 200){
   // //         result = Map<String, dynamic>.from(response.data);
   // //       }
-  // //       CustomLoading().hide(context);
+  // //       CustomLoading.hideLoading();
   // //       return result;
   // //     }catch(e){
-  // //       CustomLoading().hide(context);
+  // //       CustomLoading.hideLoading();
   // //       print("Exception..........$e.........");
   // //       Fluttertoast.showToast(msg: "Something went wrong");
   // //       return result;
   // //     }
   // //  // }
   // //   // else{
-  // //   //   CustomLoading().hide(context);
+  // //   //   CustomLoading.hideLoading();
   // //   //   // Navigator.pushNamed(context, networkErrorScreenRoute);
   // //   //   // Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   // //   // }
@@ -1454,22 +1453,22 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   if(await ConnectionValidator().check()){
   //     try{
-  //       CustomLoading().show(context);
+  //       CustomLoading.showLoading();
   //       final Response? response = await requestGetForApi(context, url, dictParameter, token);
   //
   //       if(response != null && response.statusCode == 200){
   //         result = Map<String, dynamic>.from(response.data);
   //       }
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       return result;
   //     }catch(e){
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       print("Exception..........$e.........");
   //       Fluttertoast.showToast(msg: "Something went wrong");
   //       return result;
   //     }
   //   }else{
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     // Navigator.pushNamed(context, networkErrorScreenRoute);
   //     Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   }
@@ -1479,22 +1478,22 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   if(await ConnectionValidator().check()){
   //     try{
-  //      CustomLoading().show(context);
+  //      CustomLoading.showLoading();
   //       final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //       if(response != null && response.statusCode == 200){
   //         result = Map<String, dynamic>.from(response.data);
   //       }
-  //      CustomLoading().hide(context);
+  //      CustomLoading.hideLoading();
   //       return result;
   //     }catch(e){
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       print("Exception..........$e.........");
   //       Fluttertoast.showToast(msg: "Something went wrong");
   //       return result;
   //     }
   //   }else{
-  //    CustomLoading().hide(context);
+  //    CustomLoading.hideLoading();
   //     // Navigator.pushNamed(context, networkErrorScreenRoute);
   //     Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   }
@@ -1504,22 +1503,22 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   if(await ConnectionValidator().check()){
   //     try{
-  //       CustomLoading().show(context);
+  //       CustomLoading.showLoading();
   //       final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //       if(response != null && response.statusCode == 200){
   //         result = Map<String, dynamic>.from(response.data);
   //       }
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       return result;
   //     }catch(e){
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       print("Exception..........$e.........");
   //       Fluttertoast.showToast(msg: "Something went wrong");
   //       return result;
   //     }
   //   }else{
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     // Navigator.pushNamed(context, networkErrorScreenRoute);
   //     Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   }
@@ -1529,22 +1528,22 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   if(await ConnectionValidator().check()){
   //     try{
-  //       CustomLoading().show(context);
+  //       CustomLoading.showLoading();
   //       final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //       if(response != null && response.statusCode == 200){
   //         result = Map<String, dynamic>.from(response.data);
   //       }
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       return result;
   //     }catch(e){
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       print("Exception..........$e.........");
   //       Fluttertoast.showToast(msg: "Something went wrong");
   //       return result;
   //     }
   //   }else{
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     // Navigator.pushNamed(context, networkErrorScreenRoute);
   //     Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   }
@@ -1554,22 +1553,22 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   if(await ConnectionValidator().check()){
   //     try{
-  //       CustomLoading().show(context);
+  //       CustomLoading.showLoading();
   //       final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //       if(response != null && response.statusCode == 200){
   //         result = Map<String, dynamic>.from(response.data);
   //       }
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       return result;
   //     }catch(e){
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       print("Exception..........$e.........");
   //       Fluttertoast.showToast(msg: "Something went wrong");
   //       return result;
   //     }
   //   }else{
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     // Navigator.pushNamed(context, networkErrorScreenRoute);
   //     Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   }
@@ -1579,22 +1578,22 @@ class ApiProvider {
   //   Map<String, dynamic>? result;
   //   if(await ConnectionValidator().check()){
   //     try{
-  //       CustomLoading().show(context);
+  //       CustomLoading.showLoading();
   //       final Response? response = await requestPostForApi(context, url, dictParameter, token);
   //
   //       if(response != null && response.statusCode == 200){
   //         result = Map<String, dynamic>.from(response.data);
   //       }
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       return result;
   //     }catch(e){
-  //       CustomLoading().hide(context);
+  //       CustomLoading.hideLoading();
   //       print("Exception..........$e.........");
   //       Fluttertoast.showToast(msg: "Something went wrong");
   //       return result;
   //     }
   //   }else{
-  //     CustomLoading().hide(context);
+  //     CustomLoading.hideLoading();
   //     // Navigator.pushNamed(context, networkErrorScreenRoute);
   //     Fluttertoast.showToast( msg: 'Please check network connection and try again !');
   //   }
