@@ -1,8 +1,8 @@
 
 class WebApiConstant{
   // Base URLs
-  // static const String BASE_URL                                 =  "https://payrupya.in/intapi/Action"; //Live
-  static const String BASE_URL                                 =  "https://uat.payrupya.in/intapi/"; //Local
+  static const String BASE_URL                                 =  "https://payrupya.in/intapi/"; //Live
+  // static const String BASE_URL                                 =  "https://uat.payrupya.in/intapi/"; //UAT
 
   // Authentication APIs
   static const String API_URL_LOGIN                            = "${BASE_URL}Action/login";                    //Done

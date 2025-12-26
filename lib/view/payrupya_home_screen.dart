@@ -71,9 +71,11 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
     );
     startAutoScroll();
 
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   initializeData();
-    // });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      CustomLoading.showLoading();
+      // initializeData();
+    });
   }
 
   /// Initialize data after widget is built

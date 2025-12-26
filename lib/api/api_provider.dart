@@ -212,7 +212,8 @@ class ApiProvider {
       );
       dio.options = options;
       Response response = await dio.post(
-        "$url?demo=true",
+        url,
+        // "$url?demo=true",
         data: dictParameter,
         options: Options(
           followRedirects: false,
