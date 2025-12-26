@@ -1483,7 +1483,8 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                 // signupController.selectedPincode.value = "";
                 // dmtController.selectedPincode.value = "";
                 dmtController.senderAddressController.value.clear();
-                Get.back();
+                // Get.back();
+                Navigator.of(context).pop(context);
               },
               child: Container(
                 height: GlobalUtils.screenHeight * (22 / 393),

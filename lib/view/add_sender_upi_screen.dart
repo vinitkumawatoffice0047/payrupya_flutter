@@ -1403,7 +1403,8 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
                 // signupController.selectedPincode.value = "";
                 upiWalletController.selectedPincode.value = "";
                 upiWalletController.senderAddressController.value.clear();
-                Get.back();
+                // Get.back();
+                Navigator.of(context).pop(context);
               },
               child: Container(
                 height: GlobalUtils.screenHeight * (22 / 393),

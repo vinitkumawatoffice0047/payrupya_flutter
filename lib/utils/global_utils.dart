@@ -864,6 +864,7 @@ class GlobalUtils {
     Color? inputTextColor,
     double? inputTextFontSize,
     FontWeight? inputTextFontWeight,
+    TextCapitalization? textCapitalization,
 
     // Placeholder Styling
     TextStyle? placeholderStyle,
@@ -1052,6 +1053,7 @@ class GlobalUtils {
                       textInputAction: textInputAction,
                       focusNode: focusNode,
                       onEditingComplete: onEditingComplete,
+                      textCapitalization: textCapitalization ?? TextCapitalization.sentences,
                       onChanged: (value) {
                         // Update error message on every change
                         final error = baseValidatorFunction(value);

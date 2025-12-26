@@ -733,6 +733,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controllers/dmt_wallet_controller.dart';
 import '../models/get_beneficiary_list_response_model.dart';
+import '../utils/ConsoleLog.dart';
 import '../utils/global_utils.dart';
 import 'add_sender_screen.dart';
 import 'add_beneficiary_screen.dart';
@@ -879,7 +880,9 @@ class _PayrupyaWalletScreenState extends State<PayrupyaWalletScreen> {
         children: [
           // if (widget.showBackButton) ...[
             GestureDetector(
-              onTap: () => Get.back(),
+              onTap: () {
+                ConsoleLog.printError("AAAAAAAAAAAAAAAAAAAAAA");
+                Navigator.of(context).pop();/*Get.back()*/},
               child: Container(
                 height: GlobalUtils.screenHeight * (22 / 393),
                 width: GlobalUtils.screenWidth * (47 / 393),

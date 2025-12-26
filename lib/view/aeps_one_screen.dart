@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:payrupya/controllers/aeps_controller.dart';
+import 'package:payrupya/utils/ConsoleLog.dart';
+
+import '../models/get_all_my_bank_list_response_model.dart';
+import '../utils/global_utils.dart';
 
 // Import your controllers and services
 // import '../controllers/aeps_api_service.dart';
@@ -25,7 +30,7 @@ class AepsOneScreen extends StatefulWidget {
 
 class _AepsOneScreenState extends State<AepsOneScreen> {
   // Controller - Replace with your actual controller
-  // final AepsControllerFull controller = Get.put(AepsControllerFull());
+  final AepsController aepsController = Get.put(AepsController());
   
   // Demo state variables (replace with controller.value)
   bool isLoading = false;
@@ -74,6 +79,10 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await aepsController.loadAuthCredentials();
+      await aepsController.fetchMyBanks(context, "true");
+    });
     // Check onboard status on init
     // controller.checkFingpayOnboardStatus();
     // controller.fetchMyBankList();
@@ -81,31 +90,94 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: _buildAppBar(),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
+    return GestureDetector(
+      // for manage multiple text field keyboard and cursor
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      behavior: HitTestBehavior.translucent,
+      child: Scaffold(
+        backgroundColor: Color(0xFFF0F4F8),
+        // appBar: _buildAppBar(),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SafeArea(
+              child: SizedBox(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Show authentication form if user is onboarded and authenticated
-                    if (showAuthenticationForm) _buildAuthenticationForm(),
-                    
-                    // Show eKYC auth form after OTP verification
-                    if (showOnboardAuthForm) _buildOnboardAuthForm(),
-                    
-                    // Show onboarding form if user is not onboarded
-                    if (showOnboardingForm) _buildOnboardingForm(),
+                    buildCustomAppBar(),
+                    Expanded(
+                      child: SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Show authentication form if user is onboarded and authenticated
+                                if (showAuthenticationForm) _buildAuthenticationForm(),
+
+                                // Show eKYC auth form after OTP verification
+                                if (showOnboardAuthForm) _buildOnboardAuthForm(),
+
+                                // Show onboarding form if user is not onboarded
+                                if (showOnboardingForm) _buildOnboardingForm(),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ),
                   ],
                 ),
               ),
             ),
-      // OTP Modal
-      bottomSheet: showOtpModal ? _buildOtpModal() : null,
+        // OTP Modal
+        bottomSheet: showOtpModal ? _buildOtpModal() : null,
+      ),
+    );
+  }
+
+  Widget buildCustomAppBar() {
+    return Padding(
+      padding: EdgeInsets.only(
+          left: GlobalUtils.screenWidth * 0.04,
+          right: GlobalUtils.screenWidth * 0.04,
+          bottom: 16
+      ),
+      child: Row(
+        children: [
+          if (widget.showBackButton) ...[
+            GestureDetector(
+              onTap: () {
+                ConsoleLog.printError("AAAAAAAAAAAAAAAAAAAAAA");
+                // dmtController.senderMobileController.value.clear();
+                // otpKey.currentState?.clear();
+                // dmtController.senderNameController.value.clear();
+                // dmtController.senderAddressController.value.clear();
+                // Get.back();
+                Navigator.of(context).pop();
+              },
+              child: Container(
+                height: GlobalUtils.screenHeight * (22 / 393),
+                width: GlobalUtils.screenWidth * (47 / 393),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.arrow_back_ios_new, color: Colors.black87, size: 22),
+              ),
+            ),
+            SizedBox(width: GlobalUtils.screenWidth * (14 / 393)),
+          ],
+          Text(
+            "AEPS One (Fingpay)",
+            style: GoogleFonts.albertSans(
+              fontSize: GlobalUtils.screenWidth * (20 / 393),
+              fontWeight: FontWeight.w600,
+              color: const Color(0xff1B1C1C),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -141,7 +213,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           const SizedBox(height: 16),
           
           // Aadhaar Number
-          _buildTextField(
+          buildTextField(
             label: 'Aadhaar Number',
             controller: aadhaarController,
             readOnly: true,
@@ -267,7 +339,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           Row(
             children: [
               Expanded(
-                child: _buildTextField(
+                child: buildTextField(
                   label: 'First Name',
                   controller: firstNameController,
                   readOnly: true,
@@ -275,7 +347,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildTextField(
+                child: buildTextField(
                   label: 'Last Name',
                   controller: lastNameController,
                   readOnly: true,
@@ -287,7 +359,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           const SizedBox(height: 16),
           
           // Shop Name
-          _buildTextField(
+          buildTextField(
             label: 'Shop Name',
             controller: shopNameController,
             readOnly: true,
@@ -296,7 +368,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           const SizedBox(height: 16),
           
           // Email
-          _buildTextField(
+          buildTextField(
             label: 'Email',
             controller: emailController,
             readOnly: true,
@@ -306,7 +378,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           const SizedBox(height: 16),
           
           // Mobile Number
-          _buildTextField(
+          buildTextField(
             label: 'Mobile Number',
             controller: mobileController,
             readOnly: true,
@@ -317,7 +389,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           const SizedBox(height: 16),
           
           // PAN Number
-          _buildTextField(
+          buildTextField(
             label: 'PAN Number',
             controller: panController,
             readOnly: true,
@@ -327,7 +399,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           const SizedBox(height: 16),
           
           // Aadhaar Number
-          _buildTextField(
+          buildTextField(
             label: 'Aadhaar Number',
             controller: aadhaarController,
             readOnly: true,
@@ -338,7 +410,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           const SizedBox(height: 16),
           
           // GSTIN
-          _buildTextField(
+          buildTextField(
             label: 'GSTIN',
             controller: gstController,
             readOnly: true,
@@ -351,7 +423,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           Row(
             children: [
               Expanded(
-                child: _buildTextField(
+                child: buildTextField(
                   label: 'State',
                   controller: stateController,
                   readOnly: true,
@@ -359,7 +431,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildTextField(
+                child: buildTextField(
                   label: 'City',
                   controller: cityController,
                   readOnly: true,
@@ -371,7 +443,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           const SizedBox(height: 16),
           
           // Pincode
-          _buildTextField(
+          buildTextField(
             label: 'Pincode',
             controller: pincodeController,
             readOnly: true,
@@ -382,7 +454,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           const SizedBox(height: 16),
           
           // Shop Address
-          _buildTextField(
+          buildTextField(
             label: 'Shop Address',
             controller: shopAddressController,
             readOnly: true,
@@ -390,9 +462,49 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           ),
           
           const SizedBox(height: 16),
-          
+
+          /// MY BANKS DROPDOWN WITH SEARCH
+          GestureDetector(
+            onTap: () {
+              // aepsController.fetchMyBanks(context);
+              showSearchableBankDropdown(
+                context,
+                aepsController,
+              );
+            },
+            child: Container(
+              height: GlobalUtils.screenWidth * (60 / 393),
+              width: GlobalUtils.screenWidth * 0.9,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  SizedBox(width: 10,),
+                  Expanded(
+                    child: Text(
+                      aepsController.selectedMyBank.value?.bankName ??
+                          'Select Bank',
+                      // signupController.selectedState.value.isEmpty
+                      //     ? "Select State"
+                      //     : signupController.selectedState.value,
+                      style: GoogleFonts.albertSans(
+                        fontSize: GlobalUtils.screenWidth * (14 / 393),
+                        color: aepsController.selectedMyBank.value?.bankName == "Select Bank"
+                            ? Color(0xFF6B707E)
+                            : Color(0xFF1B1C1C),
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
+                ],
+              ),
+            ),
+          ),
           // Bank Account Selection
-          _buildBankSelectionDropdown(),
+          // _buildBankSelectionDropdown(),
           
           const SizedBox(height: 24),
           
@@ -512,7 +624,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           ),
           const SizedBox(height: 16),
           
-          _buildTextField(
+          buildTextField(
             label: 'Enter OTP',
             controller: otpController,
             keyboardType: TextInputType.number,
@@ -552,14 +664,14 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
     return Text(
       title,
       style: GoogleFonts.albertSans(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Colors.black87,
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: Color(0xff1B1C1C),
       ),
     );
   }
 
-  Widget _buildTextField({
+  Widget buildTextField({
     required String label,
     required TextEditingController controller,
     bool readOnly = false,
@@ -568,6 +680,8 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
     String? hintText,
     int maxLines = 1,
     TextCapitalization textCapitalization = TextCapitalization.none,
+    Function(String)? onChanged,
+    Function(String)? onSubmitted,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -576,45 +690,42 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           label,
           style: GoogleFonts.albertSans(
             fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: Color(0xff6B707E),
+            fontWeight: FontWeight.w400,
           ),
         ),
         const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          readOnly: readOnly,
-          keyboardType: keyboardType,
-          maxLength: maxLength,
-          maxLines: maxLines,
-          textCapitalization: textCapitalization,
-          style: GoogleFonts.albertSans(fontSize: 14),
-          decoration: InputDecoration(
-            counterText: '',
-            hintText: hintText,
-            hintStyle: GoogleFonts.albertSans(color: Colors.grey[400]),
-            filled: true,
-            fillColor: readOnly ? Colors.grey[100] : Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+        GlobalUtils.CustomTextField(
+            label: label,
+            showLabel: false,
+            controller: controller,
+            readOnly: readOnly,
+            keyboardType: keyboardType ?? TextInputType.emailAddress,
+            // isMobileNumber: true,
+            maxLength: maxLength,
+            maxLines: maxLines,
+            textCapitalization: textCapitalization,
+            // style: GoogleFonts.albertSans(fontSize: 14),
+            placeholder: "Phone Number",
+            placeholderColor: Colors.white,
+            height: GlobalUtils.screenWidth * (60 / 393),
+            width: GlobalUtils.screenWidth * 0.9,
+            autoValidate: false,
+            backgroundColor: Colors.white,
+            borderColor: Color(0xffE2E5EC),
+            borderRadius: 16,
+            placeholderStyle: GoogleFonts.albertSans(
+              fontSize: GlobalUtils.screenWidth * (14 / 393),
+              color: Color(0xFF6B707E),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+            inputTextStyle: GoogleFonts.albertSans(
+              fontSize: GlobalUtils.screenWidth * (14 / 393),
+              color: Color(0xFF1B1C1C),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF2E5BFF)),
-            ),
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'This field is required';
-            }
-            return null;
-          },
+            errorColor: Colors.red,
+            errorFontSize: 12,
+            onChanged: onChanged,
+            onSubmitted: onSubmitted
         ),
       ],
     );
@@ -672,28 +783,48 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
     required String label,
     required VoidCallback onPressed,
   }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2E5BFF),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.albertSans(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
+    return GlobalUtils.CustomButton(
+      text: label,
+      onPressed: onPressed,
+      textStyle: GoogleFonts.albertSans(
+        fontSize: 16,
+        color: Colors.white,
+        fontWeight: FontWeight.w600,
       ),
+      width: GlobalUtils.screenWidth * 0.9,
+      height: GlobalUtils.screenWidth * (60 / 393),
+      backgroundGradient: GlobalUtils.blueBtnGradientColor,
+      borderColor: Color(0xFF71A9FF),
+      showShadow: false,
+      textColor: Colors.white,
+      animation: ButtonAnimation.fade,
+      animationDuration: const Duration(milliseconds: 150),
+      buttonType: ButtonType.elevated,
+      borderRadius: 16,
     );
+
+    //   SizedBox(
+    //   width: double.infinity,
+    //   height: 50,
+    //   child: ElevatedButton(
+    //     onPressed: onPressed,
+    //     style: ElevatedButton.styleFrom(
+    //       backgroundColor: const Color(0xFF2E5BFF),
+    //       shape: RoundedRectangleBorder(
+    //         borderRadius: BorderRadius.circular(12),
+    //       ),
+    //       elevation: 0,
+    //     ),
+    //     child: Text(
+    //       label,
+    //       style: GoogleFonts.albertSans(
+    //         fontSize: 16,
+    //         fontWeight: FontWeight.w600,
+    //         color: Colors.white,
+    //       ),
+    //     ),
+    //   ),
+    // );
   }
 
   Widget _buildSecondaryButton({
@@ -722,6 +853,123 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
       ),
     );
   }
+
+  // ============== Utils Methods ==============
+  void showSearchableBankDropdown(
+      BuildContext context,
+      AepsController controller,
+      ) {
+    controller.filteredBankList.assignAll(controller.myBankList);
+    controller.searchCtrl.clear();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.7,
+              decoration: BoxDecoration(
+                // color: Colors.white,
+                color: Color(0xFFDEEBFF),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(25),
+                  topRight: Radius.circular(25),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[700],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      "Select Bank",
+                      style: GoogleFonts.albertSans(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1B1C1C),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    /// 🔍 Search Field
+                    TextField(
+                      controller: controller.searchCtrl,
+                      onChanged: controller.filterBank,
+                      decoration: InputDecoration(
+                        hintText: 'Search...',
+                        prefixIcon: Icon(Icons.search, color: Color(0xFF6B707E)),
+                        filled: true,
+                        fillColor: Color(0xFFF5F5F5),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      style: TextStyle(
+                        color: Colors.black,
+                      ),
+                    ),
+
+                    /// 🏦 Bank List
+                    Expanded(
+                      child: Obx(() => controller.filteredBankList.isEmpty
+                          ? Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Center(child: Text('No bank found', style: GoogleFonts.albertSans(
+                          color: Color(0xFF6B707E),
+                        ),)),
+                      )
+                          : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount:
+                        controller.filteredBankList.length,
+                        itemBuilder: (context, index) {
+                          final bank =
+                          controller.filteredBankList[index];
+
+                          return ListTile(
+                            title: Text(bank.bankName ?? ''),
+                            trailing: controller.selectedMyBank.value
+                                ?.aepsBankid ==
+                                bank.aepsBankid
+                                ? const Icon(Icons.check,
+                                color: Colors.green)
+                                : null,
+                            onTap: () {
+                              controller.selectedMyBank.value = bank;
+                              Get.back();
+                            },
+                          );
+                        },
+                      )),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
 
   // ============== API Methods ==============
 

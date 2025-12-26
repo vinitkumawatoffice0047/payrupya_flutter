@@ -55,682 +55,689 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        height: GlobalUtils.getScreenHeight(),
-        width: GlobalUtils.getScreenWidth(),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: GlobalUtils.getBackgroundColor()
+    return GestureDetector(
+      // for manage multiple text field keyboard and cursor
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      behavior: HitTestBehavior.translucent,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          height: GlobalUtils.getScreenHeight(),
+          width: GlobalUtils.getScreenWidth(),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: GlobalUtils.getBackgroundColor()
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              buildCustomAppBar(),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Obx(() => Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: 20),
+          child: SafeArea(
+            child: Column(
+              children: [
+                buildCustomAppBar(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Obx(() => Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: 20),
 
-                        /// SUBTITLE TEXT
-                        Text(
-                          "Register Your Account",
-                          style: GoogleFonts.albertSans(
-                            fontSize: GlobalUtils.screenWidth * (24 / 393),
-                            color: Color(0xFF0F0F0F),
-                            height: 1.5,
+                          /// SUBTITLE TEXT
+                          Text(
+                            "Register Your Account",
+                            style: GoogleFonts.albertSans(
+                              fontSize: GlobalUtils.screenWidth * (24 / 393),
+                              color: Color(0xFF0F0F0F),
+                              height: 1.5,
+                            ),
                           ),
-                        ),
 
-                        SizedBox(height: GlobalUtils.screenHeight * 0.035),
+                          SizedBox(height: GlobalUtils.screenHeight * 0.035),
 
-                        /// FIRST NAME
-                        GlobalUtils.CustomTextField(
-                            label: "First Name",
-                            showLabel: false,
-                            controller: signupController.firstNameController.value,
-                            prefixIcon: Icon(Icons.person, color: Color(0xFF6B707E)),
-                            isName: true,
-                            placeholder: "First Name",
-                            placeholderColor: Colors.white,
+                          /// FIRST NAME
+                          GlobalUtils.CustomTextField(
+                              label: "First Name",
+                              showLabel: false,
+                              controller: signupController.firstNameController.value,
+                              prefixIcon: Icon(Icons.person, color: Color(0xFF6B707E)),
+                              isName: true,
+                              placeholder: "First Name",
+                              placeholderColor: Colors.white,
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth * 0.9,
+                              autoValidate: false,
+                              backgroundColor: Colors.white,
+                              borderRadius: 16,
+                              placeholderStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF6B707E),
+                              ),
+                              inputTextStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF1B1C1C),
+                              ),
+                              errorColor: Colors.red,
+                              errorFontSize: 12,
+                              onChanged: (value) {
+                                signupController.isValidName.value = value.isNotEmpty && value.length >= 2;
+                              }
+                          ),
+
+                          SizedBox(height: 20),
+
+                          /// LAST NAME
+                          GlobalUtils.CustomTextField(
+                              label: "Last Name",
+                              showLabel: false,
+                              controller: signupController.lastNameController.value,
+                              prefixIcon: Icon(Icons.person, color: Color(0xFF6B707E)),
+                              isName: true,
+                              placeholder: "Last Name",
+                              placeholderColor: Colors.white,
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth * 0.9,
+                              autoValidate: false,
+                              backgroundColor: Colors.white,
+                              borderRadius: 16,
+                              placeholderStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF6B707E),
+                              ),
+                              inputTextStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF1B1C1C),
+                              ),
+                              errorColor: Colors.red,
+                              errorFontSize: 12
+                          ),
+
+                          SizedBox(height: 20),
+
+                          /// EMAIL
+                          GlobalUtils.CustomTextField(
+                              label: "Email",
+                              showLabel: false,
+                              controller: signupController.emailController.value,
+                              prefixIcon: Icon(Icons.email, color: Color(0xFF6B707E)),
+                              isEmail: true,
+                              placeholder: "Email",
+                              placeholderColor: Colors.white,
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth * 0.9,
+                              autoValidate: false,
+                              backgroundColor: Colors.white,
+                              borderRadius: 16,
+                              placeholderStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF6B707E),
+                              ),
+                              inputTextStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF1B1C1C),
+                              ),
+                              errorColor: Colors.red,
+                              errorFontSize: 12,
+                              onChanged: (value) {
+                                signupController.isValidEmail.value = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value);
+                              }
+                          ),
+
+                          SizedBox(height: 20),
+
+                          /// PHONE NUMBER
+                          GlobalUtils.CustomTextField(
+                              label: "Phone Number",
+                              showLabel: false,
+                              controller: signupController.mobileController.value,
+                              prefixIcon: Icon(Icons.call, color: Color(0xFF6B707E)),
+                              // suffixIcon: Obx(() {
+                              //   if (signupController.isMobileVerified.value) {
+                              //     return Row(
+                              //   mainAxisSize: MainAxisSize.min,
+                              //   children: [
+                              //   Image.asset("assets/images/verified_icon.png",
+                              //   height: 20,
+                              //   ),
+                              //   SizedBox(width: 2,),
+                              //   Text("Verified", style: GoogleFonts.albertSans(
+                              //     fontSize: GlobalUtils.screenWidth * (14 / 393),
+                              //     color: Color(0xFF0054D3),
+                              //     fontWeight: FontWeight.w500,
+                              //   ),),
+                              //   SizedBox(width: 12,),
+                              // ],);
+                              // /*Row(
+                              //       mainAxisSize: MainAxisSize.min,
+                              //       children: [
+                              //         Icon(Icons.check_circle, color: Colors.green, size: 20),
+                              //         SizedBox(width: 4),
+                              //         Text(
+                              //           "Verified",
+                              //           style: GoogleFonts.albertSans(
+                              //             fontSize: GlobalUtils.screenWidth * (14 / 393),
+                              //             color: Colors.green,
+                              //             fontWeight: FontWeight.w600,
+                              //           ),
+                              //         ),
+                              //         SizedBox(width: 12),
+                              //       ],
+                              //     );*/
+                              //   } else {
+                              //     return TextButton(
+                              //       onPressed: () async {
+                              //         String mobile = signupController.mobileController.value.text.trim();
+                              //
+                              //         if (mobile.isEmpty || mobile.length != 10) {
+                              //           Fluttertoast.showToast(msg: "Please enter valid 10-digit mobile number");
+                              //           return;
+                              //         }
+                              //
+                              //         // Call the updated sendMobileOtp function
+                              //         await signupController.sendMobileOtp(context);
+                              //       },
+                              //       child: Text(
+                              //         "Verify",
+                              //         style: GoogleFonts.albertSans(
+                              //           fontSize: GlobalUtils.screenWidth * (14 / 393),
+                              //           color: Color(0xFF0054D3),
+                              //           fontWeight: FontWeight.w500,
+                              //         ),
+                              //       ),
+                              //     );
+                              //   }
+                              // }),
+                              isMobileNumber: true,
+                              placeholder: "Phone Number",
+                              placeholderColor: Colors.white,
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth * 0.9,
+                              autoValidate: false,
+                              backgroundColor: Colors.white,
+                              borderRadius: 16,
+                              placeholderStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF6B707E),
+                              ),
+                              inputTextStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF1B1C1C),
+                              ),
+                              errorColor: Colors.red,
+                              errorFontSize: 12,
+                              onChanged: (value) {
+                                signupController.isMobileNo.value = value.length == 10;
+                              },
+                              enabled: !signupController.isMobileVerified.value,
+                              readOnly: signupController.isMobileVerified.value,
+                          ),
+
+                          SizedBox(height: 20),
+
+                          /// GENDER DROPDOWN
+                          Container(
                             height: GlobalUtils.screenWidth * (60 / 393),
                             width: GlobalUtils.screenWidth * 0.9,
-                            autoValidate: false,
-                            backgroundColor: Colors.white,
-                            borderRadius: 16,
-                            placeholderStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF6B707E),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            inputTextStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF1B1C1C),
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: signupController.selectedGender.value.isEmpty
+                                    ? null
+                                    : signupController.selectedGender.value,
+                                hint: Row(
+                                  children: [
+                                    Icon(Icons.person_outline, color: Color(0xFF6B707E)),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      "Select Gender",
+                                      style: GoogleFonts.albertSans(
+                                        fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                        color: Color(0xFF6B707E),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                isExpanded: true,
+                                dropdownColor: Color(0xFFDEEBFF),
+                                icon: Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
+                                items: ['MALE', 'FEMALE', 'OTHER'].map((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(
+                                      value,
+                                      style: GoogleFonts.albertSans(
+                                        fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                        color: Color(0xFF1B1C1C),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  if (newValue != null) {
+                                    signupController.selectedGender.value = newValue;
+                                  }
+                                },
+                              ),
                             ),
-                            errorColor: Colors.red,
-                            errorFontSize: 12,
-                            onChanged: (value) {
-                              signupController.isValidName.value = value.isNotEmpty && value.length >= 2;
-                            }
-                        ),
+                          ),
 
-                        SizedBox(height: 20),
+                          SizedBox(height: 20),
 
-                        /// LAST NAME
-                        GlobalUtils.CustomTextField(
-                            label: "Last Name",
-                            showLabel: false,
-                            controller: signupController.lastNameController.value,
-                            prefixIcon: Icon(Icons.person, color: Color(0xFF6B707E)),
-                            isName: true,
-                            placeholder: "Last Name",
-                            placeholderColor: Colors.white,
-                            height: GlobalUtils.screenWidth * (60 / 393),
-                            width: GlobalUtils.screenWidth * 0.9,
-                            autoValidate: false,
-                            backgroundColor: Colors.white,
-                            borderRadius: 16,
-                            placeholderStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF6B707E),
-                            ),
-                            inputTextStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF1B1C1C),
-                            ),
-                            errorColor: Colors.red,
-                            errorFontSize: 12
-                        ),
+                          /// PERMANENT ADDRESS
+                          GlobalUtils.CustomTextField(
+                              label: "Permanent Address",
+                              showLabel: false,
+                              controller: signupController.permanentAddressController.value,
+                              prefixIcon: Icon(Icons.home, color: Color(0xFF6B707E)),
+                              placeholder: "Enter Permanent Address",
+                              placeholderColor: Colors.white,
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth * 0.9,
+                              autoValidate: false,
+                              backgroundColor: Colors.white,
+                              borderRadius: 16,
+                              placeholderStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF6B707E),
+                              ),
+                              inputTextStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF1B1C1C),
+                              ),
+                              errorColor: Colors.red,
+                              errorFontSize: 12
+                          ),
 
-                        SizedBox(height: 20),
+                          SizedBox(height: 20),
 
-                        /// EMAIL
-                        GlobalUtils.CustomTextField(
-                            label: "Email",
-                            showLabel: false,
-                            controller: signupController.emailController.value,
-                            prefixIcon: Icon(Icons.email, color: Color(0xFF6B707E)),
-                            isEmail: true,
-                            placeholder: "Email",
-                            placeholderColor: Colors.white,
-                            height: GlobalUtils.screenWidth * (60 / 393),
-                            width: GlobalUtils.screenWidth * 0.9,
-                            autoValidate: false,
-                            backgroundColor: Colors.white,
-                            borderRadius: 16,
-                            placeholderStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF6B707E),
-                            ),
-                            inputTextStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF1B1C1C),
-                            ),
-                            errorColor: Colors.red,
-                            errorFontSize: 12,
-                            onChanged: (value) {
-                              signupController.isValidEmail.value = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value);
-                            }
-                        ),
+                          /// SHOP NAME
+                          GlobalUtils.CustomTextField(
+                              label: "Shop Name",
+                              showLabel: false,
+                              controller: signupController.shopNameController.value,
+                              prefixIcon: Icon(Icons.store, color: Color(0xFF6B707E)),
+                              placeholder: "Enter Shop Name",
+                              placeholderColor: Colors.white,
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth * 0.9,
+                              autoValidate: false,
+                              backgroundColor: Colors.white,
+                              borderRadius: 16,
+                              placeholderStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF6B707E),
+                              ),
+                              inputTextStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF1B1C1C),
+                              ),
+                              errorColor: Colors.red,
+                              errorFontSize: 12
+                          ),
 
-                        SizedBox(height: 20),
+                          SizedBox(height: 20),
 
-                        /// PHONE NUMBER
-                        GlobalUtils.CustomTextField(
-                            label: "Phone Number",
-                            showLabel: false,
-                            controller: signupController.mobileController.value,
-                            prefixIcon: Icon(Icons.call, color: Color(0xFF6B707E)),
-                            // suffixIcon: Obx(() {
-                            //   if (signupController.isMobileVerified.value) {
-                            //     return Row(
-                            //   mainAxisSize: MainAxisSize.min,
-                            //   children: [
-                            //   Image.asset("assets/images/verified_icon.png",
-                            //   height: 20,
-                            //   ),
-                            //   SizedBox(width: 2,),
-                            //   Text("Verified", style: GoogleFonts.albertSans(
-                            //     fontSize: GlobalUtils.screenWidth * (14 / 393),
-                            //     color: Color(0xFF0054D3),
-                            //     fontWeight: FontWeight.w500,
-                            //   ),),
-                            //   SizedBox(width: 12,),
-                            // ],);
-                            // /*Row(
-                            //       mainAxisSize: MainAxisSize.min,
-                            //       children: [
-                            //         Icon(Icons.check_circle, color: Colors.green, size: 20),
-                            //         SizedBox(width: 4),
-                            //         Text(
-                            //           "Verified",
-                            //           style: GoogleFonts.albertSans(
-                            //             fontSize: GlobalUtils.screenWidth * (14 / 393),
-                            //             color: Colors.green,
-                            //             fontWeight: FontWeight.w600,
-                            //           ),
-                            //         ),
-                            //         SizedBox(width: 12),
-                            //       ],
-                            //     );*/
-                            //   } else {
-                            //     return TextButton(
-                            //       onPressed: () async {
-                            //         String mobile = signupController.mobileController.value.text.trim();
-                            //
-                            //         if (mobile.isEmpty || mobile.length != 10) {
-                            //           Fluttertoast.showToast(msg: "Please enter valid 10-digit mobile number");
-                            //           return;
-                            //         }
-                            //
-                            //         // Call the updated sendMobileOtp function
-                            //         await signupController.sendMobileOtp(context);
-                            //       },
-                            //       child: Text(
-                            //         "Verify",
-                            //         style: GoogleFonts.albertSans(
-                            //           fontSize: GlobalUtils.screenWidth * (14 / 393),
-                            //           color: Color(0xFF0054D3),
-                            //           fontWeight: FontWeight.w500,
-                            //         ),
-                            //       ),
-                            //     );
-                            //   }
-                            // }),
-                            isMobileNumber: true,
-                            placeholder: "Phone Number",
-                            placeholderColor: Colors.white,
-                            height: GlobalUtils.screenWidth * (60 / 393),
-                            width: GlobalUtils.screenWidth * 0.9,
-                            autoValidate: false,
-                            backgroundColor: Colors.white,
-                            borderRadius: 16,
-                            placeholderStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF6B707E),
-                            ),
-                            inputTextStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF1B1C1C),
-                            ),
-                            errorColor: Colors.red,
-                            errorFontSize: 12,
-                            onChanged: (value) {
-                              signupController.isMobileNo.value = value.length == 10;
+                          /// PAN NUMBER
+                          GlobalUtils.CustomTextField(
+                              label: "PAN Number",
+                              showLabel: false,
+                              controller: signupController.panController.value,
+                              prefixIcon: Icon(Icons.credit_card, color: Color(0xFF6B707E)),
+                              placeholder: "Enter PAN Number",
+                              placeholderColor: Colors.white,
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth * 0.9,
+                              autoValidate: false,
+                              backgroundColor: Colors.white,
+                              borderRadius: 16,
+                              placeholderStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF6B707E),
+                              ),
+                              inputTextStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF1B1C1C),
+                              ),
+                              errorColor: Colors.red,
+                              errorFontSize: 12
+                          ),
+
+                          SizedBox(height: 20),
+
+                          /*/// AADHAR NUMBER - NEW FIELD FOR FUTURE
+                          GlobalUtils.CustomTextField(
+                              label: "Aadhar Number",
+                              showLabel: false,
+                              controller: signupController.aadharController.value,
+                              prefixIcon: Icon(Icons.badge, color: Color(0xFF6B707E)),
+                              isAadharNumber: true,
+                              placeholder: "Enter 12-digit Aadhar Number",
+                              placeholderColor: Colors.white,
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth * 0.9,
+                              autoValidate: false,
+                              backgroundColor: Colors.white,
+                              borderRadius: 16,
+                              placeholderStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF6B707E),
+                              ),
+                              inputTextStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF1B1C1C),
+                              ),
+                              errorColor: Colors.red,
+                              errorFontSize: 12,
+                              maxLength: 12,
+                              onChanged: (value) {
+                              }
+                          ),
+
+                          SizedBox(height: 20),*/
+
+                          /// GSTIN NUMBER
+                          GlobalUtils.CustomTextField(
+                              label: "GSTIN Number",
+                              showLabel: false,
+                              controller: signupController.gstinController.value,
+                              prefixIcon: Icon(Icons.document_scanner, color: Color(0xFF6B707E)),
+                              placeholder: "Enter GSTIN Number (Optional)",
+                              placeholderColor: Colors.white,
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth * 0.9,
+                              autoValidate: false,
+                              backgroundColor: Colors.white,
+                              borderRadius: 16,
+                              placeholderStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF6B707E),
+                              ),
+                              inputTextStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF1B1C1C),
+                              ),
+                              errorColor: Colors.red,
+                              errorFontSize: 12
+                          ),
+
+                          SizedBox(height: 20),
+
+                          /// STATE DROPDOWN WITH SEARCH
+                          GestureDetector(
+                            onTap: () {
+                              signupController.fetchStates(context);
+                              showSearchableDropdown(
+                                context,
+                                'Select State',
+                                signupController.stateList,
+                                signupController.selectedState,
+                                    (value) {
+                                  signupController.selectedState.value = value;
+                                  signupController.fetchCities(context);
+                                },
+                              );
                             },
-                            enabled: !signupController.isMobileVerified.value,
-                            readOnly: signupController.isMobileVerified.value,
-                        ),
-
-                        SizedBox(height: 20),
-
-                        /// GENDER DROPDOWN
-                        Container(
-                          height: GlobalUtils.screenWidth * (60 / 393),
-                          width: GlobalUtils.screenWidth * 0.9,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: signupController.selectedGender.value.isEmpty
-                                  ? null
-                                  : signupController.selectedGender.value,
-                              hint: Row(
+                            child: Container(
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth * 0.9,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: Row(
                                 children: [
-                                  Icon(Icons.person_outline, color: Color(0xFF6B707E)),
+                                  Icon(Icons.location_on, color: Color(0xFF6B707E)),
                                   SizedBox(width: 12),
-                                  Text(
-                                    "Select Gender",
-                                    style: GoogleFonts.albertSans(
-                                      fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                      color: Color(0xFF6B707E),
+                                  Expanded(
+                                    child: Text(
+                                      signupController.selectedState.value.isEmpty
+                                          ? "Select State"
+                                          : signupController.selectedState.value,
+                                      style: GoogleFonts.albertSans(
+                                        fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                        color: signupController.selectedState.value.isEmpty
+                                            ? Color(0xFF6B707E)
+                                            : Color(0xFF1B1C1C),
+                                      ),
                                     ),
                                   ),
+                                  Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
                                 ],
                               ),
-                              isExpanded: true,
-                              dropdownColor: Color(0xFFDEEBFF),
-                              icon: Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
-                              items: ['MALE', 'FEMALE', 'OTHER'].map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(
-                                    value,
-                                    style: GoogleFonts.albertSans(
-                                      fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                      color: Color(0xFF1B1C1C),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                if (newValue != null) {
-                                  signupController.selectedGender.value = newValue;
-                                }
-                              },
                             ),
                           ),
-                        ),
 
-                        SizedBox(height: 20),
+                          SizedBox(height: 20),
 
-                        /// PERMANENT ADDRESS
-                        GlobalUtils.CustomTextField(
-                            label: "Permanent Address",
-                            showLabel: false,
-                            controller: signupController.permanentAddressController.value,
-                            prefixIcon: Icon(Icons.home, color: Color(0xFF6B707E)),
-                            placeholder: "Enter Permanent Address",
-                            placeholderColor: Colors.white,
-                            height: GlobalUtils.screenWidth * (60 / 393),
-                            width: GlobalUtils.screenWidth * 0.9,
-                            autoValidate: false,
-                            backgroundColor: Colors.white,
-                            borderRadius: 16,
-                            placeholderStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF6B707E),
-                            ),
-                            inputTextStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF1B1C1C),
-                            ),
-                            errorColor: Colors.red,
-                            errorFontSize: 12
-                        ),
-
-                        SizedBox(height: 20),
-
-                        /// SHOP NAME
-                        GlobalUtils.CustomTextField(
-                            label: "Shop Name",
-                            showLabel: false,
-                            controller: signupController.shopNameController.value,
-                            prefixIcon: Icon(Icons.store, color: Color(0xFF6B707E)),
-                            placeholder: "Enter Shop Name",
-                            placeholderColor: Colors.white,
-                            height: GlobalUtils.screenWidth * (60 / 393),
-                            width: GlobalUtils.screenWidth * 0.9,
-                            autoValidate: false,
-                            backgroundColor: Colors.white,
-                            borderRadius: 16,
-                            placeholderStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF6B707E),
-                            ),
-                            inputTextStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF1B1C1C),
-                            ),
-                            errorColor: Colors.red,
-                            errorFontSize: 12
-                        ),
-
-                        SizedBox(height: 20),
-
-                        /// PAN NUMBER
-                        GlobalUtils.CustomTextField(
-                            label: "PAN Number",
-                            showLabel: false,
-                            controller: signupController.panController.value,
-                            prefixIcon: Icon(Icons.credit_card, color: Color(0xFF6B707E)),
-                            placeholder: "Enter PAN Number",
-                            placeholderColor: Colors.white,
-                            height: GlobalUtils.screenWidth * (60 / 393),
-                            width: GlobalUtils.screenWidth * 0.9,
-                            autoValidate: false,
-                            backgroundColor: Colors.white,
-                            borderRadius: 16,
-                            placeholderStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF6B707E),
-                            ),
-                            inputTextStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF1B1C1C),
-                            ),
-                            errorColor: Colors.red,
-                            errorFontSize: 12
-                        ),
-
-                        SizedBox(height: 20),
-
-                        /*/// AADHAR NUMBER - NEW FIELD FOR FUTURE
-                        GlobalUtils.CustomTextField(
-                            label: "Aadhar Number",
-                            showLabel: false,
-                            controller: signupController.aadharController.value,
-                            prefixIcon: Icon(Icons.badge, color: Color(0xFF6B707E)),
-                            isAadharNumber: true,
-                            placeholder: "Enter 12-digit Aadhar Number",
-                            placeholderColor: Colors.white,
-                            height: GlobalUtils.screenWidth * (60 / 393),
-                            width: GlobalUtils.screenWidth * 0.9,
-                            autoValidate: false,
-                            backgroundColor: Colors.white,
-                            borderRadius: 16,
-                            placeholderStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF6B707E),
-                            ),
-                            inputTextStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF1B1C1C),
-                            ),
-                            errorColor: Colors.red,
-                            errorFontSize: 12,
-                            maxLength: 12,
-                            onChanged: (value) {
-                            }
-                        ),
-
-                        SizedBox(height: 20),*/
-
-                        /// GSTIN NUMBER
-                        GlobalUtils.CustomTextField(
-                            label: "GSTIN Number",
-                            showLabel: false,
-                            controller: signupController.gstinController.value,
-                            prefixIcon: Icon(Icons.document_scanner, color: Color(0xFF6B707E)),
-                            placeholder: "Enter GSTIN Number (Optional)",
-                            placeholderColor: Colors.white,
-                            height: GlobalUtils.screenWidth * (60 / 393),
-                            width: GlobalUtils.screenWidth * 0.9,
-                            autoValidate: false,
-                            backgroundColor: Colors.white,
-                            borderRadius: 16,
-                            placeholderStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF6B707E),
-                            ),
-                            inputTextStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF1B1C1C),
-                            ),
-                            errorColor: Colors.red,
-                            errorFontSize: 12
-                        ),
-
-                        SizedBox(height: 20),
-
-                        /// STATE DROPDOWN WITH SEARCH
-                        GestureDetector(
-                          onTap: () {
-                            signupController.fetchStates(context);
-                            showSearchableDropdown(
-                              context,
-                              'Select State',
-                              signupController.stateList,
-                              signupController.selectedState,
-                                  (value) {
-                                signupController.selectedState.value = value;
-                                signupController.fetchCities(context);
-                              },
-                            );
-                          },
-                          child: Container(
-                            height: GlobalUtils.screenWidth * (60 / 393),
-                            width: GlobalUtils.screenWidth * 0.9,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Row(
-                              children: [
-                                Icon(Icons.location_on, color: Color(0xFF6B707E)),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    signupController.selectedState.value.isEmpty
-                                        ? "Select State"
-                                        : signupController.selectedState.value,
-                                    style: GoogleFonts.albertSans(
-                                      fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                      color: signupController.selectedState.value.isEmpty
-                                          ? Color(0xFF6B707E)
-                                          : Color(0xFF1B1C1C),
+                          /// CITY DROPDOWN WITH SEARCH
+                          GestureDetector(
+                            onTap: () {
+                              if (signupController.selectedState.value.isEmpty) {
+                                Fluttertoast.showToast(msg: "Please select state first");
+                                return;
+                              }
+                              showSearchableDropdown(
+                                context,
+                                'Select City',
+                                signupController.cityList,
+                                signupController.selectedCity,
+                                    (value) {
+                                  signupController.selectedCity.value = value;
+                                  signupController.fetchPincodes(context);
+                                },
+                              );
+                            },
+                            child: Container(
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth * 0.9,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.location_city, color: Color(0xFF6B707E)),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      signupController.selectedCity.value.isEmpty
+                                          ? "Select City"
+                                          : signupController.selectedCity.value,
+                                      style: GoogleFonts.albertSans(
+                                        fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                        color: signupController.selectedCity.value.isEmpty
+                                            ? Color(0xFF6B707E)
+                                            : Color(0xFF1B1C1C),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(height: 20),
-
-                        /// CITY DROPDOWN WITH SEARCH
-                        GestureDetector(
-                          onTap: () {
-                            if (signupController.selectedState.value.isEmpty) {
-                              Fluttertoast.showToast(msg: "Please select state first");
-                              return;
-                            }
-                            showSearchableDropdown(
-                              context,
-                              'Select City',
-                              signupController.cityList,
-                              signupController.selectedCity,
-                                  (value) {
-                                signupController.selectedCity.value = value;
-                                signupController.fetchPincodes(context);
-                              },
-                            );
-                          },
-                          child: Container(
-                            height: GlobalUtils.screenWidth * (60 / 393),
-                            width: GlobalUtils.screenWidth * 0.9,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Row(
-                              children: [
-                                Icon(Icons.location_city, color: Color(0xFF6B707E)),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    signupController.selectedCity.value.isEmpty
-                                        ? "Select City"
-                                        : signupController.selectedCity.value,
-                                    style: GoogleFonts.albertSans(
-                                      fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                      color: signupController.selectedCity.value.isEmpty
-                                          ? Color(0xFF6B707E)
-                                          : Color(0xFF1B1C1C),
-                                    ),
-                                  ),
-                                ),
-                                Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(height: 20),
-
-                        /// PINCODE DROPDOWN WITH SEARCH
-                        GestureDetector(
-                          onTap: () {
-                            if (signupController.selectedState.value.isEmpty) {
-                              Fluttertoast.showToast(msg: "Please select state first");
-                              return;
-                            }
-                            if (signupController.selectedCity.value.isEmpty) {
-                              Fluttertoast.showToast(msg: "Please select city first");
-                              return;
-                            }
-                            if (signupController.pincodeList.isEmpty) {
-                              Fluttertoast.showToast(msg: "No pincodes available for selected city");
-                              return;
-                            }
-                            showSearchableDropdown(
-                              context,
-                              'Select Pincode',
-                              signupController.pincodeList,
-                              signupController.selectedPincode,
-                                  (value) {
-                                signupController.selectedPincode.value = value;
-                              },
-                            );
-                          },
-                          child: Container(
-                            height: GlobalUtils.screenWidth * (60 / 393),
-                            width: GlobalUtils.screenWidth * 0.9,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Row(
-                              children: [
-                                Icon(Icons.pin_drop, color: Color(0xFF6B707E)),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    signupController.selectedPincode.value.isEmpty
-                                        ? "Select Pincode"
-                                        : signupController.selectedPincode.value,
-                                    style: GoogleFonts.albertSans(
-                                      fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                      color: signupController.selectedPincode.value.isEmpty
-                                          ? Color(0xFF6B707E)
-                                          : Color(0xFF1B1C1C),
-                                    ),
-                                  ),
-                                ),
-                                Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(height: 20),
-
-                        /// SHOP ADDRESS
-                        GlobalUtils.CustomTextField(
-                            label: "Shop Address",
-                            showLabel: false,
-                            controller: signupController.shopAddressController.value,
-                            prefixIcon: Icon(Icons.business, color: Color(0xFF6B707E)),
-                            placeholder: "Enter Shop Address",
-                            placeholderColor: Colors.white,
-                            height: GlobalUtils.screenWidth * (60 / 393),
-                            width: GlobalUtils.screenWidth * 0.9,
-                            autoValidate: false,
-                            backgroundColor: Colors.white,
-                            borderRadius: 16,
-                            placeholderStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF6B707E),
-                            ),
-                            inputTextStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF1B1C1C),
-                            ),
-                            errorColor: Colors.red,
-                            errorFontSize: 12
-                        ),
-
-                        SizedBox(height: 20),
-
-                        /// TERMS & CONDITIONS CHECKBOX
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: signupController.isChecked.value,
-                              onChanged: (value) {
-                                signupController.isChecked.value = value ?? false;
-                              },
-                              activeColor: Color(0xFF0054D3),
-                              checkColor: Colors.white,
-                            ),
-                            Expanded(
-                              child: Text(
-                                "I agree to Terms & Conditions",
-                                style: GoogleFonts.albertSans(
-                                  fontSize: GlobalUtils.screenWidth * (14 / 393),
-                                  color: Color(0xFF6B707E),
-                                ),
+                                  Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-
-                        SizedBox(height: 30),
-
-                        /// SIGN UP BUTTON
-                        GlobalUtils.CustomButton(
-                          text: "SIGN UP",
-                          onPressed: () {
-                            signupController.validateAndRegister(context);
-                          },
-                          textStyle: GoogleFonts.albertSans(
-                            fontSize: GlobalUtils.screenWidth * (16 / 393),
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
                           ),
-                          width: GlobalUtils.screenWidth * 0.9,
-                          height: GlobalUtils.screenWidth * (60 / 393),
-                          backgroundGradient: GlobalUtils.blueBtnGradientColor,
-                          borderColor: Color(0xFF71A9FF),
-                          showShadow: false,
-                          textColor: Colors.white,
-                          animation: ButtonAnimation.fade,
-                          animationDuration: const Duration(milliseconds: 150),
-                          buttonType: ButtonType.elevated,
-                          borderRadius: 16,
-                        ),
 
-                        SizedBox(height: GlobalUtils.screenWidth * 0.02),
+                          SizedBox(height: 20),
 
-                        /// ALREADY HAVE ACCOUNT
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "Already have an account?",
-                              style: GoogleFonts.albertSans(
+                          /// PINCODE DROPDOWN WITH SEARCH
+                          GestureDetector(
+                            onTap: () {
+                              if (signupController.selectedState.value.isEmpty) {
+                                Fluttertoast.showToast(msg: "Please select state first");
+                                return;
+                              }
+                              if (signupController.selectedCity.value.isEmpty) {
+                                Fluttertoast.showToast(msg: "Please select city first");
+                                return;
+                              }
+                              if (signupController.pincodeList.isEmpty) {
+                                Fluttertoast.showToast(msg: "No pincodes available for selected city");
+                                return;
+                              }
+                              showSearchableDropdown(
+                                context,
+                                'Select Pincode',
+                                signupController.pincodeList,
+                                signupController.selectedPincode,
+                                    (value) {
+                                  signupController.selectedPincode.value = value;
+                                },
+                              );
+                            },
+                            child: Container(
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth * 0.9,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.pin_drop, color: Color(0xFF6B707E)),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      signupController.selectedPincode.value.isEmpty
+                                          ? "Select Pincode"
+                                          : signupController.selectedPincode.value,
+                                      style: GoogleFonts.albertSans(
+                                        fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                        color: signupController.selectedPincode.value.isEmpty
+                                            ? Color(0xFF6B707E)
+                                            : Color(0xFF1B1C1C),
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          SizedBox(height: 20),
+
+                          /// SHOP ADDRESS
+                          GlobalUtils.CustomTextField(
+                              label: "Shop Address",
+                              showLabel: false,
+                              controller: signupController.shopAddressController.value,
+                              prefixIcon: Icon(Icons.business, color: Color(0xFF6B707E)),
+                              placeholder: "Enter Shop Address",
+                              placeholderColor: Colors.white,
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth * 0.9,
+                              autoValidate: false,
+                              backgroundColor: Colors.white,
+                              borderRadius: 16,
+                              placeholderStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
                                 color: Color(0xFF6B707E),
-                                fontSize: GlobalUtils.screenWidth * (16 / 393),
                               ),
+                              inputTextStyle: GoogleFonts.albertSans(
+                                fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                color: Color(0xFF1B1C1C),
+                              ),
+                              errorColor: Colors.red,
+                              errorFontSize: 12
+                          ),
+
+                          SizedBox(height: 20),
+
+                          /// TERMS & CONDITIONS CHECKBOX
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: signupController.isChecked.value,
+                                onChanged: (value) {
+                                  signupController.isChecked.value = value ?? false;
+                                },
+                                activeColor: Color(0xFF0054D3),
+                                checkColor: Colors.white,
+                              ),
+                              Expanded(
+                                child: Text(
+                                  "I agree to Terms & Conditions",
+                                  style: GoogleFonts.albertSans(
+                                    fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                    color: Color(0xFF6B707E),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: 30),
+
+                          /// SIGN UP BUTTON
+                          GlobalUtils.CustomButton(
+                            text: "SIGN UP",
+                            onPressed: () {
+                              signupController.validateAndRegister(context);
+                            },
+                            textStyle: GoogleFonts.albertSans(
+                              fontSize: GlobalUtils.screenWidth * (16 / 393),
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
                             ),
-                            GlobalUtils.CustomButton(
-                              onPressed: () {
-                                Get.to(LoginScreen());
-                              },
-                              buttonType: ButtonType.text,
-                              text: "Sign in",
-                              padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-                              textStyle: GoogleFonts.albertSans(
-                                fontSize: GlobalUtils.screenWidth * (16 / 393),
-                                color: Color(0xFF0054D3),
-                                fontWeight: FontWeight.w600,
+                            width: GlobalUtils.screenWidth * 0.9,
+                            height: GlobalUtils.screenWidth * (60 / 393),
+                            backgroundGradient: GlobalUtils.blueBtnGradientColor,
+                            borderColor: Color(0xFF71A9FF),
+                            showShadow: false,
+                            textColor: Colors.white,
+                            animation: ButtonAnimation.fade,
+                            animationDuration: const Duration(milliseconds: 150),
+                            buttonType: ButtonType.elevated,
+                            borderRadius: 16,
+                          ),
+
+                          SizedBox(height: GlobalUtils.screenWidth * 0.02),
+
+                          /// ALREADY HAVE ACCOUNT
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "Already have an account?",
+                                style: GoogleFonts.albertSans(
+                                  color: Color(0xFF6B707E),
+                                  fontSize: GlobalUtils.screenWidth * (16 / 393),
+                                ),
                               ),
-                            )
-                          ],
-                        ),
-                        SizedBox(height: GlobalUtils.screenWidth * 0.05)
-                      ],
-                    ),
-                  )),
+                              GlobalUtils.CustomButton(
+                                onPressed: () {
+                                  Get.to(LoginScreen());
+                                },
+                                buttonType: ButtonType.text,
+                                text: "Sign in",
+                                padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                                textStyle: GoogleFonts.albertSans(
+                                  fontSize: GlobalUtils.screenWidth * (16 / 393),
+                                  color: Color(0xFF0054D3),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              )
+                            ],
+                          ),
+                          SizedBox(height: GlobalUtils.screenWidth * 0.05)
+                        ],
+                      ),
+                    )),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

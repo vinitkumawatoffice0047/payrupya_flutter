@@ -4,6 +4,15 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import 'package:payrupya/controllers/login_controller.dart';
+
+import '../api/api_provider.dart';
+import '../api/web_api_constant.dart';
+import '../models/get_all_my_bank_list_response_model.dart';
+import '../utils/ConsoleLog.dart';
+import '../utils/app_shared_preferences.dart';
+import '../utils/global_utils.dart';
+import '../view/onboarding_screen.dart';
 
 // Import your existing files - adjust paths as needed
 // import '../api/api_provider.dart';
@@ -23,6 +32,8 @@ class AepsController extends GetxController {
   RxBool isLoading = false.obs;
   RxBool isOnboardingLoading = false.obs;
   RxBool isTransactionLoading = false.obs;
+  RxString userAuthToken = "".obs;
+  RxString userSignature = "".obs;
 
   // Onboarding states
   RxBool isOnboarded = false.obs;
@@ -44,8 +55,12 @@ class AepsController extends GetxController {
   RxString selectedBankIin = ''.obs;
 
   // My Bank List (for Fingpay)
-  RxList<MyBankAccount> myBankList = <MyBankAccount>[].obs;
-  Rx<MyBankAccount?> selectedMyBank = Rx<MyBankAccount?>(null);
+  RxList<GetAllMyBankListData> myBankList = <GetAllMyBankListData>[].obs;
+  Rx<GetAllMyBankListData?> selectedMyBank = Rx<GetAllMyBankListData?>(null);
+  RxList<GetAllMyBankListData> filteredBankList = <GetAllMyBankListData>[].obs;
+  final TextEditingController searchCtrl = TextEditingController();
+  // RxList<MyBankAccount> myBankList = <MyBankAccount>[].obs;
+  // Rx<MyBankAccount?> selectedMyBank = Rx<MyBankAccount?>(null);
 
   // Transaction data
   Rx<AepsConfirmData?> confirmationData = Rx<AepsConfirmData?>(null);
@@ -108,6 +123,8 @@ class AepsController extends GetxController {
   // Transaction PIN
   final txnPinController = TextEditingController();
 
+  LoginController loginController = Get.put(LoginController());
+
   // ============== Dependencies ==============
   // Uncomment and adjust based on your existing code structure
   // final ApiProvider _apiProvider = ApiProvider();
@@ -118,8 +135,25 @@ class AepsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    filteredBankList.assignAll(myBankList);
     // Initialize user data from login controller
     // _initializeUserData();
+  }
+
+  void filterBank(String query) {
+    if (query.isEmpty) {
+      filteredBankList.assignAll(myBankList);
+    } else {
+      filteredBankList.assignAll(
+        myBankList.where(
+              (bank) =>
+          bank.bankName
+              ?.toLowerCase()
+              .contains(query.toLowerCase()) ??
+              false,
+        ),
+      );
+    }
   }
 
   @override
@@ -176,6 +210,122 @@ class AepsController extends GetxController {
     shopAddressController.text = shopAddress;
   }
 
+  // ============== API Calls ==============
+
+  // Generate Request ID
+  String generateRequestId() {
+    return GlobalUtils.generateRandomId(6);
+  }
+
+  //region loadAuthCredentials
+  // Load both token and signature properly
+  Future<void> loadAuthCredentials() async {
+    try {
+      Map<String, String> authData = await AppSharedPreferences.getLoginAuth();
+      userAuthToken.value = authData["token"] ?? "";
+      userSignature.value = authData["signature"] ?? "";
+
+      ConsoleLog.printInfo("Token: ${userAuthToken.value.isNotEmpty ? 'Found' : 'NOT FOUND'}");
+      ConsoleLog.printInfo("Signature: ${userSignature.value.isNotEmpty ? 'Found' : 'NOT FOUND'}");
+
+      // Debug: Print first 20 chars
+      if (userAuthToken.value.isNotEmpty) {
+        int tokenLength = userAuthToken.value.length;
+        int previewLength = tokenLength > 20 ? 20 : tokenLength;
+        if (previewLength > 0) {
+          ConsoleLog.printColor("Token Preview: ${userAuthToken.value.substring(0, previewLength)}...", color: "cyan");
+        }
+      }
+
+      if (userSignature.value.isNotEmpty) {
+        int signatureLength = userSignature.value.length;
+        int previewLength = signatureLength > 20 ? 20 : signatureLength;
+        if (previewLength > 0) {
+          ConsoleLog.printColor("Signature Preview: ${userSignature.value.substring(0, previewLength)}...", color: "cyan");
+        }
+      }
+
+    } catch (e) {
+      ConsoleLog.printError("Error loading auth credentials: $e");
+    }
+  }
+  //endregion
+
+  //region isTokenValid
+  Future<bool> isTokenValid() async {
+    // Reload credentials first
+    await loadAuthCredentials();
+
+    if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+      ConsoleLog.printError("❌ Token or Signature missing");
+      ConsoleLog.printError("Token Length: ${userAuthToken.value.length}");
+      ConsoleLog.printError("Signature Length: ${userSignature.value.length}");
+      return false;
+    }
+    return true;
+  }
+  //endregion
+
+  //region refreshToken
+  Future<void> refreshToken(BuildContext context) async {
+    ConsoleLog.printWarning("⚠️ Token expired, please login again");
+    await AppSharedPreferences.clearAll();
+    Get.offAll(() => OnboardingScreen());
+    Fluttertoast.showToast(msg: "Session expired. Please login again.");
+  }
+  //endregion
+
+  // Fetch Banks
+  Future<void> fetchMyBanks(BuildContext context, String allBanksList) async {
+    try {
+      if (loginController.latitude.value == 0.0 || loginController.longitude.value == 0.0) {
+        ConsoleLog.printInfo("Latitude: ${loginController.latitude.value}");
+        ConsoleLog.printInfo("Longitude: ${loginController.longitude.value}");
+        return;
+      }
+      if (!await isTokenValid()) {
+        await refreshToken(context);
+        return;
+      }
+
+      Map<String, dynamic> dict = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
+        "all_banks_list": allBanksList
+      };
+
+      ConsoleLog.printInfo("Fetching my banks list with params: $dict");
+
+      var response = await ApiProvider().requestPostForApi(
+        WebApiConstant.API_URL_GET_ALL_MY_BANK_LIST,
+        dict,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+
+        // Parse using model
+        GetAllMyBankListResponseModel getAllMyBanksResponse = GetAllMyBankListResponseModel.fromJson(data);
+
+        if (getAllMyBanksResponse.respCode == 'RCS' && getAllMyBanksResponse.data != null) {
+          myBankList.value = getAllMyBanksResponse.data!
+              .map((getAllMyBanksData) => getAllMyBanksData.bankName ?? "")
+              .where((bankName) => bankName.isNotEmpty).cast<GetAllMyBankListData>()
+              .toList();
+          ConsoleLog.printSuccess("My Banks List loaded: ${myBankList.length}");
+        } else {
+          Fluttertoast.showToast(msg: getAllMyBanksResponse.respDesc ?? "Failed to load banks list");
+        }
+      }
+    } catch (e) {
+      ConsoleLog.printError("Error fetching my bank list: $e");
+      Fluttertoast.showToast(msg: "Error loading banks list");
+    }
+  }
+
   // ============== Service Selection ==============
 
   void onServiceSelect(String service) {
@@ -215,9 +365,12 @@ class AepsController extends GetxController {
     selectedBankIin.value = bank.bankIin ?? '';
   }
 
-  void selectMyBank(MyBankAccount bank) {
+  void selectMyBank(GetAllMyBankListData bank) {
     selectedMyBank.value = bank;
   }
+  // void selectMyBank(MyBankAccount bank) {
+  //   selectedMyBank.value = bank;
+  // }
 
   // ============== Modal Controls ==============
 

@@ -49,6 +49,7 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
     {'name': 'Union Bank', 'time': '2 hrs', 'img': 'assets/images/union_logo.png'},
   ];
 
+  bool _isInitialLoading = true;
   bool isServiceLoading = true;
   bool isServiceLoaded = false;
 
@@ -73,23 +74,30 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
 
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      CustomLoading.showLoading();
-      // initializeData();
+      initializeData();
     });
   }
 
   /// Initialize data after widget is built
   Future<void> initializeData() async {
     try {
-      CustomLoading.showLoading();
+      // Show loading state
+      setState(() {
+        _isInitialLoading = true;
+      });
 
-      // Load wallet balance
-      // await payrupyaHomeScreenController.getWalletBalance();
+      // Load wallet balance and services
+      await payrupyaHomeScreenController.initializeHomeScreen();
 
     } catch (e) {
       debugPrint('Error initializing data: $e');
     } finally {
-      CustomLoading.hideLoading();
+      // Hide loading state
+      if (mounted) {
+        setState(() {
+          _isInitialLoading = false;
+        });
+      }
     }
   }
 
@@ -109,48 +117,77 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xff80a8ff),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF2E5BFF), Color(0xFF5E92F3)],
-          ),
-        ),
-        child: Column(
-          children: [
-            SizedBox(
-              height: 30,
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF2E5BFF), Color(0xFF5E92F3)],
+              ),
             ),
-            buildHeader(),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(30),
-                    topRight: Radius.circular(30),
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 30,
+                ),
+                buildHeader(),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(30),
+                        topRight: Radius.circular(30),
+                      ),
+                    ),
+                    child: SingleChildScrollView(
+                      physics: BouncingScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: 20),
+                          buildQuickLinks(),
+                          SizedBox(height: 20),
+                          buildPromoBanner(),
+                          SizedBox(height: 20),
+                          buildDownBanks(),
+                          SizedBox(height: 20),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                child: SingleChildScrollView(
-                  physics: BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 20),
-                      buildQuickLinks(),
-                      SizedBox(height: 20),
-                      buildPromoBanner(),
-                      SizedBox(height: 20),
-                      buildDownBanks(),
-                      SizedBox(height: 20),
-                    ],
-                  ),
+              ],
+            ),
+          ),
+          // ✅ NEW: Full screen loading overlay
+          if (_isInitialLoading)
+            Container(
+              color: Colors.black.withOpacity(0.4),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 3,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Loading...',
+                      style: GoogleFonts.albertSans(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -213,7 +250,7 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
 
   Widget buildHeaderIcon(String imagePath, VoidCallback onTap) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: _isInitialLoading ? null : onTap,
       child: Container(
         padding: EdgeInsets.all(10),
         decoration: BoxDecoration(
@@ -247,7 +284,7 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
                       Material(
                         child: InkWell(
                           borderRadius: BorderRadius.circular(100),
-                          onTap: () {
+                          onTap: _isInitialLoading ? null : () { // ✅ Disable during loading
                             refreshController.forward(from: 0);
                             payrupyaHomeScreenController.getWalletBalance();
                           },
@@ -346,70 +383,66 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
             itemBuilder: (context, index) {
               final item = quickLinks[index];
               return GestureDetector(
-                onTap: () {
-                  // if(item['label'] == "Payrupya\nWallet"){
-                  //   // Get.to(WalletScreen(showBackButton: true));
-                  //   Get.to(AddSenderScreen(showBackButton: true));
-                  // }else if(item['label'] == "DMT KYC"){
-                  //   Get.to(OtpVerificationScreen(phoneNumber: "1234567890", referenceId: "referenceId"));
-                  // }
+                onTap: _isInitialLoading ? null : () { // ✅ Disable during loading
                   switch (item['label']) {
                     case "Payrupya\nWallet":
-                    // Get.to(WalletScreen(showBackButton: true));
-                      Get.to(AddSenderScreen(showBackButton: true));
+                      Get.to(() => AddSenderScreen(showBackButton: true));
                       break;
                     case "Payrupya\nUPI":
-                      Get.to(AddSenderUPIScreen(showBackButton: true));
-                    break;
+                      Get.to(() => AddSenderUPIScreen(showBackButton: true));
+                      break;
                     case "AEPS One":
-                      Get.to(AepsOneScreen(showBackButton: true));
-                    break;
+                      Get.to(() => AepsOneScreen(showBackButton: true));
+                      break;
                     case "AEPS Three":
-                      Get.to(AepsThreeScreen(showBackButton: true));
-                    break;
+                      Get.to(() => AepsThreeScreen(showBackButton: true));
+                      break;
                   }
                   print('Tapped on ${item['label']}');
-                  },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 65,
-                      height: 65,
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(100),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
-                            blurRadius: 3,
-                            spreadRadius: 1,
-                            offset: Offset(0, 0),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(5),
-                        child: Image.asset(item['img'], fit: BoxFit.contain),
-                      ),
-                    ),
-                    SizedBox(height: 6),
-                    Flexible(
-                      child: Text(
-                        item['label'],
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87,
-                          height: 1.1,
+                },
+                child: Opacity(
+                  opacity: _isInitialLoading ? 0.5 : 1.0, // ✅ Dim during loading
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 65,
+                        height: 65,
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(100),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 3,
+                              spreadRadius: 1,
+                              offset: Offset(0, 0),
+                            ),
+                          ],
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        child: Padding(
+                          padding: EdgeInsets.all(5),
+                          child: Image.asset(item['img'], fit: BoxFit.contain),
+                        ),
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 6),
+                      Flexible(
+                        child: Text(
+                          item['label'],
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                            height: 1.1,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -497,7 +530,7 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: _isInitialLoading ? null : () {}, // ✅ Disable during loading
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   minimumSize: Size(0, 0),

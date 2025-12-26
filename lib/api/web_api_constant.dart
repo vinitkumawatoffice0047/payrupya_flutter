@@ -1,8 +1,8 @@
 
 class WebApiConstant{
   // Base URLs
-  static const String BASE_URL                                 =  "https://payrupya.in/intapi/"; //Live
-  // static const String BASE_URL                                 =  "https://uat.payrupya.in/intapi/"; //UAT
+  // static const String BASE_URL                                 =  "https://payrupya.in/intapi/"; //Live
+  static const String BASE_URL                                 =  "https://uat.payrupya.in/intapi/"; //UAT
 
   // Authentication APIs
   static const String API_URL_LOGIN                            = "${BASE_URL}Action/login";                    //Done
@@ -50,6 +50,8 @@ class WebApiConstant{
   // Returns HTML content (not PDF)
   static const String API_URL_GET_RECEIPT = "${BASE_URL}Fetch/TxnReceipt";
 
+  // AEPS APIs
+  static const String API_URL_GET_ALL_MY_BANK_LIST = "${BASE_URL}Fetch/getAllMyBankList";
 
 
 

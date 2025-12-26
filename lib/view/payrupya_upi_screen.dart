@@ -879,7 +879,7 @@ class _PayrupyaUPIScreenState extends State<PayrupyaUPIScreen> {
         children: [
           // if (widget.showBackButton) ...[
             GestureDetector(
-              onTap: () => Get.back(),
+              onTap: () => Navigator.of(context).pop()/*Get.back()*/,
               child: Container(
                 height: GlobalUtils.screenHeight * (22 / 393),
                 width: GlobalUtils.screenWidth * (47 / 393),

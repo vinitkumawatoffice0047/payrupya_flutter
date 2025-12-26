@@ -26,6 +26,7 @@ class PayrupyaHomeScreenController extends GetxController {
   // Services related variables
   RxList<dynamic> services = <dynamic>[].obs;
   RxBool isServicesLoading = false.obs;
+  RxBool isInitialized = false.obs;
 
   @override
   void onInit() {
@@ -33,11 +34,17 @@ class PayrupyaHomeScreenController extends GetxController {
 
     // _initWalletFlow();
     // getLocationAndLoadData();
-    initializeHomeScreen();
+    // initializeHomeScreen();
   }
 
   // Initialize everything in sequence
   Future<void> initializeHomeScreen() async {
+    // ✅ Prevent multiple initializations
+    if (isInitialized.value) {
+      ConsoleLog.printInfo("Already initialized, skipping...");
+      return;
+    }
+
     try {
       // 1. Get location first
       await getLocationAndLoadData();
@@ -50,12 +57,13 @@ class PayrupyaHomeScreenController extends GetxController {
         ConsoleLog.printError("Location not available, cannot load services");
         CustomDialog.error(message: "Location not available. Please enable location services.");
       }
-
+      isInitialized.value = true;
     } catch (e) {
       CustomLoading.hideLoading();
       ConsoleLog.printError("Error initializing home screen: $e");
       CustomDialog.error(message: "Error loading data: $e");
-    }finally{
+    }
+    finally{
       CustomLoading.hideLoading();
     }
   }
@@ -75,7 +83,7 @@ class PayrupyaHomeScreenController extends GetxController {
 
         // Load auth credentials और balance
         await loadAuthCredentials();
-        getWalletBalance();
+        await getWalletBalance();
       } else {
         ConsoleLog.printError("Failed to get location");
       }
@@ -132,6 +140,11 @@ class PayrupyaHomeScreenController extends GetxController {
         }
       }
 
+      // ✅ NEW: Debug full signature to verify
+      ConsoleLog.printColor("=== AUTH DEBUG ===", color: "yellow");
+      ConsoleLog.printColor("Full Token: ${userAuthToken.value}", color: "cyan");
+      ConsoleLog.printColor("Full Signature: ${userSignature.value}", color: "cyan");
+      ConsoleLog.printColor("=== END AUTH DEBUG ===", color: "yellow");
     } catch (e) {
       ConsoleLog.printError("Error loading auth credentials: $e");
     }
@@ -201,6 +214,11 @@ class PayrupyaHomeScreenController extends GetxController {
           // Error case properly handled
           ConsoleLog.printError("Get Wallet Balance Error: ${apiResponse.respDesc}");
           CustomDialog.error(message: apiResponse.respDesc ?? "Failed to get wallet balance");
+          // ✅ Check if it's an auth error
+          if (apiResponse.respDesc?.toLowerCase().contains('unauthorized') == true) {
+            ConsoleLog.printError("❌ UNAUTHORIZED - Token or Signature is invalid!");
+            ConsoleLog.printError("Please re-login to get fresh credentials");
+          }
         }
       } else {
         ConsoleLog.printError("API Error: ${response?.statusCode}");
@@ -278,4 +296,11 @@ class PayrupyaHomeScreenController extends GetxController {
     }
   }
   //endregion
+
+  // ✅ NEW: Reset initialization state (useful for re-login)
+  void resetInitialization() {
+    isInitialized.value = false;
+    walletBalance.value = "";
+    services.clear();
+  }
 }
