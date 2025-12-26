@@ -46,7 +46,7 @@ class PayrupyaHomeScreenController extends GetxController {
       if (latitude.value != 0.0 && longitude.value != 0.0) {
         await loadAllowedServices();
       } else {
-        CustomLoading.hideLoading();
+        // CustomLoading.hideLoading();
         ConsoleLog.printError("Location not available, cannot load services");
         CustomDialog.error(message: "Location not available. Please enable location services.");
       }
@@ -141,6 +141,7 @@ class PayrupyaHomeScreenController extends GetxController {
   //region getAllowedServiceByType
   Future<void> getWalletBalance() async {
     try {
+      CustomLoading.showLoading();
       // if (latitude.value == 0.0 || longitude.value == 0.0) {
       //   ConsoleLog.printInfo("Latitude: ${latitude.value}");
       //   ConsoleLog.printInfo("Longitude: ${longitude.value}");

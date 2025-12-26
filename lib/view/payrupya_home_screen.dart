@@ -71,7 +71,24 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
     );
     startAutoScroll();
 
-    CustomLoading.showLoading();
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   initializeData();
+    // });
+  }
+
+  /// Initialize data after widget is built
+  Future<void> initializeData() async {
+    try {
+      CustomLoading.showLoading();
+
+      // Load wallet balance
+      // await payrupyaHomeScreenController.getWalletBalance();
+
+    } catch (e) {
+      debugPrint('Error initializing data: $e');
+    } finally {
+      CustomLoading.hideLoading();
+    }
   }
 
   void startAutoScroll() {
