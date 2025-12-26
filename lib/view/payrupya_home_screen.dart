@@ -5,6 +5,8 @@ import 'package:payrupya/controllers/dmt_wallet_controller.dart';
 import 'package:payrupya/controllers/payrupya_home_screen_controller.dart';
 import 'package:payrupya/view/add_sender_screen.dart';
 import 'package:payrupya/controllers/login_controller.dart';
+import 'package:payrupya/view/aeps_one_screen.dart';
+import 'package:payrupya/view/aeps_three_screen.dart';
 import 'dart:async';
 import '../utils/custom_loading.dart';
 import 'add_sender_upi_screen.dart';
@@ -339,6 +341,12 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
                       break;
                     case "Payrupya\nUPI":
                       Get.to(AddSenderUPIScreen(showBackButton: true));
+                    break;
+                    case "AEPS One":
+                      Get.to(AepsOneScreen(showBackButton: true));
+                    break;
+                    case "AEPS Three":
+                      Get.to(AepsThreeScreen(showBackButton: true));
                     break;
                   }
                   print('Tapped on ${item['label']}');
