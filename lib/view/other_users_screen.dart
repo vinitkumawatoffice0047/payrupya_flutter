@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:payrupya/view/onboarding_screen.dart';
 
+import '../controllers/session_manager.dart';
 import '../utils/app_shared_preferences.dart';
 import '../utils/global_utils.dart';
 
@@ -91,6 +92,11 @@ class _OtherUsersScreenState extends State<OtherUsersScreen> {
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
+                // ✅ Session ko properly end karo
+                if (Get.isRegistered<SessionManager>()) {
+                  await SessionManager.instance.endSession();
+                  Get.delete<SessionManager>(force: true);
+                }
                 await AppSharedPreferences.clearSessionOnly();
                 Get.offAll(() => OnboardingScreen());
               },

@@ -12,6 +12,7 @@ import 'package:get/get_rx/src/rx_types/rx_types.dart';
 import 'package:payrupya/controllers/upi_wallet_controller.dart';
 import '../controllers/dmt_wallet_controller.dart';
 import '../controllers/login_controller.dart';
+import '../controllers/session_manager.dart';
 import '../models/CartListApiResponseModel.dart';
 import '../models/HomeDetailsApiResponseModel.dart';
 import '../models/MyOrderApiResponseModel.dart';
@@ -382,6 +383,11 @@ class ApiProvider {
   //region refreshToken
   Future<void> refreshToken(BuildContext context) async {
     ConsoleLog.printWarning("⚠️ Token expired, please login again");
+    // ✅ Session ko properly end karo
+    if (Get.isRegistered<SessionManager>()) {
+      await SessionManager.instance.endSession();
+      Get.delete<SessionManager>(force: true);
+    }
     await AppSharedPreferences.clearSessionOnly();
     Get.offAll(() => OnboardingScreen());
     Fluttertoast.showToast(msg: "Session expired. Please login again.");

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 // import '../controllers/theme_controller.dart';
+import '../controllers/session_manager.dart';
 import '../controllers/theme_controller.dart';
 import '../utils/app_shared_preferences.dart';
 import 'login_screen.dart';
@@ -268,6 +269,11 @@ class SettingsScreen extends StatelessWidget {
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
+                // ✅ Session ko properly end karo
+                if (Get.isRegistered<SessionManager>()) {
+                  await SessionManager.instance.endSession();
+                  Get.delete<SessionManager>(force: true);
+                }
                 await AppSharedPreferences.clearSessionOnly();
                 Get.offAll(() => LoginScreen());
               },

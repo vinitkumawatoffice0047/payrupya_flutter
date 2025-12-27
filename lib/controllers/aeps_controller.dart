@@ -13,6 +13,7 @@ import '../utils/ConsoleLog.dart';
 import '../utils/app_shared_preferences.dart';
 import '../utils/global_utils.dart';
 import '../view/onboarding_screen.dart';
+import 'session_manager.dart';
 
 // Import your existing files - adjust paths as needed
 // import '../api/api_provider.dart';
@@ -269,6 +270,11 @@ class AepsController extends GetxController {
   //region refreshToken
   Future<void> refreshToken(BuildContext context) async {
     ConsoleLog.printWarning("⚠️ Token expired, please login again");
+    // ✅ Session ko properly end karo
+    if (Get.isRegistered<SessionManager>()) {
+      await SessionManager.instance.endSession();
+      Get.delete<SessionManager>(force: true);
+    }
     await AppSharedPreferences.clearSessionOnly();
     Get.offAll(() => OnboardingScreen());
     Fluttertoast.showToast(msg: "Session expired. Please login again.");

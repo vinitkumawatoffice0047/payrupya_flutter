@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:payrupya/controllers/session_manager.dart';
 import '../api/api_provider.dart';
 import '../api/web_api_constant.dart';
 import '../models/add_beneficiary_response_model.dart';
@@ -317,6 +318,11 @@ class UPIWalletController extends GetxController {
   //region refreshToken
   Future<void> refreshToken(BuildContext context) async {
     ConsoleLog.printWarning("⚠️ Token expired, please login again");
+    // ✅ Session ko properly end karo
+    if (Get.isRegistered<SessionManager>()) {
+      await SessionManager.instance.endSession();
+      Get.delete<SessionManager>(force: true);
+    }
     await AppSharedPreferences.clearSessionOnly();
     Get.offAll(() => OnboardingScreen());
     Fluttertoast.showToast(msg: "Session expired. Please login again.");
