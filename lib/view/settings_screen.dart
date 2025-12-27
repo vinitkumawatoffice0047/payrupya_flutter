@@ -268,7 +268,7 @@ class SettingsScreen extends StatelessWidget {
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
-                await AppSharedPreferences.clearAll();
+                await AppSharedPreferences.clearSessionOnly();
                 Get.offAll(() => LoginScreen());
               },
               child: Text('Logout', style: TextStyle(color: Colors.red)),

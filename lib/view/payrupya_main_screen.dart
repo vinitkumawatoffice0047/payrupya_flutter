@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:payrupya/view/payrupya_home_screen.dart';
+import '../controllers/session_manager.dart';
 import 'add_sender_screen.dart';
 import 'nav_wallet_screen.dart';
 import 'payment_screen.dart';
@@ -17,7 +19,7 @@ class PayrupyaMainScreen extends StatefulWidget {
   State<PayrupyaMainScreen> createState() => _PayrupyaMainScreenState();
 }
 
-class _PayrupyaMainScreenState extends State<PayrupyaMainScreen> {
+class _PayrupyaMainScreenState extends State<PayrupyaMainScreen> with WidgetsBindingObserver {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
@@ -33,6 +35,37 @@ class _PayrupyaMainScreenState extends State<PayrupyaMainScreen> {
     // WalletScreen(),
     // ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    // Update session activity when main screen loads
+    _updateSessionActivity();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.resumed) {
+      // Update activity when app resumes
+      _updateSessionActivity();
+    }
+  }
+
+  void _updateSessionActivity() {
+    if (Get.isRegistered<SessionManager>()) {
+      SessionManager.instance.updateActivity();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +112,11 @@ class _PayrupyaMainScreenState extends State<PayrupyaMainScreen> {
   Widget _buildNavItem(IconData icon, String label, int index) {
     bool isSelected = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () {
+        setState(() => _selectedIndex = index);
+        // Update session activity on navigation
+        _updateSessionActivity();
+      },
       child: AnimatedContainer(
         duration: Duration(milliseconds: 200),
         padding: EdgeInsets.symmetric(horizontal: isSelected ? 16 : 8, vertical: 8),

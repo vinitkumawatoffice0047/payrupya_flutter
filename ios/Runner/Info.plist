@@ -83,5 +83,8 @@
 
     <key>NSCameraUsageDescription</key>
     <string>Camera access for QR scanning</string>
+
+    <key>NSFaceIDUsageDescription</key>
+    <string>PayRupya uses Face ID for secure and quick login</string>
 	</dict>
 </plist>

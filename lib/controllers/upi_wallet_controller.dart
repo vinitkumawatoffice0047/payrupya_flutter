@@ -317,7 +317,7 @@ class UPIWalletController extends GetxController {
   //region refreshToken
   Future<void> refreshToken(BuildContext context) async {
     ConsoleLog.printWarning("⚠️ Token expired, please login again");
-    await AppSharedPreferences.clearAll();
+    await AppSharedPreferences.clearSessionOnly();
     Get.offAll(() => OnboardingScreen());
     Fluttertoast.showToast(msg: "Session expired. Please login again.");
   }

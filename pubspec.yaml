@@ -64,6 +64,10 @@ dependencies:
   flutter_animate: ^4.5.0
   path_provider: ^2.1.1 #^2.1.2
   mobile_scanner: ^5.2.3
+  # NEW: For Biometric Authentication (Fingerprint/Face ID)
+  local_auth: ^2.2.0
+  # For secure storage of credentials (recommended)
+  flutter_secure_storage: ^9.0.0
 
 #  e_commerce_app: any
 dev_dependencies:

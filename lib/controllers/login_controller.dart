@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import 'package:payrupya/controllers/session_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_provider.dart';
 import '../api/web_api_constant.dart';
@@ -18,6 +19,7 @@ import '../view/payrupya_main_screen.dart';
 
 import '../view/other_users_screen.dart';
 import '../view/payrupya_main_screen.dart';
+import 'biometric_service.dart';
 
 class LoginController extends GetxController {
   Rx<TextEditingController> emailController = TextEditingController(text: "").obs;
@@ -30,6 +32,12 @@ class LoginController extends GetxController {
   RxString name = "".obs;
   RxDouble latitude = 0.0.obs;
   RxDouble longitude = 0.0.obs;
+
+  // ============================================
+  // NEW: Biometric Login Variables
+  // ============================================
+  late BiometricService biometricService;
+  RxBool isBiometricLoading = false.obs;
 
 
   // @override
@@ -47,9 +55,27 @@ class LoginController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _initServices();
     getLocationAndLoadData();
     // GlobalUtils.getLocation(latitude.value, longitude.value);
     init();
+  }
+
+  // ============================================
+  // NEW: Initialize Biometric & Session Manager
+  // ============================================
+  void _initServices() {
+    // Initialize BiometricService
+    if (!Get.isRegistered<BiometricService>()) {
+      biometricService = Get.put(BiometricService(), permanent: true);
+    } else {
+      biometricService = Get.find<BiometricService>();
+    }
+
+    // Initialize SessionManager
+    if (!Get.isRegistered<SessionManager>()) {
+      Get.put(SessionManager(), permanent: true);
+    }
   }
 
   Future<void> getLocationAndLoadData() async {
@@ -165,7 +191,244 @@ class LoginController extends GetxController {
   // }
 
 
-  // ======================================================
+  // ============================================
+  // BIOMETRIC LOGIN - Direct, No Dialog
+  // ============================================
+  Future<void> loginWithBiometric(BuildContext context) async {
+    // Check if biometric is available and enabled
+    if (!biometricService.canUseBiometricLogin()) {
+      Fluttertoast.showToast(
+        msg: "Please login with password first to enable ${biometricService.getBiometricTypeName()}",
+        backgroundColor: Colors.orange,
+      );
+      return;
+    }
+
+    isBiometricLoading.value = true;
+
+    try {
+      // Authenticate
+      final success = await biometricService.authenticate(
+        reason: 'Login to PayRupya',
+      );
+
+      if (!success) {
+        isBiometricLoading.value = false;
+        return;
+      }
+
+      // Get saved credentials
+      final credentials = await biometricService.getSavedCredentials();
+
+      if (credentials == null) {
+        isBiometricLoading.value = false;
+        Fluttertoast.showToast(
+          msg: "No saved credentials. Please login with password.",
+          backgroundColor: Colors.orange,
+        );
+        return;
+      }
+
+      // Set credentials and login
+      mobileController.value.text = credentials['mobile']!;
+      passwordController.value.text = credentials['password']!;
+
+      // Call login API
+      await loginApi(context, fromBiometric: true);
+
+    } catch (e) {
+      ConsoleLog.printError("Biometric login error: $e");
+      Fluttertoast.showToast(
+        msg: "Authentication failed",
+        backgroundColor: Colors.red,
+      );
+    } finally {
+      isBiometricLoading.value = false;
+    }
+  }
+
+  // ============================================
+  // LOGIN API
+  // ============================================
+  Future<void> loginApi(BuildContext context, {bool fromBiometric = false}) async {
+    String mobile = mobileController.value.text.trim();
+    String password = passwordController.value.text.trim();
+
+    // Validation
+    if (mobile.isEmpty) {
+      Fluttertoast.showToast(msg: "Please enter mobile number");
+      return;
+    }
+
+    if (mobile.length != 10) {
+      Fluttertoast.showToast(msg: "Please enter valid 10-digit mobile number");
+      return;
+    }
+
+    if (password.isEmpty) {
+      Fluttertoast.showToast(msg: "Please enter password");
+      return;
+    }
+
+    // Check Internet
+    bool isConnected = await ConnectionValidator.isConnected();
+    if (!isConnected) {
+      Fluttertoast.showToast(msg: "No Internet Connection!");
+      return;
+    }
+
+    // Show Loader
+    CustomLoading.showLoading();
+
+    Map<String, dynamic> requestBody = {
+      "login": mobile,
+      "password": password,
+      "request_id": GlobalUtils.generateRandomId(8),
+      "lat": latitude.value.toString(),
+      "long": longitude.value.toString(),
+    };
+
+    ConsoleLog.printColor("LOGIN REQ: $requestBody");
+
+    try {
+      var response = await ApiProvider().loginApi(
+        context,
+        WebApiConstant.API_URL_LOGIN,
+        requestBody,
+        "",
+      );
+
+      CustomLoading.hideLoading();
+
+      if (response == null) {
+        Fluttertoast.showToast(msg: "No response from server");
+        return;
+      }
+
+      try {
+        String respCode = response["Resp_code"] ?? "";
+        String respDesc = response["Resp_desc"] ?? "";
+
+        if (respCode == "RCS") {
+          if (response["data"] == null || response["data"] is! Map) {
+            Fluttertoast.showToast(msg: "Login failed: Invalid response");
+            return;
+          }
+
+          LoginApiResponseModel loginResponse = LoginApiResponseModel.fromJson(response);
+
+          String token = loginResponse.data?.tokenid ?? "";
+          String signature = loginResponse.data?.requestId ?? "";
+
+          if (token.isEmpty) {
+            Fluttertoast.showToast(msg: "Login failed: Invalid token");
+            return;
+          }
+
+          // Save auth data
+          await AppSharedPreferences.saveLoginAuth(token: token, signature: signature);
+          await AppSharedPreferences.setUserId(loginResponse.data?.userdata?.accountidf ?? "");
+          await AppSharedPreferences.setMobileNo(loginResponse.data?.userdata?.mobile ?? "");
+          await AppSharedPreferences.setEmail(loginResponse.data?.userdata?.email ?? "");
+          await AppSharedPreferences.setUserName(loginResponse.data?.userdata?.contactPerson ?? "");
+          await AppSharedPreferences.saveUserRole(loginResponse.data?.userdata?.roleidf ?? "");
+
+          // Update observables
+          name.value = loginResponse.data?.userdata?.contactPerson ?? "";
+          email.value = loginResponse.data?.userdata?.email ?? "";
+          this.mobile.value = loginResponse.data?.userdata?.mobile ?? "";
+
+          // ============================================
+          // SAVE CREDENTIALS FOR BIOMETRIC (No Dialog!)
+          // ============================================
+          if (!fromBiometric && biometricService.isBiometricAvailable.value) {
+            await biometricService.saveCredentialsForBiometric(mobile, password);
+            ConsoleLog.printSuccess("✅ Biometric auto-enabled for future logins");
+          }
+
+          // Start session
+          if (Get.isRegistered<SessionManager>()) {
+            await SessionManager.instance.startSession();
+          }
+
+          ConsoleLog.printSuccess("✅ Login successful: ${loginResponse.data?.userdata?.contactPerson}");
+
+          Fluttertoast.showToast(
+            msg: "Welcome ${loginResponse.data?.userdata?.contactPerson}!",
+            toastLength: Toast.LENGTH_LONG,
+          );
+
+          Get.offAll(() => PayrupyaMainScreen());
+
+        } else if (respCode == "ERR") {
+          String errorMessage = respDesc;
+          if (respDesc.toLowerCase().contains('invalid')) {
+            errorMessage = "Invalid mobile number or password";
+          }
+          Fluttertoast.showToast(msg: errorMessage, backgroundColor: Colors.red);
+        } else {
+          Fluttertoast.showToast(msg: respDesc.isNotEmpty ? respDesc : "Login failed");
+        }
+
+      } catch (parseError) {
+        ConsoleLog.printError("Parse error: $parseError");
+        Fluttertoast.showToast(msg: "Login failed");
+      }
+    } catch (e, stackTrace) {
+      CustomLoading.hideLoading();
+      ConsoleLog.printError("LOGIN ERROR: $e");
+      Fluttertoast.showToast(msg: "Technical issue. Please try again.");
+    }
+  }
+
+  // ============================================
+  // LOGOUT
+  // ============================================
+  Future<void> logout({bool clearBiometric = false}) async {
+    try {
+      CustomLoading.showLoading();
+
+      // End session
+      if (Get.isRegistered<SessionManager>()) {
+        await SessionManager.instance.endSession();
+      }
+
+      // Clear user data
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(AppSharedPreferences.isLogin, false);
+      await prefs.remove(AppSharedPreferences.token);
+      await prefs.remove(AppSharedPreferences.signature);
+
+      // Clear biometric if requested
+      if (clearBiometric) {
+        await biometricService.disableBiometric();
+      }
+
+      // Clear fields
+      name.value = "";
+      email.value = "";
+      mobile.value = "";
+      mobileController.value.clear();
+      passwordController.value.clear();
+
+      CustomLoading.hideLoading();
+      ConsoleLog.printSuccess("✅ Logout successful");
+
+    } catch (e) {
+      CustomLoading.hideLoading();
+      ConsoleLog.printError("Logout error: $e");
+    }
+  }
+
+  @override
+  void onClose() {
+    mobileController.value.dispose();
+    passwordController.value.dispose();
+    super.onClose();
+  }
+
+
+  /*// ======================================================
   // LOGIN API CALL
   // ======================================================
   // LOGIN API CALL WITH MODEL INTEGRATION
@@ -486,7 +749,14 @@ class LoginController extends GetxController {
     mobileController.value.dispose();
     passwordController.value.dispose();
     super.onClose();
-  }
+  }*/
+
+
+
+
+
+
+
   // Future<void> loginApi(BuildContext context) async {
   //   String mobile = mobileController.value.text.trim();
   //   String password = passwordController.value.text.trim();

@@ -253,10 +253,20 @@ class AppSharedPreferences {
     return prefs.getBool(KEY_EMAIL_NOTIFICATIONS) ?? true;
   }
 
-  // Clear all data
-  static Future<void> clearAll() async {
+  // // Clear all data
+  // static Future<void> clearAll() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   await prefs.clear();
+  // }
+
+  // Clear session only
+  static Future<void> clearSessionOnly() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await prefs.setBool(isLogin, false);
+    await prefs.remove(token);
+    await prefs.remove(signature);
+    await prefs.remove(userID);
+    // Biometric keys intact rahenge
   }
 
   // Data? data;

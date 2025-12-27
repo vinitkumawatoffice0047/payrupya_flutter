@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../controllers/session_manager.dart';
 import '../utils/app_shared_preferences.dart';
 import '../utils/global_utils.dart';
 import 'onboarding_screen.dart';
@@ -86,7 +87,12 @@ class ProfileScreen extends StatelessWidget {
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
-                await AppSharedPreferences.clearAll();
+                // ✅ Session ko properly end karo
+                if (Get.isRegistered<SessionManager>()) {
+                  await SessionManager.instance.endSession();
+                  Get.delete<SessionManager>(force: true);
+                }
+                await AppSharedPreferences.clearSessionOnly();
                 Get.offAll(() => OnboardingScreen());
               },
               child: Text('Yes', style: GoogleFonts.albertSans(color: Colors.red,

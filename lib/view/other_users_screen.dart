@@ -91,7 +91,7 @@ class _OtherUsersScreenState extends State<OtherUsersScreen> {
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
-                await AppSharedPreferences.clearAll();
+                await AppSharedPreferences.clearSessionOnly();
                 Get.offAll(() => OnboardingScreen());
               },
               child: Text('Yes', style: GoogleFonts.albertSans(color: Colors.red,

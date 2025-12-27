@@ -19,6 +19,22 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   LoginController loginController = Get.put(LoginController());
 
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill mobile if saved for biometric
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadSavedMobile();
+    });
+  }
+
+  Future<void> loadSavedMobile() async {
+    final savedMobile = await loginController.biometricService.getSavedMobile();
+    if (savedMobile != null && savedMobile.isNotEmpty) {
+      loginController.mobileController.value.text = savedMobile;
+    }
+  }
+
   Widget buildCustomAppBar() {
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -64,6 +80,132 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // ============================================
+  // BIOMETRIC LOGIN BUTTON - Always Visible
+  // ============================================
+  Widget buildBiometricButton() {
+    return Obx(() {
+      final biometricService = loginController.biometricService;
+
+      // Show button only if biometric is available on device
+      if (!biometricService.isBiometricAvailable.value) {
+        return SizedBox.shrink();
+      }
+
+      final isEnabled = biometricService.isBiometricEnabled.value;
+      final isLoading = loginController.isBiometricLoading.value;
+
+      return Column(
+        children: [
+          SizedBox(height: 20),
+
+          // OR Divider
+          Row(
+            children: [
+              Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'OR',
+                  style: GoogleFonts.albertSans(
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)),
+            ],
+          ),
+
+          SizedBox(height: 20),
+
+          // Biometric Button
+          GestureDetector(
+            onTap: isLoading ? null : () {
+              if (isEnabled) {
+                loginController.loginWithBiometric(context);
+              } else {
+                // Show hint to login first
+                Get.snackbar(
+                  'Enable ${biometricService.getBiometricTypeName()}',
+                  'Login with password once to enable ${biometricService.getBiometricTypeName()} login',
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: Color(0xFF4A90E2),
+                  colorText: Colors.white,
+                  duration: Duration(seconds: 3),
+                  icon: Icon(biometricService.getBiometricIcon(), color: Colors.white),
+                );
+              }
+            },
+            child: Container(
+              width: GlobalUtils.screenWidth * 0.9,
+              height: GlobalUtils.screenWidth * (60 / 393),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isEnabled ? Color(0xFF4A90E2) : Colors.grey.shade300,
+                  width: 2,
+                ),
+                boxShadow: isEnabled ? [
+                  BoxShadow(
+                    color: Color(0xFF4A90E2).withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
+                  ),
+                ] : null,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (isLoading)
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Color(0xFF4A90E2),
+                      ),
+                    )
+                  else
+                    Icon(
+                      biometricService.getBiometricIcon(),
+                      color: isEnabled ? Color(0xFF4A90E2) : Colors.grey.shade400,
+                      size: 28,
+                    ),
+                  SizedBox(width: 12),
+                  Text(
+                    isLoading
+                        ? 'Authenticating...'
+                        : 'Login with ${biometricService.getBiometricTypeName()}',
+                    style: GoogleFonts.albertSans(
+                      fontSize: GlobalUtils.screenWidth * (16 / 393),
+                      color: isEnabled ? Color(0xFF4A90E2) : Colors.grey.shade500,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          SizedBox(height: 8),
+
+          // Status hint text
+          Text(
+            isEnabled
+                ? 'Tap to login instantly'
+                : 'Login with password to enable',
+            style: GoogleFonts.albertSans(
+              fontSize: 12,
+              color: Colors.grey.shade500,
+            ),
+          ),
+        ],
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -204,6 +346,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               )
                             ],
                           ),
+
+                          // ============================================
+                          // BIOMETRIC BUTTON - ALWAYS VISIBLE
+                          // ============================================
+                          buildBiometricButton(),
 
                           // SizedBox(
                           //   height: GlobalUtils.screenWidth * 0.2,
