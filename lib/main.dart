@@ -2,7 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:payrupya/view/splash_screen.dart';
+import 'controllers/aeps_controller.dart';
 import 'controllers/biometric_service.dart';
+import 'controllers/dmt_wallet_controller.dart';
+import 'controllers/login_controller.dart';
+import 'controllers/payrupya_home_screen_controller.dart';
 import 'controllers/session_manager.dart';
 import 'utils/ConsoleLog.dart';
 
@@ -36,11 +40,32 @@ class _MyAppState extends State<MyApp> {
   }
 
   void initServices() {
+    // 1. Core Services (No dependencies)
     if (!Get.isRegistered<SessionManager>()) {
       Get.put(SessionManager(), permanent: true);
     }
     if (!Get.isRegistered<BiometricService>()) {
       Get.put(BiometricService(), permanent: true);
+    }
+
+    // 2. Login Controller (No circular dependency)
+    if (!Get.isRegistered<LoginController>()) {
+      Get.put(LoginController(), permanent: true);
+    }
+
+    // 3. DMT Wallet Controller
+    if (!Get.isRegistered<DmtWalletController>()) {
+      Get.put(DmtWalletController(), permanent: true);
+    }
+
+    // 4. AEPS Controller (Will use Get.find for other controllers)
+    if (!Get.isRegistered<AepsController>()) {
+      Get.put(AepsController(), permanent: true);
+    }
+
+    // 5. Home Screen Controller (Will use Get.find for AepsController)
+    if (!Get.isRegistered<PayrupyaHomeScreenController>()) {
+      Get.put(PayrupyaHomeScreenController(), permanent: true);
     }
     ConsoleLog.printSuccess("✅ Services initialized");
   }

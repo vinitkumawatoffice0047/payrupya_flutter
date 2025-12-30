@@ -4,33 +4,28 @@ class GetAllMyBankListResponseModel {
   String? requestId;
   List<GetAllMyBankListData>? data;
 
-  GetAllMyBankListResponseModel(
-      {this.respCode, this.respDesc, this.requestId, this.data});
+  GetAllMyBankListResponseModel({this.respCode, this.respDesc, this.requestId, this.data});
 
   GetAllMyBankListResponseModel.fromJson(Map<String, dynamic> json) {
-    GetAllMyBankListData? parsedData;
-
-    // ✅ Handle both cases: Map and List
-    if (json['data'] != null) {
-      if (json['data'] is Map) {
-        // Success case: data is a Map
-        parsedData = GetAllMyBankListData.fromJson(json['data'] as Map<String, dynamic>);
-      } else if (json['data'] is List) {
-        // Error case: data is an empty array []
-        // In this case, we don't need to parse it
-        parsedData = null;
-      }
-    }
     respCode = json['Resp_code'];
     respDesc = json['Resp_desc'];
     requestId = json['request_id'];
-    data: parsedData;
-    // if (json['data'] != null) {
-    //   data = <GetAllMyBankListData>[];
-    //   json['data'].forEach((v) {
-    //     data!.add(new GetAllMyBankListData.fromJson(v));
-    //   });
-    // }
+
+    // ✅ Handle both cases: Map and List
+    if (json['data'] != null) {
+      if (json['data'] is List) {
+        // List case
+        data = <GetAllMyBankListData>[];
+        json['data'].forEach((v) {
+          data!.add(GetAllMyBankListData.fromJson(v));
+        });
+      } else if (json['data'] is Map) {
+        // Map case (single item)
+        data = [GetAllMyBankListData.fromJson(json['data'] as Map<String, dynamic>)];
+      }
+    } else {
+      data = [];
+    }
   }
 
   Map<String, dynamic> toJson() {

@@ -53,9 +53,12 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
   bool isServiceLoading = true;
   bool isServiceLoaded = false;
 
-  DmtWalletController dmtController = Get.put(DmtWalletController());
-  LoginController loginController = Get.put(LoginController());
-  PayrupyaHomeScreenController payrupyaHomeScreenController = Get.put(PayrupyaHomeScreenController());
+  // DmtWalletController dmtController = Get.put(DmtWalletController());
+  // LoginController loginController = Get.put(LoginController());
+  // PayrupyaHomeScreenController payrupyaHomeScreenController = Get.put(PayrupyaHomeScreenController());
+  DmtWalletController get dmtController => Get.find<DmtWalletController>();
+  LoginController get loginController => Get.find<LoginController>();
+  PayrupyaHomeScreenController get payrupyaHomeScreenController => Get.find<PayrupyaHomeScreenController>();
 
   @override
   void initState() {
@@ -81,6 +84,9 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
   /// Initialize data after widget is built
   Future<void> initializeData() async {
     try {
+      // Show custom loading overlay
+      CustomLoading.showLoading();
+
       // Show loading state
       setState(() {
         _isInitialLoading = true;
@@ -91,9 +97,16 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
 
     } catch (e) {
       debugPrint('Error initializing data: $e');
+      CustomLoading.hideLoading();
+      setState(() {
+        _isInitialLoading = false;
+      });
     } finally {
-      // Hide loading state
+      // Hide loading state after a small delay to ensure smooth UX
+      await Future.delayed(Duration(milliseconds: 500));
+
       if (mounted) {
+        CustomLoading.hideLoading();
         setState(() {
           _isInitialLoading = false;
         });
@@ -162,31 +175,31 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
               ],
             ),
           ),
-          // ✅ NEW: Full screen loading overlay
-          if (_isInitialLoading)
-            Container(
-              color: Colors.black.withOpacity(0.4),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 3,
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Loading...',
-                      style: GoogleFonts.albertSans(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          // // ✅ NEW: Full screen loading overlay
+          // if (_isInitialLoading)
+          //   Container(
+          //     color: Colors.black.withOpacity(0.4),
+          //     child: Center(
+          //       child: Column(
+          //         mainAxisSize: MainAxisSize.min,
+          //         children: [
+          //           CircularProgressIndicator(
+          //             color: Colors.white,
+          //             strokeWidth: 3,
+          //           ),
+          //           SizedBox(height: 16),
+          //           Text(
+          //             'Loading...',
+          //             style: GoogleFonts.albertSans(
+          //               fontSize: 14,
+          //               color: Colors.grey[700],
+          //               fontWeight: FontWeight.w500,
+          //             ),
+          //           ),
+          //         ],
+          //       ),
+          //     ),
+          //   ),
         ],
       ),
     );
@@ -627,6 +640,7 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
     timer?.cancel();
     pageController.dispose();
     refreshController.dispose();
+    CustomLoading.hideLoading();
     super.dispose();
   }
 }

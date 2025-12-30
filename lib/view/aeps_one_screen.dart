@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:payrupya/controllers/aeps_controller.dart';
+import 'package:payrupya/controllers/payrupya_home_screen_controller.dart';
+import 'package:payrupya/models/get_profile_data_response_model.dart';
 import 'package:payrupya/utils/ConsoleLog.dart';
+import 'package:payrupya/view/categories_screen.dart';
 
 import '../models/get_all_my_bank_list_response_model.dart';
 import '../utils/global_utils.dart';
@@ -31,13 +34,8 @@ class AepsOneScreen extends StatefulWidget {
 class _AepsOneScreenState extends State<AepsOneScreen> {
   // Controller - Replace with your actual controller
   final AepsController aepsController = Get.put(AepsController());
-  
-  // Demo state variables (replace with controller.value)
-  bool isLoading = false;
-  bool showOnboardingForm = true;
-  bool showAuthenticationForm = false;
-  bool showOnboardAuthForm = false;
-  bool showOtpModal = false;
+  final PayrupyaHomeScreenController homeScreenController = Get.put(PayrupyaHomeScreenController());
+
   String selectedDevice = '';
   
   // Demo bank list (replace with controller.myBankList)
@@ -61,77 +59,236 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
   ];
 
   // Form controllers
-  final _formKey = GlobalKey<FormState>();
-  final firstNameController = TextEditingController(text: 'John');
-  final lastNameController = TextEditingController(text: 'Doe');
-  final shopNameController = TextEditingController(text: 'My Shop');
-  final emailController = TextEditingController(text: 'john@example.com');
-  final mobileController = TextEditingController(text: '9876543210');
-  final panController = TextEditingController(text: 'ABCDE1234F');
-  final aadhaarController = TextEditingController(text: '123412341234');
-  final gstController = TextEditingController(text: '08AAHCE2527N1ZC');
-  final stateController = TextEditingController(text: 'Rajasthan');
-  final cityController = TextEditingController(text: 'Jaipur');
-  final pincodeController = TextEditingController(text: '302001');
-  final shopAddressController = TextEditingController(text: '123 Main Street');
-  final otpController = TextEditingController();
+  final formKey = GlobalKey<FormState>();
+
+  // Future for initialization
+  // ✅ NEW: Loading state managed locally
+  RxBool isInitializing = true.obs;
+  RxBool hasError = false.obs;
+  RxString errorMessage = ''.obs;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await aepsController.loadAuthCredentials();
-      await aepsController.fetchMyBanks(context, "true");
+    // aepsController.resetSelectedBank();
+    aepsController.resetFingpayState();
+
+    // ✅ FIX: Use addPostFrameCallback to call API after build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeData();
     });
-    // Check onboard status on init
-    // controller.checkFingpayOnboardStatus();
-    // controller.fetchMyBankList();
+  }
+
+  /// ✅ NEW: Initialize data after widget is built
+  Future<void> _initializeData() async {
+    try {
+      isInitializing.value = true;
+      hasError.value = false;
+      errorMessage.value = '';
+
+      await homeScreenController.checkFingpayUserOnboardStatus();
+
+      isInitializing.value = false;
+    } catch (e) {
+      ConsoleLog.printError("Error initializing AEPS One: $e");
+      isInitializing.value = false;
+      hasError.value = true;
+      errorMessage.value = e.toString();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // for manage multiple text field keyboard and cursor
       onTap: () {
         FocusManager.instance.primaryFocus?.unfocus();
       },
       behavior: HitTestBehavior.translucent,
       child: Scaffold(
         backgroundColor: Color(0xFFF0F4F8),
-        // appBar: _buildAppBar(),
-        body: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : SafeArea(
-              child: SizedBox(
-                child: Column(
-                  children: [
-                    buildCustomAppBar(),
-                    Expanded(
-                      child: SingleChildScrollView(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Show authentication form if user is onboarded and authenticated
-                                if (showAuthenticationForm) _buildAuthenticationForm(),
+        body: SafeArea(
+          child: Column(
+            children: [
+              buildCustomAppBar(),
+              Expanded(
+                child: Obx(() {
+                  // ✅ Show loading while initializing
+                  if (isInitializing.value) {
+                    return _buildLoadingWidget();
+                  }
 
-                                // Show eKYC auth form after OTP verification
-                                if (showOnboardAuthForm) _buildOnboardAuthForm(),
+                  // ✅ Show error if any
+                  if (hasError.value) {
+                    return _buildErrorWidget();
+                  }
 
-                                // Show onboarding form if user is not onboarded
-                                if (showOnboardingForm) _buildOnboardingForm(),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ),
-                  ],
+                  // ✅ Show main content
+                  return buildMainScreen();
+                }),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// ✅ Loading Widget
+  Widget _buildLoadingWidget() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2E5BFF)),
+          ),
+          SizedBox(height: 20),
+          Text(
+            'Loading AEPS Configuration...',
+            style: GoogleFonts.albertSans(
+              fontSize: 16,
+              color: Color(0xff1B1C1C),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ✅ Error Widget
+  Widget _buildErrorWidget() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              color: Colors.red,
+              size: 60,
+            ),
+            SizedBox(height: 20),
+            Text(
+              'Unable to load data',
+              style: GoogleFonts.albertSans(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Color(0xff1B1C1C),
+              ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Please check your connection and try again',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.albertSans(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+            SizedBox(height: 20),
+            Text(
+              'Error: ${errorMessage.value}',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.albertSans(
+                fontSize: 12,
+                color: Colors.red,
+              ),
+            ),
+            SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: () {
+                _initializeData();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF2E5BFF),
+                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Retry',
+                style: GoogleFonts.albertSans(
+                  fontSize: 16,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-        // OTP Modal
-        bottomSheet: showOtpModal ? _buildOtpModal() : null,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildMainScreen(){
+    return Obx((){
+        // Check if loading from controller
+        if (aepsController.isFingpayLoading.value) {
+          return _buildLoadingWidget();
+        }
+        return SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Show authentication form if user is onboarded and authenticated
+                if (aepsController.showFingpay2FAForm.value) buildAuthenticationForm(),
+
+                // Show eKYC auth form after OTP verification
+                if (aepsController.showFingpayOnboardAuthForm.value) _buildOnboardAuthForm(),
+
+                // Show onboarding form if user is not onboarded
+                if (aepsController.showFingpayOnboardingForm.value) _buildOnboardingForm(),
+
+                // ✅ Show message if no form is visible
+                if (!aepsController.showFingpay2FAForm.value &&
+                    !aepsController.showFingpayOnboardAuthForm.value &&
+                    !aepsController.showFingpayOnboardingForm.value)
+                  _buildNoContentWidget(),
+              ],
+            ),
+          ),
+        );
+      }
+    );
+  }
+
+  /// ✅ No Content Widget - when no form should be shown
+  Widget _buildNoContentWidget() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.info_outline,
+              color: Color(0xFF2E5BFF),
+              size: 60,
+            ),
+            SizedBox(height: 20),
+            Text(
+              'Loading AEPS Status...',
+              style: GoogleFonts.albertSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xff1B1C1C),
+              ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Please wait while we check your AEPS status',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.albertSans(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -154,6 +311,8 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                 // dmtController.senderNameController.value.clear();
                 // dmtController.senderAddressController.value.clear();
                 // Get.back();
+                // aepsController.resetSelectedBank();
+                aepsController.resetFingpayState();
                 Navigator.of(context).pop();
               },
               child: Container(
@@ -181,74 +340,121 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: const Color(0xFF2E5BFF),
-      elevation: 0,
-      leading: widget.showBackButton
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Get.back(),
-            )
-          : null,
-      title: Text(
-        'AEPS One (Fingpay)',
-        style: GoogleFonts.albertSans(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
-      ),
-      centerTitle: true,
-    );
-  }
-
+  // ============== Authentication Form (2FA) ==============
   /// Authentication Form - After successful onboarding
-  Widget _buildAuthenticationForm() {
-    return Form(
+  Widget buildAuthenticationForm() {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Two-Factor Authentication'),
-          const SizedBox(height: 16),
-          
-          // Aadhaar Number
+          Text(
+            'Two-Factor Authentication',
+            style: GoogleFonts.albertSans(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1B1C1C),
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Please complete 2FA to proceed with AEPS services',
+            style: GoogleFonts.albertSans(
+              fontSize: 14,
+              color: Color(0xFF6B707E),
+            ),
+          ),
+          SizedBox(height: 24),
+
+          // Aadhaar Field
           buildTextField(
             label: 'Aadhaar Number',
-            controller: aadhaarController,
-            readOnly: true,
+            // hint: 'Enter 12-digit Aadhaar',
+            placeholder: 'Enter 12-digit Aadhaar',
+            controller: aepsController.aadhaarController.value,
             keyboardType: TextInputType.number,
             maxLength: 12,
           ),
-          
-          const SizedBox(height: 16),
-          
-          // Device Selection
+          SizedBox(height: 16),
+
+          // Device Dropdown
           _buildDropdownField(
             label: 'Select Device',
-            value: selectedDevice.isEmpty ? null : selectedDevice,
-            items: deviceList,
+            value: aepsController.selectedDevice.value.isEmpty ? null : aepsController.selectedDevice.value,
+            items: deviceList/*.map((d) => d['value']!).toList()*/,
+            // displayItems: deviceList.map((d) => d['name']!).toList(),
             onChanged: (value) {
-              setState(() {
-                selectedDevice = value ?? '';
-              });
+              aepsController.onDeviceChange(value);
             },
           ),
-          
-          const SizedBox(height: 24),
-          
-          // Authentication Button
+          SizedBox(height: 24),
+
+          // Authenticate Button
           _buildPrimaryButton(
-            label: 'Authenticate',
-            onPressed: () {
-              // Initiate fingerprint scan and call 2FA API
-              _initFingerprint2FA();
-            },
+            label: 'Authenticate with Fingerprint',
+            onPressed: _initFingerprint2FA,
           ),
         ],
       ),
     );
   }
+  // Widget buildAuthenticationForm() {
+  //   return Form(
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         _buildSectionTitle('Two-Factor Authentication'),
+  //         const SizedBox(height: 16),
+  //
+  //         // Aadhaar Number
+  //         buildTextField(
+  //           label: 'Aadhaar Number',
+  //           placeholder: 'Aadhaar Number',
+  //           controller: aepsController.aadhaarController.value,
+  //           readOnly: true,
+  //           keyboardType: TextInputType.number,
+  //           maxLength: 12,
+  //         ),
+  //
+  //         const SizedBox(height: 16),
+  //
+  //         // Device Selection
+  //         _buildDropdownField(
+  //           label: 'Select Device',
+  //           value: selectedDevice.isEmpty ? null : selectedDevice,
+  //           items: deviceList,
+  //           onChanged: (value) {
+  //             setState(() {
+  //               selectedDevice = value ?? '';
+  //             });
+  //           },
+  //         ),
+  //
+  //         const SizedBox(height: 24),
+  //
+  //         // Authentication Button
+  //         _buildPrimaryButton(
+  //           label: 'Authenticate',
+  //           onPressed: () {
+  //             // Initiate fingerprint scan and call 2FA API
+  //             _initFingerprint2FA();
+  //           },
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   /// eKYC Auth Form - After OTP verification
   Widget _buildOnboardAuthForm() {
@@ -328,191 +534,242 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
   /// Onboarding Form - For new users
   Widget _buildOnboardingForm() {
     return Form(
-      key: _formKey,
+      key: formKey,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Registration Details'),
-          const SizedBox(height: 16),
-          
-          // First Name & Last Name Row
-          Row(
-            children: [
-              Expanded(
-                child: buildTextField(
-                  label: 'First Name',
-                  controller: firstNameController,
-                  readOnly: true,
+          Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'AEPS Registration',
+                  style: GoogleFonts.albertSans(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1B1C1C),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: buildTextField(
-                  label: 'Last Name',
-                  controller: lastNameController,
-                  readOnly: true,
+                SizedBox(height: 8),
+                Text(
+                  'Complete the registration to start using AEPS services',
+                  style: GoogleFonts.albertSans(
+                    fontSize: 14,
+                    color: Color(0xFF6B707E),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Shop Name
-          buildTextField(
-            label: 'Shop Name',
-            controller: shopNameController,
-            readOnly: true,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Email
-          buildTextField(
-            label: 'Email',
-            controller: emailController,
-            readOnly: true,
-            keyboardType: TextInputType.emailAddress,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Mobile Number
-          buildTextField(
-            label: 'Mobile Number',
-            controller: mobileController,
-            readOnly: true,
-            keyboardType: TextInputType.phone,
-            maxLength: 10,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // PAN Number
-          buildTextField(
-            label: 'PAN Number',
-            controller: panController,
-            readOnly: true,
-            textCapitalization: TextCapitalization.characters,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Aadhaar Number
-          buildTextField(
-            label: 'Aadhaar Number',
-            controller: aadhaarController,
-            readOnly: true,
-            keyboardType: TextInputType.number,
-            maxLength: 12,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // GSTIN
-          buildTextField(
-            label: 'GSTIN',
-            controller: gstController,
-            readOnly: true,
-            textCapitalization: TextCapitalization.characters,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // State & City Row
-          Row(
-            children: [
-              Expanded(
-                child: buildTextField(
-                  label: 'State',
-                  controller: stateController,
-                  readOnly: true,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: buildTextField(
-                  label: 'City',
-                  controller: cityController,
-                  readOnly: true,
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Pincode
-          buildTextField(
-            label: 'Pincode',
-            controller: pincodeController,
-            readOnly: true,
-            keyboardType: TextInputType.number,
-            maxLength: 6,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Shop Address
-          buildTextField(
-            label: 'Shop Address',
-            controller: shopAddressController,
-            readOnly: true,
-            maxLines: 2,
-          ),
-          
-          const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-          /// MY BANKS DROPDOWN WITH SEARCH
-          GestureDetector(
-            onTap: () {
-              // aepsController.fetchMyBanks(context);
-              showSearchableBankDropdown(
-                context,
-                aepsController,
-              );
-            },
-            child: Container(
-              height: GlobalUtils.screenWidth * (60 / 393),
-              width: GlobalUtils.screenWidth * 0.9,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  SizedBox(width: 10,),
-                  Expanded(
-                    child: Text(
-                      aepsController.selectedMyBank.value?.bankName ??
-                          'Select Bank',
-                      // signupController.selectedState.value.isEmpty
-                      //     ? "Select State"
-                      //     : signupController.selectedState.value,
-                      style: GoogleFonts.albertSans(
-                        fontSize: GlobalUtils.screenWidth * (14 / 393),
-                        color: aepsController.selectedMyBank.value?.bankName == "Select Bank"
-                            ? Color(0xFF6B707E)
-                            : Color(0xFF1B1C1C),
+                // First Name & Last Name Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: buildTextField(
+                        label: 'First Name',
+                        placeholder: 'First Name',
+                        controller: aepsController.firstNameController.value,
+                        readOnly: true,
                       ),
                     ),
-                  ),
-                  Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
-                ],
-              ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: buildTextField(
+                        label: 'Last Name',
+                        placeholder: 'Last Name',
+                        controller: aepsController.lastNameController.value,
+                        readOnly: true,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Shop Name
+                buildTextField(
+                  label: 'Shop Name',
+                  placeholder: 'Shop Name',
+                  controller: aepsController.shopNameController.value,
+                  readOnly: true,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Email
+                buildTextField(
+                  label: 'Email',
+                  placeholder: 'Email',
+                  controller: aepsController.emailController.value,
+                  readOnly: true,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Mobile Number
+                buildTextField(
+                  label: 'Mobile Number',
+                  placeholder: 'Mobile Number',
+                  controller: aepsController.mobileController.value,
+                  readOnly: true,
+                  keyboardType: TextInputType.phone,
+                  maxLength: 10,
+                ),
+
+                const SizedBox(height: 16),
+
+                // PAN Number
+                buildTextField(
+                  label: 'PAN Number',
+                  placeholder: 'PAN Number',
+                  controller: aepsController.panController.value,
+                  readOnly: true,
+                  textCapitalization: TextCapitalization.characters,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Aadhaar Number
+                buildTextField(
+                  label: 'Aadhaar Number',
+                  placeholder: 'Aadhaar Number',
+                  controller: aepsController.aadhaarController.value,
+                  readOnly: true,
+                  keyboardType: TextInputType.number,
+                  maxLength: 12,
+                ),
+
+                const SizedBox(height: 16),
+
+                // GSTIN
+                buildTextField(
+                  label: 'GSTIN',
+                  placeholder: 'GSTIN',
+                  controller: aepsController.gstController.value,
+                  readOnly: true,
+                  textCapitalization: TextCapitalization.characters,
+                ),
+
+                const SizedBox(height: 16),
+
+                // State & City Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: buildTextField(
+                        label: 'State',
+                        placeholder: 'State',
+                        controller: aepsController.stateController.value,
+                        readOnly: true,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: buildTextField(
+                        label: 'City',
+                        placeholder: 'City',
+                        controller: aepsController.cityController.value,
+                        readOnly: true,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Pincode
+                buildTextField(
+                  label: 'Pincode',
+                  placeholder: 'Pincode',
+                  controller: aepsController.pincodeController.value,
+                  readOnly: true,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Shop Address
+                buildTextField(
+                  label: 'Shop Address',
+                  placeholder: 'Shop Address',
+                  controller: aepsController.shopAddressController.value,
+                  readOnly: true,
+                  maxLines: 2,
+                ),
+
+                const SizedBox(height: 16),
+
+                /// MY BANKS DROPDOWN WITH SEARCH
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Select Bank',
+                      style: GoogleFonts.albertSans(
+                        fontSize: 14,
+                        color: Color(0xff6B707E),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Obx(()=>
+                      GestureDetector(
+                        onTap: () {
+                          // aepsController.fetchMyBanks(context);
+                          showSearchableBankDropdown(
+                            context,
+                            aepsController,
+                          );
+                        },
+                        child: Container(
+                          height: GlobalUtils.screenWidth * (60 / 393),
+                          width: GlobalUtils.screenWidth * 0.9,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Color(0xffE2E5EC)),
+                          ),
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            children: [
+                              SizedBox(width: 10,),
+                              Expanded(
+                                child: Text(
+                                  aepsController.selectedMyBank.value?.bankName ??
+                                      'Select Bank',
+                                  // signupController.selectedState.value.isEmpty
+                                  //     ? "Select State"
+                                  //     : signupController.selectedState.value,
+                                  style: GoogleFonts.albertSans(
+                                    fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                    color: aepsController.selectedMyBank.value?.bankName == "Select Bank"
+                                        ? Color(0xFF6B707E)
+                                        : Color(0xFF1B1C1C),
+                                  ),
+                                ),
+                              ),
+                              Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          // Bank Account Selection
-          // _buildBankSelectionDropdown(),
-          
-          const SizedBox(height: 24),
-          
+          const SizedBox(height: 20),
+
           // Confirm Button
           _buildPrimaryButton(
-            label: 'CONFIRM',
+            label: 'Register & Send OTP',
             onPressed: () {
-              if (_formKey.currentState!.validate()) {
+              if (formKey.currentState!.validate()) {
                 if (selectedBank == null) {
                   Get.snackbar('Error', 'Please select a bank account');
                   return;
@@ -521,12 +778,120 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
               }
             },
           ),
-          
-          const SizedBox(height: 20),
+
+          const SizedBox(height: 5),
         ],
       ),
     );
   }
+
+  // ============== OTP Section ==============
+  Widget _buildOtpSection() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Enter OTP',
+            style: GoogleFonts.albertSans(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1B1C1C),
+            ),
+          ),
+          SizedBox(height: 12),
+          buildTextField(
+            label: '',
+            placeholder: 'Enter 6-digit OTP',
+            controller: aepsController.otpController.value,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+          ),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSecondaryButton(
+                  label: 'Resend OTP',
+                  onPressed: _resendOtp,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: _buildPrimaryButton(
+                  label: 'Verify OTP',
+                  onPressed: _verifyOtp,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============== Onboard Auth Form (eKYC) ==============
+  // Widget _buildOnboardAuthForm() {
+  //   return Container(
+  //     padding: EdgeInsets.all(20),
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       borderRadius: BorderRadius.circular(16),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.black.withOpacity(0.05),
+  //           blurRadius: 10,
+  //           offset: Offset(0, 2),
+  //         ),
+  //       ],
+  //     ),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Text(
+  //           'eKYC Verification',
+  //           style: GoogleFonts.albertSans(
+  //             fontSize: 18,
+  //             fontWeight: FontWeight.w600,
+  //             color: Color(0xFF1B1C1C),
+  //           ),
+  //         ),
+  //         SizedBox(height: 8),
+  //         Text(
+  //           'Complete eKYC using fingerprint to finish registration',
+  //           style: GoogleFonts.albertSans(
+  //             fontSize: 14,
+  //             color: Color(0xFF6B707E),
+  //           ),
+  //         ),
+  //         SizedBox(height: 24),
+  //
+  //         // Device Dropdown
+  //         _buildDropdownField(
+  //           label: 'Select Device',
+  //           value: aepsController.selectedDevice.value.isEmpty ? null : aepsController.selectedDevice.value,
+  //           items: deviceList.map((d) => d['value']!).toList(),
+  //           displayItems: deviceList.map((d) => d['name']!).toList(),
+  //           onChanged: (value) {
+  //             aepsController.onDeviceChange(value);
+  //           },
+  //         ),
+  //         SizedBox(height: 24),
+  //
+  //         // eKYC Button
+  //         _buildPrimaryButton(
+  //           label: 'Complete eKYC with Fingerprint',
+  //           onPressed: _initFingerprintEkyc,
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   /// Bank Selection Dropdown
   Widget _buildBankSelectionDropdown() {
@@ -615,8 +980,8 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                 icon: const Icon(Icons.close),
                 onPressed: () {
                   setState(() {
-                    showOtpModal = false;
-                    otpController.clear();
+                    aepsController.showFingpayOtpModal.value = false;
+                    aepsController.otpController.value.clear();
                   });
                 },
               ),
@@ -626,7 +991,8 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           
           buildTextField(
             label: 'Enter OTP',
-            controller: otpController,
+            placeholder: 'Enter OTP',
+            controller: aepsController.otpController.value,
             keyboardType: TextInputType.number,
             maxLength: 6,
             hintText: 'Enter 6-digit OTP',
@@ -674,6 +1040,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
   Widget buildTextField({
     required String label,
     required TextEditingController controller,
+    String? placeholder,
     bool readOnly = false,
     TextInputType? keyboardType,
     int? maxLength,
@@ -706,7 +1073,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
             maxLines: maxLines,
             textCapitalization: textCapitalization,
             // style: GoogleFonts.albertSans(fontSize: 14),
-            placeholder: "Phone Number",
+            placeholder: placeholder,
             placeholderColor: Colors.white,
             height: GlobalUtils.screenWidth * (60 / 393),
             width: GlobalUtils.screenWidth * 0.9,
@@ -945,7 +1312,9 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                           controller.filteredBankList[index];
 
                           return ListTile(
-                            title: Text(bank.bankName ?? ''),
+                            title: Text(bank.bankName ?? '', style: GoogleFonts.albertSans(
+                              color: Colors.black
+                            ),),
                             trailing: controller.selectedMyBank.value
                                 ?.aepsBankid ==
                                 bank.aepsBankid
@@ -976,15 +1345,16 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
   void _registerOnboarding() {
     // Call Fingpay onboarding API
     // controller.fingpayOnboarding(reqType: 'REGISTERUSER');
-    
+        aepsController.registerFingpayOnboarding();
+
     // For demo, show OTP modal
-    setState(() {
-      showOtpModal = true;
-    });
+    // setState(() {
+      aepsController.showFingpayOtpModal.value = true;
+    // });
   }
 
   void _verifyOtp() {
-    if (otpController.text.length != 6) {
+    if (aepsController.otpController.value.text.length != 6) {
       Get.snackbar('Error', 'Please enter valid 6-digit OTP');
       return;
     }
@@ -994,9 +1364,9 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
     
     // For demo, move to eKYC auth form
     setState(() {
-      showOtpModal = false;
-      showOnboardingForm = false;
-      showOnboardAuthForm = true;
+      aepsController.showFingpayOtpModal.value = false;
+      aepsController.showFingpayOnboardingForm.value = false;
+      aepsController.showFingpayOnboardAuthForm.value = true;
     });
   }
 
@@ -1012,8 +1382,8 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
     
     // For demo, navigate to choose service
     setState(() {
-      showOnboardAuthForm = false;
-      showAuthenticationForm = true;
+      aepsController.showFingpayOnboardAuthForm.value = false;
+      aepsController.showFingpay2FAForm.value = true;
     });
   }
 
@@ -1026,21 +1396,10 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
     // Get.to(() => AepsChooseServiceScreen(aepsType: 'fingpay'));
   }
 
+  // ============== Lifecycle Methods ==============
+
   @override
   void dispose() {
-    firstNameController.dispose();
-    lastNameController.dispose();
-    shopNameController.dispose();
-    emailController.dispose();
-    mobileController.dispose();
-    panController.dispose();
-    aadhaarController.dispose();
-    gstController.dispose();
-    stateController.dispose();
-    cityController.dispose();
-    pincodeController.dispose();
-    shopAddressController.dispose();
-    otpController.dispose();
     super.dispose();
   }
 }

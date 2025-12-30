@@ -21,7 +21,7 @@ class SessionManager extends GetxController with WidgetsBindingObserver {
   // ============================================
   // CONFIGURATION - Change these as needed
   // ============================================
-  static const int SESSION_TIMEOUT_MINUTES = 1;  // Auto logout after 5 min
+  static const int SESSION_TIMEOUT_MINUTES = 5;  // Auto logout after 5 min
   static const int WARNING_SECONDS = 30;         // Warning 30s before logout
 
   // Keys
@@ -101,16 +101,7 @@ class SessionManager extends GetxController with WidgetsBindingObserver {
 
     lastActivity = DateTime.now();
     saveLastActivity();
-    cancelWarningTimer();
     startInactivityTimer();
-
-    // // Hide warning if showing
-    // if (isShowingWarning.value) {
-    //   isShowingWarning.value = false;
-    //   if (Get.isDialogOpen ?? false) {
-    //     Get.back();
-    //   }
-    // }
   }
 
   /// Check if session is valid
@@ -148,13 +139,18 @@ class SessionManager extends GetxController with WidgetsBindingObserver {
     // if (!isSessionActive.value || isShowingWarning.value) return;
     if (!isSessionActive.value) return;
     if (Get.currentRoute.contains('onboarding')) return;
+
+    // ✅ Check if already showing
+    if (isShowingWarning.value) return;
+
     isShowingWarning.value = true;
     warningCountdown.value = WARNING_SECONDS;
 
     warningTimer = Timer.periodic(Duration(seconds: 1), (timer) {
       if (warningCountdown.value <= 0) {
         timer.cancel();
-        performAutoLogout();
+        _closeDialogAndLogout();
+        // performAutoLogout();
       } else {
         warningCountdown.value--;
       }
@@ -221,29 +217,60 @@ class SessionManager extends GetxController with WidgetsBindingObserver {
   }
 
   void onStayLoggedInPressed() {
-    cancelAllTimers();
+    ConsoleLog.printInfo("🔄 Stay Logged In pressed");
+    // cancelAllTimers();
+    cancelWarningTimer();
     isShowingWarning.value = false;
 
-    if (Get.isDialogOpen ?? false) {
-      Get.back();
-    }
+    _closeDialog();
+
+    // if (Get.isDialogOpen ?? false) {
+    //   Get.back();
+    // }
 
     lastActivity = DateTime.now();
     saveLastActivity();
-    startInactivityTimer();
+    // startInactivityTimer();
 
-    ConsoleLog.printSuccess("✅ Session extended");
+    Future.delayed(Duration(milliseconds: 200), () {
+      startInactivityTimer();
+      ConsoleLog.printSuccess("✅ Session extended successfully");
+    });
   }
 
-  void onLogoutNowPressed() {
+  void onLogoutNowPressed() async {
+    ConsoleLog.printInfo("🔄 Logout Now pressed");
     cancelAllTimers();
     isShowingWarning.value = false;
+    _closeDialogAndLogout();
+    // if (Get.isDialogOpen ?? false) {
+    //   Get.back();
+    // }
+    // await Future.delayed(Duration(milliseconds: 100));
+    // performAutoLogout();
+  }
 
-    if (Get.isDialogOpen ?? false) {
-      Get.back();
+  /// ✅ NEW: Safe dialog close method
+  void _closeDialog() {
+    try {
+      if (Get.isDialogOpen == true) {
+        Get.back();
+        ConsoleLog.printInfo("✅ Dialog closed");
+      }
+    } catch (e) {
+      ConsoleLog.printError("Error closing dialog: $e");
     }
+  }
 
-    performAutoLogout();
+  /// ✅ NEW: Close dialog and perform logout
+  void _closeDialogAndLogout() {
+    // Close dialog first
+    _closeDialog();
+
+    // Then logout after small delay
+    Future.delayed(Duration(milliseconds: 100), () {
+      performAutoLogout();
+    });
   }
 
   Future<void> performAutoLogout() async {
@@ -290,32 +317,50 @@ class SessionManager extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> saveLastActivity() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(KEY_LAST_ACTIVITY, DateTime.now().toIso8601String());
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(KEY_LAST_ACTIVITY, DateTime.now().toIso8601String());
+    } catch (e) {
+      ConsoleLog.printError("Error saving last activity: $e");
+    }
   }
 
   Future<void> clearSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(KEY_LAST_ACTIVITY);
-    await prefs.setBool(KEY_SESSION_ACTIVE, false);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(KEY_LAST_ACTIVITY);
+      await prefs.setBool(KEY_SESSION_ACTIVE, false);
+    } catch (e) {
+      ConsoleLog.printError("Error clearing session: $e");
+    }
   }
 
   Future<void> clearUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(AppSharedPreferences.isLogin, false);
-    await prefs.remove(AppSharedPreferences.token);
-    await prefs.remove(AppSharedPreferences.signature);
-    await prefs.remove(AppSharedPreferences.userID);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(AppSharedPreferences.isLogin, false);
+      await prefs.remove(AppSharedPreferences.token);
+      await prefs.remove(AppSharedPreferences.signature);
+      await prefs.remove(AppSharedPreferences.userID);
+    } catch (e) {
+      ConsoleLog.printError("Error clearing user data: $e");
+    }
   }
 
   void cancelInactivityTimer() {
-    inactivityTimer?.cancel();
-    inactivityTimer = null;
+    if (inactivityTimer != null) {
+      inactivityTimer!.cancel();
+      inactivityTimer = null;
+      ConsoleLog.printInfo("Inactivity timer cancelled");
+    }
   }
 
   void cancelWarningTimer() {
-    warningTimer?.cancel();
-    warningTimer = null;
+    if (warningTimer != null) {
+      warningTimer!.cancel();
+      warningTimer = null;
+      ConsoleLog.printInfo("Warning timer cancelled");
+    }
   }
 
   void cancelAllTimers() {
@@ -343,6 +388,8 @@ class ActivityDetector extends StatelessWidget {
 
   void updateActivity() {
     if (Get.isRegistered<SessionManager>()) {
+      // Warning dialog open ho to activity update nahi hoga
+      if (SessionManager.instance.isShowingWarning.value) return;
       SessionManager.instance.updateActivity();
     }
   }

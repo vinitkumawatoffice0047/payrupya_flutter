@@ -16,6 +16,11 @@ class WebApiConstant{
 
   // Home Screen APIs
   static const String API_URL_GET_WALLET_BALANCE = "${BASE_URL}Fetch/getWalletBalance";
+  static const String API_URL_GET_PROFILE_DATA = "${BASE_URL}Fetch/get_profile_data";
+  static const String API_URL_CHECK_FINGPAY_USER_ONBOARD_STATUS = "${BASE_URL}Fetch/checkFingpayUserOnboardStatus";
+  static const String API_URL_CHECK_INSTANTPAY_USER_ONBOARD_STATUS = "${BASE_URL}Fetch/checkUserOnboardStatus";
+  static const String API_URL_CHECK_FINGPAY_2FA_AUTH_STATUS = "${BASE_URL}Fetch/checkFingpayAuthStatus";
+  static const String API_URL_CHECK_INSTANTPAY_2FA_AUTH_STATUS = "${BASE_URL}Fetch/checkBioAuthStatus";
 
   // Location/Address APIs
   static const String API_URL_GET_CITY_STATE_BY_PINCODE = "${BASE_URL}Fetch/getCityStateByPincode";
@@ -52,6 +57,16 @@ class WebApiConstant{
 
   // AEPS APIs
   static const String API_URL_GET_ALL_MY_BANK_LIST = "${BASE_URL}Fetch/getAllMyBankList";
+  static const String API_URL_FINGPAY_AEPS_PROCESS_ONBOARDING = "${BASE_URL}Action/fingpayAepsProcessOnboarding";
+  static const String API_URL_FINGPAY_2FA_PROCESS = "${BASE_URL}Action/fingpayTwofaProcess";
+  static const String API_URL_GET_AEPS_BANK_LIST = "${BASE_URL}Fetch/getAepsBanklist";
+  static const String API_URL_AEPS_START_TRANSACTION_PROCESS = "${BASE_URL}Action/aepsStartTransactionProcess";
+  static const String API_URL_FINGPAY_TRANSACTION_PROCESS = "${BASE_URL}Action/fingpayTransactionProcess";
+  static const String API_URL_INSTANTPAY_AEPS_PROCESS_ONBOARDING = "${BASE_URL}Action/instantpayAepsProcessOnboarding";
+  static const String API_URL_INSTANTPAY_2FA_PROCESS = "${BASE_URL}Action/start_2faauth_process";
+  static const String API_URL_GET_RECENT_TXN_DATA = "${BASE_URL}Fetch/getRecentTxnData";
+  static const String API_URL_MARK_FAV_BANK = "${BASE_URL}Action/markFavBank";
+
 
 
 
