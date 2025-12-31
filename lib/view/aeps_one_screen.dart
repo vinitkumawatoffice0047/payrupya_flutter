@@ -10,6 +10,7 @@ import 'package:payrupya/view/categories_screen.dart';
 
 import '../models/get_all_my_bank_list_response_model.dart';
 import '../utils/global_utils.dart';
+import 'aeps_choose_service_screen.dart';
 
 // Import your controllers and services
 // import '../controllers/aeps_api_service.dart';
@@ -33,8 +34,11 @@ class AepsOneScreen extends StatefulWidget {
 
 class _AepsOneScreenState extends State<AepsOneScreen> {
   // Controller - Replace with your actual controller
-  final AepsController aepsController = Get.put(AepsController());
-  final PayrupyaHomeScreenController homeScreenController = Get.put(PayrupyaHomeScreenController());
+  // final AepsController aepsController = Get.put(AepsController());
+  // final PayrupyaHomeScreenController homeScreenController = Get.put(PayrupyaHomeScreenController());
+  PayrupyaHomeScreenController get homeScreenController => Get.find<PayrupyaHomeScreenController>();
+  AepsController get aepsController => Get.find<AepsController>();
+
 
   String selectedDevice = '';
   
@@ -305,7 +309,6 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           if (widget.showBackButton) ...[
             GestureDetector(
               onTap: () {
-                ConsoleLog.printError("AAAAAAAAAAAAAAAAAAAAAA");
                 // dmtController.senderMobileController.value.clear();
                 // otpKey.currentState?.clear();
                 // dmtController.senderNameController.value.clear();
@@ -382,7 +385,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
             label: 'Aadhaar Number',
             // hint: 'Enter 12-digit Aadhaar',
             placeholder: 'Enter 12-digit Aadhaar',
-            controller: aepsController.aadhaarController.value,
+            controller: aepsController.aadhaarController,
             keyboardType: TextInputType.number,
             maxLength: 12,
           ),
@@ -571,7 +574,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                       child: buildTextField(
                         label: 'First Name',
                         placeholder: 'First Name',
-                        controller: aepsController.firstNameController.value,
+                        controller: aepsController.firstNameController,
                         readOnly: true,
                       ),
                     ),
@@ -580,7 +583,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                       child: buildTextField(
                         label: 'Last Name',
                         placeholder: 'Last Name',
-                        controller: aepsController.lastNameController.value,
+                        controller: aepsController.lastNameController,
                         readOnly: true,
                       ),
                     ),
@@ -593,7 +596,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                 buildTextField(
                   label: 'Shop Name',
                   placeholder: 'Shop Name',
-                  controller: aepsController.shopNameController.value,
+                  controller: aepsController.shopNameController,
                   readOnly: true,
                 ),
 
@@ -603,7 +606,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                 buildTextField(
                   label: 'Email',
                   placeholder: 'Email',
-                  controller: aepsController.emailController.value,
+                  controller: aepsController.emailController,
                   readOnly: true,
                   keyboardType: TextInputType.emailAddress,
                 ),
@@ -614,7 +617,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                 buildTextField(
                   label: 'Mobile Number',
                   placeholder: 'Mobile Number',
-                  controller: aepsController.mobileController.value,
+                  controller: aepsController.mobileController,
                   readOnly: true,
                   keyboardType: TextInputType.phone,
                   maxLength: 10,
@@ -626,7 +629,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                 buildTextField(
                   label: 'PAN Number',
                   placeholder: 'PAN Number',
-                  controller: aepsController.panController.value,
+                  controller: aepsController.panController,
                   readOnly: true,
                   textCapitalization: TextCapitalization.characters,
                 ),
@@ -637,7 +640,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                 buildTextField(
                   label: 'Aadhaar Number',
                   placeholder: 'Aadhaar Number',
-                  controller: aepsController.aadhaarController.value,
+                  controller: aepsController.aadhaarController,
                   readOnly: true,
                   keyboardType: TextInputType.number,
                   maxLength: 12,
@@ -649,7 +652,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                 buildTextField(
                   label: 'GSTIN',
                   placeholder: 'GSTIN',
-                  controller: aepsController.gstController.value,
+                  controller: aepsController.gstController,
                   readOnly: true,
                   textCapitalization: TextCapitalization.characters,
                 ),
@@ -663,7 +666,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                       child: buildTextField(
                         label: 'State',
                         placeholder: 'State',
-                        controller: aepsController.stateController.value,
+                        controller: aepsController.stateController,
                         readOnly: true,
                       ),
                     ),
@@ -672,7 +675,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                       child: buildTextField(
                         label: 'City',
                         placeholder: 'City',
-                        controller: aepsController.cityController.value,
+                        controller: aepsController.cityController,
                         readOnly: true,
                       ),
                     ),
@@ -685,7 +688,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                 buildTextField(
                   label: 'Pincode',
                   placeholder: 'Pincode',
-                  controller: aepsController.pincodeController.value,
+                  controller: aepsController.pincodeController,
                   readOnly: true,
                   keyboardType: TextInputType.number,
                   maxLength: 6,
@@ -697,7 +700,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                 buildTextField(
                   label: 'Shop Address',
                   placeholder: 'Shop Address',
-                  controller: aepsController.shopAddressController.value,
+                  controller: aepsController.shopAddressController,
                   readOnly: true,
                   maxLines: 2,
                 ),
@@ -808,7 +811,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           buildTextField(
             label: '',
             placeholder: 'Enter 6-digit OTP',
-            controller: aepsController.otpController.value,
+            controller: aepsController.otpController,
             keyboardType: TextInputType.number,
             maxLength: 6,
           ),
@@ -981,7 +984,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                 onPressed: () {
                   setState(() {
                     aepsController.showFingpayOtpModal.value = false;
-                    aepsController.otpController.value.clear();
+                    aepsController.otpController.clear();
                   });
                 },
               ),
@@ -992,7 +995,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           buildTextField(
             label: 'Enter OTP',
             placeholder: 'Enter OTP',
-            controller: aepsController.otpController.value,
+            controller: aepsController.otpController,
             keyboardType: TextInputType.number,
             maxLength: 6,
             hintText: 'Enter 6-digit OTP',
@@ -1158,7 +1161,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
         color: Colors.white,
         fontWeight: FontWeight.w600,
       ),
-      width: GlobalUtils.screenWidth * 0.9,
+      width: GlobalUtils.screenWidth,
       height: GlobalUtils.screenWidth * (60 / 393),
       backgroundGradient: GlobalUtils.blueBtnGradientColor,
       borderColor: Color(0xFF71A9FF),
@@ -1226,7 +1229,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
       BuildContext context,
       AepsController controller,
       ) {
-    controller.filteredBankList.assignAll(controller.myBankList);
+    controller.filteredMyBankList.assignAll(controller.myBankList);
     controller.searchCtrl.clear();
 
     showModalBottomSheet(
@@ -1278,7 +1281,10 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                     /// 🔍 Search Field
                     TextField(
                       controller: controller.searchCtrl,
-                      onChanged: controller.filterBank,
+                      // onChanged: controller.filterBank,
+                      onChanged: (query) {
+                        controller.filterBank(query);
+                      },
                       decoration: InputDecoration(
                         hintText: 'Search...',
                         prefixIcon: Icon(Icons.search, color: Color(0xFF6B707E)),
@@ -1296,7 +1302,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
 
                     /// 🏦 Bank List
                     Expanded(
-                      child: Obx(() => controller.filteredBankList.isEmpty
+                      child: Obx(() => controller.filteredMyBankList.isEmpty
                           ? Padding(
                         padding: EdgeInsets.all(20),
                         child: Center(child: Text('No bank found', style: GoogleFonts.albertSans(
@@ -1306,10 +1312,10 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
                           : ListView.builder(
                         shrinkWrap: true,
                         itemCount:
-                        controller.filteredBankList.length,
+                        controller.filteredMyBankList.length,
                         itemBuilder: (context, index) {
                           final bank =
-                          controller.filteredBankList[index];
+                          controller.filteredMyBankList[index];
 
                           return ListTile(
                             title: Text(bank.bankName ?? '', style: GoogleFonts.albertSans(
@@ -1376,27 +1382,47 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
     Get.snackbar('Success', 'OTP resent successfully');
   }
 
-  void _initFingerprintEkyc() {
-    // Initiate fingerprint scan for eKYC
-    // On success, navigate to Choose Service screen
-    
-    // For demo, navigate to choose service
-    setState(() {
-      aepsController.showFingpayOnboardAuthForm.value = false;
-      aepsController.showFingpay2FAForm.value = true;
-    });
+  void _initFingerprintEkyc() async {
+    if (aepsController.selectedDevice.value.isEmpty) {
+      Get.snackbar('Error', 'Please select a biometric device');
+      return;
+    }
+
+    // Call the eKYC method
+    bool success = await aepsController.completeFingpayEkycWithBiometric();
+
+    if (success) {
+      // eKYC done, now show 2FA form
+      // State is already updated in controller
+    }
   }
 
-  void _initFingerprint2FA() {
-    // Initiate fingerprint scan for 2FA
-    // On success, navigate to Choose Service screen
-    
-    // For demo, navigate to choose service screen
-    Get.snackbar('Success', '2FA Authentication successful');
-    // Get.to(() => AepsChooseServiceScreen(aepsType: 'fingpay'));
+  void _initFingerprint2FA() async {
+    // Validate device
+    if (aepsController.selectedDevice.value.isEmpty) {
+      Get.snackbar('Error', 'Please select a biometric device');
+      return;
+    }
+
+    // Validate Aadhaar
+    if (aepsController.aadhaarController.value.text.isEmpty ||
+        aepsController.aadhaarController.value.text.length != 12) {
+      Get.snackbar('Error', 'Please enter valid 12-digit Aadhaar number');
+      return;
+    }
+
+    // Call the biometric 2FA method
+    bool success = await aepsController.completeFingpay2FAWithBiometric();
+
+    if (success) {
+      // Navigate to Choose Service Screen
+      Get.off(() => AepsChooseServiceScreen(aepsType: 'AEPS1'));
+    }
   }
+
 
   // ============== Lifecycle Methods ==============
+
 
   @override
   void dispose() {

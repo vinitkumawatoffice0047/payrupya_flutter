@@ -875,7 +875,7 @@ class PayrupyaHomeScreenController extends GetxController {
 
         if (getAllMyBanksResponse.respCode == 'RCS' && getAllMyBanksResponse.data != null) {
           aepsController.myBankList.assignAll(getAllMyBanksResponse.data!);
-          aepsController.filteredBankList.assignAll(getAllMyBanksResponse.data!);
+          aepsController.filteredMyBankList.assignAll(getAllMyBanksResponse.data!);
           ConsoleLog.printSuccess("My Banks List loaded: ${aepsController.myBankList.length}");
         }
         else {

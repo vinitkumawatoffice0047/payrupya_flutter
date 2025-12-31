@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../controllers/aeps_controller.dart';
 import '../controllers/payrupya_home_screen_controller.dart';
 import '../utils/ConsoleLog.dart';
+import '../utils/global_utils.dart';
 
 // Import your controllers and services
 // import '../controllers/aeps_controller.dart';
@@ -39,8 +40,10 @@ class _AepsThreeScreenState extends State<AepsThreeScreen> {
   // String selectedDevice = '';
 
   // Controllers
-  final AepsController aepsController = Get.put(AepsController());
-  final PayrupyaHomeScreenController homeScreenController = Get.put(PayrupyaHomeScreenController());
+  // final AepsController aepsController = Get.put(AepsController());
+  // final PayrupyaHomeScreenController homeScreenController = Get.put(PayrupyaHomeScreenController());
+  PayrupyaHomeScreenController get homeScreenController => Get.find<PayrupyaHomeScreenController>();
+  AepsController get aepsController => Get.find<AepsController>();
 
   // Device list
   final List<Map<String, String>> deviceList = [
@@ -159,7 +162,7 @@ class _AepsThreeScreenState extends State<AepsThreeScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              _buildCustomAppBar(),
+              buildCustomAppBar(),
               Expanded(
                 child: Obx(() {
                   // ✅ Show loading while initializing
@@ -184,51 +187,90 @@ class _AepsThreeScreenState extends State<AepsThreeScreen> {
   }
 
   // ============== AppBar ==============
-  Widget _buildCustomAppBar() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
+  Widget buildCustomAppBar() {
+    return Padding(
+      padding: EdgeInsets.only(
+          left: GlobalUtils.screenWidth * 0.04,
+          right: GlobalUtils.screenWidth * 0.04,
+          bottom: 16
       ),
       child: Row(
         children: [
-          if (widget.showBackButton)
+          if (widget.showBackButton) ...[
             GestureDetector(
-              onTap: () => Get.back(),
+              onTap: () {
+                aepsController.resetFingpayState();
+                Navigator.of(context).pop();
+              },
               child: Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(8),
+                height: GlobalUtils.screenHeight * (22 / 393),
+                width: GlobalUtils.screenWidth * (47 / 393),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.arrow_back_ios_new,
-                  size: 20,
-                  color: Color(0xFF1B1C1C),
-                ),
+                child: const Icon(Icons.arrow_back_ios_new, color: Colors.black87, size: 22),
               ),
             ),
-          SizedBox(width: 12),
+            SizedBox(width: GlobalUtils.screenWidth * (14 / 393)),
+          ],
           Text(
-            'AEPS Three (Instantpay)',
+            "AEPS Three (Instantpay)",
             style: GoogleFonts.albertSans(
-              fontSize: 18,
+              fontSize: GlobalUtils.screenWidth * (20 / 393),
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1B1C1C),
+              color: const Color(0xff1B1C1C),
             ),
           ),
-          Spacer(),
         ],
       ),
     );
   }
+  // Widget _buildCustomAppBar() {
+  //   return Container(
+  //     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.black.withOpacity(0.05),
+  //           blurRadius: 10,
+  //           offset: Offset(0, 2),
+  //         ),
+  //       ],
+  //     ),
+  //     child: Row(
+  //       children: [
+  //         if (widget.showBackButton)
+  //           GestureDetector(
+  //             onTap: () => Get.back(),
+  //             child: Container(
+  //               padding: EdgeInsets.all(8),
+  //               decoration: BoxDecoration(
+  //                 color: Color(0xFFF5F5F5),
+  //                 borderRadius: BorderRadius.circular(8),
+  //               ),
+  //               child: Icon(
+  //                 Icons.arrow_back_ios_new,
+  //                 size: 20,
+  //                 color: Color(0xFF1B1C1C),
+  //               ),
+  //             ),
+  //           ),
+  //         SizedBox(width: 12),
+  //         Text(
+  //           'AEPS Three (Instantpay)',
+  //           style: GoogleFonts.albertSans(
+  //             fontSize: 18,
+  //             fontWeight: FontWeight.w600,
+  //             color: Color(0xFF1B1C1C),
+  //           ),
+  //         ),
+  //         Spacer(),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   /// ✅ Loading Widget
   Widget _buildLoadingWidget() {
@@ -329,7 +371,7 @@ class _AepsThreeScreenState extends State<AepsThreeScreen> {
 
       return SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -454,10 +496,10 @@ class _AepsThreeScreenState extends State<AepsThreeScreen> {
           SizedBox(height: 24),
 
           // Aadhaar Field
-          _buildTextField(
+          buildTextField(
             label: 'Aadhaar Number',
-            hint: 'Enter 12-digit Aadhaar',
-            controller: aepsController.aadhaarController.value,
+            placeholder: 'Enter 12-digit Aadhaar',
+            controller: aepsController.aadhaarController,
             keyboardType: TextInputType.number,
             maxLength: 12,
             readOnly: true,
@@ -523,104 +565,110 @@ class _AepsThreeScreenState extends State<AepsThreeScreen> {
   // ============== Onboarding Form ==============
   Widget _buildOnboardingForm() {
     return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
+      // padding: EdgeInsets.all(20),
+      // decoration: BoxDecoration(
+      //   color: Colors.white,
+      //   borderRadius: BorderRadius.circular(20),
+      // ),
       child: Form(
         key: formKey,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'AEPS Registration',
-              style: GoogleFonts.albertSans(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1B1C1C),
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'AEPS Registration',
+                    style: GoogleFonts.albertSans(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1B1C1C),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Complete the registration to start using AEPS services',
+                    style: GoogleFonts.albertSans(
+                      fontSize: 14,
+                      color: Color(0xFF6B707E),
+                    ),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Mobile Number (readonly)
+                  buildTextField(
+                    label: 'Mobile Number',
+                    placeholder: 'Mobile Number',
+                    controller: aepsController.mobileController,
+                    keyboardType: TextInputType.phone,
+                    readOnly: true,
+                  ),
+                  SizedBox(height: 16),
+
+                  // Email (readonly)
+                  buildTextField(
+                    label: 'Email Address',
+                    placeholder: 'Email Address',
+                    controller: aepsController.emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    readOnly: true,
+                  ),
+                  SizedBox(height: 16),
+
+                  // Aadhaar Number (readonly)
+                  buildTextField(
+                    label: 'Aadhaar Number',
+                    placeholder: 'Enter 12-digit Aadhaar',
+                    controller: aepsController.aadhaarController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 12,
+                    readOnly: true,
+                  ),
+                  SizedBox(height: 16),
+
+                  // PAN Number (readonly)
+                  buildTextField(
+                    label: 'PAN Number',
+                    placeholder: 'PAN Number',
+                    controller: aepsController.panController,
+                    readOnly: true,
+                  ),
+                  SizedBox(height: 16),
+
+                  // Bank Account Number
+                  buildTextField(
+                    label: 'Bank Account Number',
+                    placeholder: 'Enter Bank Account Number',
+                    controller: aepsController.bankAccountController,
+                    keyboardType: TextInputType.number,
+                  ),
+                  SizedBox(height: 16),
+
+                  // IFSC Code
+                  buildTextField(
+                    label: 'IFSC Code',
+                    placeholder: 'Enter IFSC Code',
+                    controller: aepsController.ifscController,
+                    maxLength: 11,
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 8),
-            Text(
-              'Complete the registration to start using AEPS services',
-              style: GoogleFonts.albertSans(
-                fontSize: 14,
-                color: Color(0xFF6B707E),
-              ),
-            ),
-            SizedBox(height: 24),
-
-            // Mobile Number (readonly)
-            _buildTextField(
-              label: 'Mobile Number',
-              hint: 'Mobile Number',
-              controller: aepsController.mobileController.value,
-              keyboardType: TextInputType.phone,
-              readOnly: true,
-            ),
-            SizedBox(height: 16),
-
-            // Email (readonly)
-            _buildTextField(
-              label: 'Email Address',
-              hint: 'Email Address',
-              controller: aepsController.emailController.value,
-              keyboardType: TextInputType.emailAddress,
-              readOnly: true,
-            ),
-            SizedBox(height: 16),
-
-            // Aadhaar Number (readonly)
-            _buildTextField(
-              label: 'Aadhaar Number',
-              hint: 'Enter 12-digit Aadhaar',
-              controller: aepsController.aadhaarController.value,
-              keyboardType: TextInputType.number,
-              maxLength: 12,
-              readOnly: true,
-            ),
-            SizedBox(height: 16),
-
-            // PAN Number (readonly)
-            _buildTextField(
-              label: 'PAN Number',
-              hint: 'PAN Number',
-              controller: aepsController.panController.value,
-              readOnly: true,
-            ),
-            SizedBox(height: 16),
-
-            // Bank Account Number
-            _buildTextField(
-              label: 'Bank Account Number',
-              hint: 'Enter Bank Account Number',
-              controller: aepsController.bankAccountController.value,
-              keyboardType: TextInputType.number,
-            ),
-            SizedBox(height: 16),
-
-            // IFSC Code
-            _buildTextField(
-              label: 'IFSC Code',
-              hint: 'Enter IFSC Code',
-              controller: aepsController.ifscController.value,
-              maxLength: 11,
-            ),
-            SizedBox(height: 24),
+            SizedBox(height: 20),
 
             // Register Button
             _buildPrimaryButton(
               label: 'Register & Send OTP',
               onPressed: _registerOnboarding,
             ),
+
+            // const SizedBox(height: 5),
 
             // OTP Section
             Obx(() {
@@ -632,7 +680,7 @@ class _AepsThreeScreenState extends State<AepsThreeScreen> {
                   ],
                 );
               }
-              return SizedBox.shrink();
+              return const SizedBox(height: 5);
             }),
           ],
         ),
@@ -668,10 +716,10 @@ class _AepsThreeScreenState extends State<AepsThreeScreen> {
             ),
           ),
           SizedBox(height: 12),
-          _buildTextField(
+          buildTextField(
             label: '',
-            hint: 'Enter 6-digit OTP',
-            controller: aepsController.otpController.value,
+            placeholder: 'Enter 6-digit OTP',
+            controller: aepsController.otpController,
             keyboardType: TextInputType.number,
             maxLength: 6,
           ),
@@ -759,64 +807,124 @@ class _AepsThreeScreenState extends State<AepsThreeScreen> {
 
   // ============== UI Components ==============
 
-  Widget _buildTextField({
+  Widget buildTextField({
     required String label,
-    required String hint,
     required TextEditingController controller,
-    TextInputType keyboardType = TextInputType.text,
-    int? maxLength,
+    String? placeholder,
     bool readOnly = false,
+    TextInputType? keyboardType,
+    int? maxLength,
+    String? hintText,
+    int maxLines = 1,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+    Function(String)? onChanged,
+    Function(String)? onSubmitted,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (label.isNotEmpty) ...[
-          Text(
-            label,
-            style: GoogleFonts.albertSans(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF1B1C1C),
-            ),
-          ),
-          SizedBox(height: 8),
-        ],
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          maxLength: maxLength,
-          readOnly: readOnly,
+        Text(
+          label,
           style: GoogleFonts.albertSans(
             fontSize: 14,
-            color: readOnly ? Color(0xFF6B707E) : Color(0xFF1B1C1C),
+            color: Color(0xff6B707E),
+            fontWeight: FontWeight.w400,
           ),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: GoogleFonts.albertSans(
-              fontSize: 14,
+        ),
+        const SizedBox(height: 8),
+        GlobalUtils.CustomTextField(
+            label: label,
+            showLabel: false,
+            controller: controller,
+            readOnly: readOnly,
+            keyboardType: keyboardType ?? TextInputType.emailAddress,
+            // isMobileNumber: true,
+            maxLength: maxLength,
+            maxLines: maxLines,
+            textCapitalization: textCapitalization,
+            // style: GoogleFonts.albertSans(fontSize: 14),
+            placeholder: placeholder,
+            placeholderColor: Colors.white,
+            height: GlobalUtils.screenWidth * (60 / 393),
+            width: GlobalUtils.screenWidth * 0.9,
+            autoValidate: false,
+            backgroundColor: Colors.white,
+            borderColor: Color(0xffE2E5EC),
+            borderRadius: 16,
+            placeholderStyle: GoogleFonts.albertSans(
+              fontSize: GlobalUtils.screenWidth * (14 / 393),
               color: Color(0xFF6B707E),
             ),
-            filled: true,
-            fillColor: readOnly ? Color(0xFFEEEEEE) : Color(0xFFF5F5F5),
-            counterText: '',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+            inputTextStyle: GoogleFonts.albertSans(
+              fontSize: GlobalUtils.screenWidth * (14 / 393),
+              color: Color(0xFF1B1C1C),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Color(0xFFE0E0E0)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Color(0xFF2E5BFF)),
-            ),
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          ),
+            errorColor: Colors.red,
+            errorFontSize: 12,
+            onChanged: onChanged,
+            onSubmitted: onSubmitted
         ),
       ],
     );
   }
+  // Widget _buildTextField({
+  //   required String label,
+  //   required String hint,
+  //   required TextEditingController controller,
+  //   TextInputType keyboardType = TextInputType.text,
+  //   int? maxLength,
+  //   bool readOnly = false,
+  // }) {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       if (label.isNotEmpty) ...[
+  //         Text(
+  //           label,
+  //           style: GoogleFonts.albertSans(
+  //             fontSize: 14,
+  //             fontWeight: FontWeight.w500,
+  //             color: Color(0xFF1B1C1C),
+  //           ),
+  //         ),
+  //         SizedBox(height: 8),
+  //       ],
+  //       TextFormField(
+  //         controller: controller,
+  //         keyboardType: keyboardType,
+  //         maxLength: maxLength,
+  //         readOnly: readOnly,
+  //         style: GoogleFonts.albertSans(
+  //           fontSize: 14,
+  //           color: readOnly ? Color(0xFF6B707E) : Color(0xFF1B1C1C),
+  //         ),
+  //         decoration: InputDecoration(
+  //           hintText: hint,
+  //           hintStyle: GoogleFonts.albertSans(
+  //             fontSize: 14,
+  //             color: Color(0xFF6B707E),
+  //           ),
+  //           filled: true,
+  //           fillColor: readOnly ? Color(0xFFEEEEEE) : Color(0xFFF5F5F5),
+  //           counterText: '',
+  //           border: OutlineInputBorder(
+  //             borderRadius: BorderRadius.circular(12),
+  //             borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+  //           ),
+  //           enabledBorder: OutlineInputBorder(
+  //             borderRadius: BorderRadius.circular(12),
+  //             borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+  //           ),
+  //           focusedBorder: OutlineInputBorder(
+  //             borderRadius: BorderRadius.circular(12),
+  //             borderSide: BorderSide(color: Color(0xFF2E5BFF)),
+  //           ),
+  //           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 
   Widget _buildDropdownField({
     required String label,
@@ -880,38 +988,103 @@ class _AepsThreeScreenState extends State<AepsThreeScreen> {
     required VoidCallback onPressed,
     IconData? icon,
   }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2E5BFF),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-            ],
-            Text(
-              label,
-              style: GoogleFonts.albertSans(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
+    return GlobalUtils.CustomButton(
+      text: label,
+      onPressed: onPressed,
+      textStyle: GoogleFonts.albertSans(
+        fontSize: 16,
+        color: Colors.white,
+        fontWeight: FontWeight.w600,
+      ),
+      width: GlobalUtils.screenWidth,
+      height: GlobalUtils.screenWidth * (60 / 393),
+      backgroundGradient: GlobalUtils.blueBtnGradientColor,
+      borderColor: Color(0xFF71A9FF),
+      showShadow: false,
+      textColor: Colors.white,
+      animation: ButtonAnimation.fade,
+      animationDuration: const Duration(milliseconds: 150),
+      buttonType: ButtonType.elevated,
+      borderRadius: 16,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, color: Colors.white, size: 20),
+            SizedBox(width: 8),
           ],
-        ),
+          Text(
+            label,
+            style: GoogleFonts.albertSans(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
+
+    //   SizedBox(
+    //   width: double.infinity,
+    //   height: 50,
+    //   child: ElevatedButton(
+    //     onPressed: onPressed,
+    //     style: ElevatedButton.styleFrom(
+    //       backgroundColor: const Color(0xFF2E5BFF),
+    //       shape: RoundedRectangleBorder(
+    //         borderRadius: BorderRadius.circular(12),
+    //       ),
+    //       elevation: 0,
+    //     ),
+    //     child: Text(
+    //       label,
+    //       style: GoogleFonts.albertSans(
+    //         fontSize: 16,
+    //         fontWeight: FontWeight.w600,
+    //         color: Colors.white,
+    //       ),
+    //     ),
+    //   ),
+    // );
   }
+  // Widget _buildPrimaryButton({
+  //   required String label,
+  //   required VoidCallback onPressed,
+  //   IconData? icon,
+  // }) {
+  //   return SizedBox(
+  //     width: double.infinity,
+  //     height: 50,
+  //     child: ElevatedButton(
+  //       onPressed: onPressed,
+  //       style: ElevatedButton.styleFrom(
+  //         backgroundColor: const Color(0xFF2E5BFF),
+  //         shape: RoundedRectangleBorder(
+  //           borderRadius: BorderRadius.circular(12),
+  //         ),
+  //         elevation: 0,
+  //       ),
+  //       child: Row(
+  //         mainAxisAlignment: MainAxisAlignment.center,
+  //         children: [
+  //           if (icon != null) ...[
+  //             Icon(icon, color: Colors.white, size: 20),
+  //             SizedBox(width: 8),
+  //           ],
+  //           Text(
+  //             label,
+  //             style: GoogleFonts.albertSans(
+  //               fontSize: 16,
+  //               fontWeight: FontWeight.w600,
+  //               color: Colors.white,
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildSecondaryButton({
     required String label,
