@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import 'package:payrupya/controllers/payrupya_home_screen_controller.dart';
 import 'package:payrupya/controllers/session_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_provider.dart';
@@ -391,6 +392,11 @@ class LoginController extends GetxController {
       // End session
       if (Get.isRegistered<SessionManager>()) {
         await SessionManager.instance.endSession();
+      }
+
+      // ✅ FIX: Reset Home Screen Controller State
+      if (Get.isRegistered<PayrupyaHomeScreenController>()) {
+        Get.find<PayrupyaHomeScreenController>().resetInitialization();
       }
 
       // Clear user data

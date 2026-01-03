@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:payrupya/view/onboarding_screen.dart';
 
+import '../controllers/payrupya_home_screen_controller.dart';
 import '../controllers/session_manager.dart';
 import '../utils/app_shared_preferences.dart';
 import '../utils/global_utils.dart';
@@ -96,6 +97,9 @@ class _OtherUsersScreenState extends State<OtherUsersScreen> {
                 if (Get.isRegistered<SessionManager>()) {
                   await SessionManager.instance.endSession();
                   Get.delete<SessionManager>(force: true);
+                }
+                if (Get.isRegistered<PayrupyaHomeScreenController>()) {
+                  Get.find<PayrupyaHomeScreenController>().resetInitialization();
                 }
                 await AppSharedPreferences.clearSessionOnly();
                 Get.offAll(() => OnboardingScreen());

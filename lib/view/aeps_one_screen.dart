@@ -392,15 +392,16 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           SizedBox(height: 16),
 
           // Device Dropdown
-          _buildDropdownField(
-            label: 'Select Device',
-            value: aepsController.selectedDevice.value.isEmpty ? null : aepsController.selectedDevice.value,
-            items: deviceList/*.map((d) => d['value']!).toList()*/,
-            // displayItems: deviceList.map((d) => d['name']!).toList(),
-            onChanged: (value) {
-              aepsController.onDeviceChange(value);
-            },
-          ),
+          _buildDeviceSelectionField(),
+          // _buildDropdownField(
+          //   label: 'Select Device',
+          //   value: aepsController.selectedDevice.value.isEmpty ? null : aepsController.selectedDevice.value,
+          //   items: deviceList/*.map((d) => d['value']!).toList()*/,
+          //   // displayItems: deviceList.map((d) => d['name']!).toList(),
+          //   onChanged: (value) {
+          //     aepsController.onDeviceChange(value);
+          //   },
+          // ),
           SizedBox(height: 24),
 
           // Authenticate Button
@@ -477,16 +478,17 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
           const SizedBox(height: 16),
           
           // Device Selection
-          _buildDropdownField(
-            label: 'Select Device',
-            value: selectedDevice.isEmpty ? null : selectedDevice,
-            items: deviceList,
-            onChanged: (value) {
-              setState(() {
-                selectedDevice = value ?? '';
-              });
-            },
-          ),
+          _buildDeviceSelectionField(),
+          // _buildDropdownField(
+          //   label: 'Select Device',
+          //   value: selectedDevice.isEmpty ? null : selectedDevice,
+          //   items: deviceList,
+          //   onChanged: (value) {
+          //     setState(() {
+          //       selectedDevice = value ?? '';
+          //     });
+          //   },
+          // ),
           
           const SizedBox(height: 24),
           
@@ -1101,53 +1103,120 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
     );
   }
 
-  Widget _buildDropdownField({
-    required String label,
-    required String? value,
-    required List<Map<String, String>> items,
-    required Function(String?) onChanged,
-  }) {
+  Widget _buildDeviceSelectionField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          'Select Device',
           style: GoogleFonts.albertSans(
             fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: const Color(0xff6B707E),
+            fontWeight: FontWeight.w400,
           ),
         ),
         const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: DropdownButtonFormField<String>(
-            value: value,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              border: InputBorder.none,
-              hintText: 'Select Device',
-              hintStyle: GoogleFonts.albertSans(color: Colors.grey[400]),
+        Obx(() {
+          // Find selected device name
+          String displayLabel = 'Select Device';
+          if (aepsController.selectedDevice.value.isNotEmpty) {
+            final device = deviceList.firstWhere(
+                    (element) => element['value'] == aepsController.selectedDevice.value,
+                orElse: () => {'name': 'Select Device', 'value': ''});
+            displayLabel = device['name']!;
+          }
+
+          return GestureDetector(
+            onTap: () => showDeviceBottomSheet(context),
+            child: Container(
+              height: GlobalUtils.screenWidth * (60 / 393),
+              width: GlobalUtils.screenWidth * 0.9,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xffE2E5EC)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    displayLabel,
+                    style: GoogleFonts.albertSans(
+                      fontSize: GlobalUtils.screenWidth * (14 / 393),
+                      color: displayLabel == 'Select Device'
+                          ? const Color(0xFF6B707E)
+                          : const Color(0xFF1B1C1C),
+                    ),
+                  ),
+                  const Icon(Icons.keyboard_arrow_down, color: Color(0xFF6B707E)),
+                ],
+              ),
             ),
-            items: items.map((item) {
-              return DropdownMenuItem<String>(
-                value: item['value'],
-                child: Text(
-                  item['name']!,
-                  style: GoogleFonts.albertSans(fontSize: 14),
-                ),
-              );
-            }).toList(),
-            onChanged: onChanged,
-          ),
-        ),
+          );
+        }),
       ],
     );
   }
+  // Widget _buildDropdownField({
+  //   required String label,
+  //   required String? value,
+  //   required List<Map<String, String>> items,
+  //   required Function(String?) onChanged,
+  // }) {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Text(
+  //         label,
+  //         style: GoogleFonts.albertSans(
+  //           fontSize: 14,
+  //           color: Color(0xff6B707E),
+  //           fontWeight: FontWeight.w400,
+  //         ),
+  //       ),
+  //       const SizedBox(height: 8),
+  //       Container(
+  //         height: GlobalUtils.screenWidth * (60 / 393),
+  //         width: GlobalUtils.screenWidth * 0.9,
+  //         decoration: BoxDecoration(
+  //           color: Colors.white,
+  //           borderRadius: BorderRadius.circular(16),
+  //           border: Border.all(color: Colors.grey.shade300),
+  //         ),
+  //         child: DropdownButtonFormField<String>(
+  //           value: value,
+  //           decoration: InputDecoration(
+  //             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+  //             border: InputBorder.none,
+  //             hintText: 'Select Device',
+  //             hintStyle: GoogleFonts.albertSans(color: Colors.grey[400]),
+  //           ),
+  //           items: items.map((item) {
+  //             return DropdownMenuItem<String>(
+  //               value: item['value'],
+  //               child: Text(
+  //                 item['name']!,
+  //                 style: GoogleFonts.albertSans(fontSize: 14, color: Colors.black),
+  //               ),
+  //             );
+  //           }).toList(),
+  //           // placeholderStyle: GoogleFonts.albertSans(
+  //           //   fontSize: GlobalUtils.screenWidth * (14 / 393),
+  //           //   color: Color(0xFF6B707E),
+  //           // ),
+  //           // inputTextStyle: GoogleFonts.albertSans(
+  //           //   fontSize: GlobalUtils.screenWidth * (14 / 393),
+  //           //   color: Color(0xFF1B1C1C),
+  //           // ),
+  //           // errorColor: Colors.red,
+  //           // errorFontSize: 12,
+  //           onChanged: onChanged,
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 
   Widget _buildPrimaryButton({
     required String label,
@@ -1195,6 +1264,113 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
     //     ),
     //   ),
     // );
+  }
+
+  // ============== DEVICE SELECTION BOTTOM SHEET ==============
+  void showDeviceBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Container(
+              // Height adjust kar sakte hain content ke hisab se
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.6,
+              ),
+              decoration: const BoxDecoration(
+                color: Color(0xFFDEEBFF), // Same as Bank Dropdown background
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(25),
+                  topRight: Radius.circular(25),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 16),
+                  // Handle Bar
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[700],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Title
+                  Text(
+                    "Select Device",
+                    style: GoogleFonts.albertSans(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1B1C1C),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Device List
+                  Expanded(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: deviceList.length,
+                      itemBuilder: (context, index) {
+                        final device = deviceList[index];
+                        // Skip 'Select Device' placeholder from list if you want
+                        if (device['value'] == '') return const SizedBox.shrink();
+
+                        final isSelected = aepsController.selectedDevice.value == device['value'];
+
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ListTile(
+                            title: Text(
+                              device['name']!,
+                              style: GoogleFonts.albertSans(
+                                color: const Color(0xFF1B1C1C),
+                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                              ),
+                            ),
+                            trailing: isSelected
+                                ? const Icon(Icons.check_circle, color: Color(0xFF2E5BFF))
+                                : const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                            onTap: () {
+                              // Update Controller
+                              aepsController.onDeviceChange(device['value']);
+                              // Update Local State for UI
+                              setState(() {
+                                selectedDevice = device['value']!;
+                              });
+                              // Get.back(); // Close BottomSheet
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildSecondaryButton({
@@ -1404,9 +1580,9 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
       return;
     }
 
-    // Validate Aadhaar
-    if (aepsController.aadhaarController.value.text.isEmpty ||
-        aepsController.aadhaarController.value.text.length != 12) {
+    // ✅ FIX: Use aadhaarController.text (not .value.text)
+    if (aepsController.aadhaarController.text.isEmpty ||
+        aepsController.aadhaarController.text.length != 12) {
       Get.snackbar('Error', 'Please enter valid 12-digit Aadhaar number');
       return;
     }

@@ -21,7 +21,7 @@ class SessionManager extends GetxController with WidgetsBindingObserver {
   // ============================================
   // CONFIGURATION - Change these as needed
   // ============================================
-  static const int SESSION_TIMEOUT_MINUTES = 5;  // Auto logout after 5 min
+  static const int SESSION_TIMEOUT_MINUTES = 10;  // Auto logout after 5 min
   static const int WARNING_SECONDS = 30;         // Warning 30s before logout
 
   // Keys
@@ -232,10 +232,10 @@ class SessionManager extends GetxController with WidgetsBindingObserver {
     saveLastActivity();
     // startInactivityTimer();
 
-    Future.delayed(Duration(milliseconds: 200), () {
+    // Future.delayed(Duration(milliseconds: 200), () {
       startInactivityTimer();
       ConsoleLog.printSuccess("✅ Session extended successfully");
-    });
+    // });
   }
 
   void onLogoutNowPressed() async {
@@ -253,10 +253,10 @@ class SessionManager extends GetxController with WidgetsBindingObserver {
   /// ✅ NEW: Safe dialog close method
   void _closeDialog() {
     try {
-      if (Get.isDialogOpen == true) {
+      // if (Get.isDialogOpen == true) {
         Get.back();
         ConsoleLog.printInfo("✅ Dialog closed");
-      }
+      // }
     } catch (e) {
       ConsoleLog.printError("Error closing dialog: $e");
     }

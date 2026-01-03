@@ -210,6 +210,7 @@ class ApiProvider {
         receiveTimeout: Duration(seconds: 30),
         connectTimeout: Duration(seconds: 30),
         headers: headers,
+        responseType: ResponseType.plain,  // ✅ ADD THIS LINE
       );
       dio.options = options;
       Response response = await dio.post(
@@ -220,6 +221,7 @@ class ApiProvider {
           followRedirects: false,
           validateStatus: (status) => true,
           headers: headers,
+          responseType: ResponseType.plain,  // ✅ ADD THIS LINE
         ),
       );
 
@@ -227,7 +229,88 @@ class ApiProvider {
       ConsoleLog.printColor("Response_realUri: ${response.realUri}", color: "yellow");
       ConsoleLog.printColor("Response_headers: ${response.headers}", color: "yellow");
       ConsoleLog.printColor("Status: ${jsonEncode(response.statusCode)}", color: "yellow");
-      ConsoleLog.printColor("Response : ${jsonEncode(response.data)}", color: "yellow");
+      // ConsoleLog.printColor("Response : ${jsonEncode(response.data)}", color: "yellow");
+
+      // ✅ SAFE RESPONSE PARSING - Parse string to JSON Map
+      dynamic parsedData;
+
+      if (response.data == null) {
+        ConsoleLog.printError("❌ Response data is null");
+        parsedData = {"Resp_code": "ERR", "Resp_desc": "Empty response from server"};
+      } else if (response.data is String) {
+        String dataStr = response.data.toString().trim();
+
+        // Check for HTML error page (PHP error, 500 error, etc.)
+        if (dataStr.startsWith('<') || dataStr.startsWith('<!')) {
+          ConsoleLog.printError("❌ Server returned HTML instead of JSON!");
+          ConsoleLog.printError("Status Code: ${response.statusCode}");
+          // Log first 500 chars for debugging
+          int previewLen = dataStr.length > 500 ? 500 : dataStr.length;
+          ConsoleLog.printError("HTML Preview: ${dataStr.substring(0, previewLen)}");
+
+          parsedData = {
+            "Resp_code": "ERR",
+            "Resp_desc": "Server error - received HTML (Status: ${response.statusCode})",
+          };
+        } else if (dataStr.isEmpty) {
+          ConsoleLog.printError("❌ Empty response from server");
+          parsedData = {"Resp_code": "ERR", "Resp_desc": "Empty response"};
+        } else {
+          // Try to parse as JSON
+          try {
+            parsedData = jsonDecode(dataStr);
+            ConsoleLog.printColor("Response : ${jsonEncode(parsedData)}", color: "yellow");
+          } catch (e) {
+            ConsoleLog.printError("❌ Failed to parse JSON: $e");
+            int rawLen = dataStr.length > 300 ? 300 : dataStr.length;
+            ConsoleLog.printError("Raw: ${dataStr.substring(0, rawLen)}...");
+            parsedData = {
+              "Resp_code": "ERR",
+              "Resp_desc": "Invalid JSON response",
+            };
+          }
+        }
+      } else if (response.data is Map) {
+        // Already a Map (shouldn't happen with ResponseType.plain)
+        parsedData = response.data;
+        ConsoleLog.printColor("Response : ${jsonEncode(parsedData)}", color: "yellow");
+      } else {
+        ConsoleLog.printError("❌ Unknown response type: ${response.data.runtimeType}");
+        parsedData = {"Resp_code": "ERR", "Resp_desc": "Unknown format"};
+      }
+
+      ConsoleLog.printColor("=== END RESPONSE ===", color: "green");
+
+      // Create new Response with parsed Map data
+      Response parsedResponse = Response(
+        requestOptions: response.requestOptions,
+        data: parsedData,  // ✅ Now it's a Map, not String
+        statusCode: response.statusCode,
+        headers: response.headers,
+      );
+
+      // Check for auth error
+      if (parsedData is Map<String, dynamic> && parsedData["errorCode"] == 7) {
+        ConsoleLog.printError("❌ Authentication failed - Error Code 7");
+        logoutUser();
+      }
+
+      return parsedResponse;  // ✅ Return parsed response
+      /*// ✅ NEW (safe):
+      try {
+        if (response.data is Map || response.data is List) {
+          ConsoleLog.printColor("Response : ${jsonEncode(response.data)}", color: "yellow");
+        } else {
+          String dataStr = response.data.toString();
+          if (dataStr.trim().startsWith('<')) {
+            ConsoleLog.printError("❌ Server returned HTML! Preview: ${dataStr.substring(0, 200)}...");
+          } else {
+            ConsoleLog.printColor("Response (raw): $dataStr", color: "yellow");
+          }
+        }
+      } catch (e) {
+        ConsoleLog.printColor("Response (raw): ${response.data}", color: "red");
+      }
       ConsoleLog.printColor("=== END RESPONSE ===", color: "green");
 
       // ConsoleLog.printJsonResponse("Response21: ${response.data}", color: "yellow", tag: "Response");
@@ -280,7 +363,7 @@ class ApiProvider {
           return response;
         }
       }
-      return response;
+      return response;*/
 
       // }
     } catch (error) {

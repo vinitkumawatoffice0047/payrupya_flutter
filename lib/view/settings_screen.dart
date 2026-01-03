@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 // import '../controllers/theme_controller.dart';
+import '../controllers/payrupya_home_screen_controller.dart';
 import '../controllers/session_manager.dart';
 import '../controllers/theme_controller.dart';
 import '../utils/app_shared_preferences.dart';
@@ -273,6 +274,9 @@ class SettingsScreen extends StatelessWidget {
                 if (Get.isRegistered<SessionManager>()) {
                   await SessionManager.instance.endSession();
                   Get.delete<SessionManager>(force: true);
+                }
+                if (Get.isRegistered<PayrupyaHomeScreenController>()) {
+                  Get.find<PayrupyaHomeScreenController>().resetInitialization();
                 }
                 await AppSharedPreferences.clearSessionOnly();
                 Get.offAll(() => LoginScreen());

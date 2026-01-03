@@ -2135,16 +2135,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:payrupya/controllers/session_manager.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../api/api_provider.dart';
 import '../api/web_api_constant.dart';
 import '../models/get_all_my_bank_list_response_model.dart';
 import '../utils/ConsoleLog.dart';
+import '../utils/CustomDialog.dart';
+import '../utils/app_shared_preferences.dart';
 import '../utils/connection_validator.dart';
+import '../utils/global_utils.dart';
+import '../utils/pid_data_converter.dart';
+import '../view/onboarding_screen.dart';
 import 'aeps_biometric_service.dart';
 import 'payrupya_home_screen_controller.dart';
 import 'package:payrupya/models/check_fingpay_auth_status_response_model.dart';
 import 'package:payrupya/models/check_instantpay_bio_auth_status_response_model.dart';
+import 'package:android_intent_plus/android_intent.dart';
 
 // Import your project files - adjust paths as needed
 // import '../api/api_provider.dart';
@@ -2357,18 +2366,85 @@ class AepsController extends GetxController {
 
   // ============== Auth Credentials ==============
 
+  // Future<void> loadAuthCredentials() async {
+  //   try {
+  //     // Load from your AppSharedPreferences
+  //     // Map<String, String> authData = await AppSharedPreferences.getLoginAuth();
+  //     // userAuthToken.value = authData["token"] ?? "";
+  //     // userSignature.value = authData["signature"] ?? "";
+  //
+  //     print("✅ Auth credentials loaded");
+  //   } catch (e) {
+  //     print("❌ Error loading auth credentials: $e");
+  //   }
+  // }
+  //region loadAuthCredentials
+  // Load both token and signature properly
   Future<void> loadAuthCredentials() async {
     try {
-      // Load from your AppSharedPreferences
-      // Map<String, String> authData = await AppSharedPreferences.getLoginAuth();
-      // userAuthToken.value = authData["token"] ?? "";
-      // userSignature.value = authData["signature"] ?? "";
+      Map<String, String> authData = await AppSharedPreferences.getLoginAuth();
+      userAuthToken.value = authData["token"] ?? "";
+      userSignature.value = authData["signature"] ?? "";
 
-      print("✅ Auth credentials loaded");
+      ConsoleLog.printInfo("Token: ${userAuthToken.value.isNotEmpty ? 'Found' : 'NOT FOUND'}");
+      ConsoleLog.printInfo("Signature: ${userSignature.value.isNotEmpty ? 'Found' : 'NOT FOUND'}");
+
+      // Debug: Print first 20 chars
+      if (userAuthToken.value.isNotEmpty) {
+        int tokenLength = userAuthToken.value.length;
+        int previewLength = tokenLength > 20 ? 20 : tokenLength;
+        if (previewLength > 0) {
+          ConsoleLog.printColor("Token Preview: ${userAuthToken.value.substring(0, previewLength)}...", color: "cyan");
+        }
+      }
+
+      if (userSignature.value.isNotEmpty) {
+        int signatureLength = userSignature.value.length;
+        int previewLength = signatureLength > 20 ? 20 : signatureLength;
+        if (previewLength > 0) {
+          ConsoleLog.printColor("Signature Preview: ${userSignature.value.substring(0, previewLength)}...", color: "cyan");
+        }
+      }
+
+      // ✅ NEW: Debug full signature to verify
+      ConsoleLog.printColor("=== AUTH DEBUG ===", color: "yellow");
+      ConsoleLog.printColor("Full Token: ${userAuthToken.value}", color: "cyan");
+      ConsoleLog.printColor("Full Signature: ${userSignature.value}", color: "cyan");
+      ConsoleLog.printColor("=== END AUTH DEBUG ===", color: "yellow");
     } catch (e) {
-      print("❌ Error loading auth credentials: $e");
+      ConsoleLog.printError("Error loading auth credentials: $e");
     }
   }
+  //endregion
+
+  //region isTokenValid
+  Future<bool> isTokenValid() async {
+    // Reload credentials first
+    await loadAuthCredentials();
+
+    if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+      ConsoleLog.printError("❌ Token or Signature missing");
+      ConsoleLog.printError("Token Length: ${userAuthToken.value.length}");
+      ConsoleLog.printError("Signature Length: ${userSignature.value.length}");
+      return false;
+    }
+    return true;
+  }
+  //endregion
+
+  //region refreshToken
+  Future<void> refreshToken(BuildContext context) async {
+    ConsoleLog.printWarning("⚠️ Token expired, please login again");
+    // ✅ Session ko properly end karo
+    if (Get.isRegistered<SessionManager>()) {
+      await SessionManager.instance.endSession();
+      Get.delete<SessionManager>(force: true);
+    }
+    await AppSharedPreferences.clearSessionOnly();
+    Get.offAll(() => OnboardingScreen());
+    Fluttertoast.showToast(msg: "Session expired. Please login again.");
+  }
+  //endregion
 
   // ============== Reset Methods ==============
 
@@ -2444,10 +2520,7 @@ class AepsController extends GetxController {
   // ============== Utility Methods ==============
 
   String generateRequestId() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    return List.generate(6, (index) =>
-    chars[DateTime.now().microsecond % chars.length]
-    ).join();
+    return GlobalUtils.generateRandomId(6);
   }
 
   String getSkey() {
@@ -2594,52 +2667,748 @@ class AepsController extends GetxController {
 
       ConsoleLog.printError('❌ Platform Error: ${e.code} - ${e.message}');
 
-      String message = _getBiometricErrorMessage(e.code, e.message ?? '');
+      // Handle different error types
+      switch (e.code) {
+        case 'DEVICE_NOT_INSTALLED':
+        // Show dialog with Play Store download link
+          String deviceName = selectedDevice.value;
+          if (e.details != null && e.details is Map) {
+            deviceName = (e.details as Map)['device'] ?? selectedDevice.value;
+          }
+          _showRdServiceInstallDialog(deviceName);
+          break;
+
+        case 'DEVICE_NOT_CONNECTED':
+        // ✅ NEW: Show device not connected dialog
+          _showDeviceNotConnectedDialog();
+          break;
+
+        case 'DEVICE_NOT_READY':
+        case 'CAPTURE_FAILED':
+        case 'POOR_QUALITY':
+        case 'CAPTURE_TIMEOUT':
+        // Show toast with error message
+          String message = _getBiometricErrorMessage(e.code, e.message ?? '');
+          Fluttertoast.showToast(
+            msg: message,
+            toastLength: Toast.LENGTH_LONG,
+            backgroundColor: Colors.red.shade600,
+          );
+          break;
+
+        default:
+        // Show generic error toast
+          String message = _getBiometricErrorMessage(e.code, e.message ?? '');
+          Fluttertoast.showToast(msg: message);
+          break;
+      }
 
       return BiometricResult(
         success: false,
         errorCode: e.code,
-        errorMessage: message,
+        errorMessage: _getBiometricErrorMessage(e.code, e.message ?? ''),
       );
+    }
+  }
 
+  /// Show dialog when biometric device is not connected
+  void _showDeviceNotConnectedDialog() {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Colors.white,
+        actionsPadding: EdgeInsets.symmetric(horizontal: 0, vertical: 20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.usb_off, color: Colors.red.shade700, size: 28),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Device Not Connected',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your biometric device is not connected.',
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade100),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Please check:',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue.shade900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildCheckItem('Device is properly connected via USB/OTG'),
+                  _buildCheckItem('RD Service app is running'),
+                  _buildCheckItem('Device LED is blinking (if applicable)'),
+                  _buildCheckItem('USB OTG is enabled in settings'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lightbulb_outline, color: Colors.amber.shade700, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tip: Open the RD Service app first to verify device connection',
+                      style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: Text('OK', style: GoogleFonts.albertSans(color: Colors.black, fontWeight: FontWeight.w800)
+                ),
+              ),
+              GlobalUtils.CustomButton(
+                onPressed: () {
+                  Get.back();
+                  // Open RD Service app
+                  _openRdServiceApp();
+                },
+                icon: const Icon(Icons.open_in_new, size: 18),
+                text: 'Open RD Service',
+                textStyle: GoogleFonts.albertSans(
+                  fontSize: 16,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+                height: GlobalUtils.screenWidth * (60 / 393),
+                backgroundGradient: GlobalUtils.blueBtnGradientColor,
+                borderColor: Color(0xFF71A9FF),
+                showShadow: false,
+                textColor: Colors.white,
+                animation: ButtonAnimation.fade,
+                animationDuration: const Duration(milliseconds: 150),
+                buttonType: ButtonType.elevated,
+                borderRadius: 16,
+              ),
+            ],
+          ),
+          // ElevatedButton.icon(
+          //   onPressed: () {
+          //     Get.back();
+          //     // Open RD Service app
+          //     _openRdServiceApp();
+          //   },
+          //   icon: const Icon(Icons.open_in_new, size: 18),
+          //   label: const Text('Open RD Service'),
+          //   style: ElevatedButton.styleFrom(
+          //     backgroundColor: const Color(0xFF2E5BFF),
+          //     foregroundColor: Colors.white,
+          //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          //   ),
+          // ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  Widget _buildCheckItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.check_circle_outline, size: 16, color: Colors.blue.shade700),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Open RD Service app based on selected device
+  void _openRdServiceApp() async {
+    final Map<String, String> devicePackages = {
+      'MANTRA': 'com.mantra.rdservice',
+      'MFS110': 'com.mantra.mfs110.rdservice',
+      'MIS100V2': 'com.mantra.mis100v2.rdservice',
+      'MORPHO': 'com.scl.rdservice',
+      'Morpho L1': 'com.scl.rdservice',
+      'Idemia': 'com.idemia.l1rdservice',
+      'SecuGen Corp.': 'com.secugen.rdservice',
+      'STARTEK': 'com.acpl.registersdk',
+      'TATVIK': 'com.aborygen.rdservice',
+    };
+
+    final packageName = devicePackages[selectedDevice.value];
+
+    if (packageName == null) {
+      Fluttertoast.showToast(msg: 'Please open RD Service app manually');
+      return;
+    }
+
+    try {
+      // Method 1: Try using url_launcher with package scheme
+      final Uri appUri = Uri.parse('package:$packageName');
+
+      // Method 2: Try Android app scheme (more reliable)
+      final Uri launchUri = Uri.parse('android-app://$packageName');
+
+      // Method 3: Try market URI to at least show the app in Play Store
+      final Uri marketUri = Uri.parse('market://details?id=$packageName');
+
+      // Try to launch the app directly
+      bool launched = false;
+
+      // First try: Direct app launch via platform channel
+      launched = await _launchAppViaChannel(packageName);
+
+      if (!launched) {
+        // Fallback: Open in Play Store
+        if (await canLaunchUrl(marketUri)) {
+          await launchUrl(marketUri, mode: LaunchMode.externalApplication);
+          Fluttertoast.showToast(
+            msg: 'Opening Play Store. Please launch the app after installation.',
+            toastLength: Toast.LENGTH_LONG,
+          );
+        } else {
+          Fluttertoast.showToast(msg: 'Please open RD Service app manually');
+        }
+      }
     } catch (e) {
-      isBiometricScanning.value = false;
-      biometricError.value = e.toString();
-      biometricSuccess.value = false;
+      ConsoleLog.printError('Error launching RD Service: $e');
+      Fluttertoast.showToast(msg: 'Please open RD Service app manually');
+    }
+    // if (packageName != null) {
+    //   try {
+    //     // Try to open the app using package name
+    //     final intent = AndroidIntent(
+    //       action: 'android.intent.action.MAIN',
+    //       package: packageName,
+    //     );
+    //     intent.launch().catchError((e) {
+    //       ConsoleLog.printError('Failed to open RD Service: $e');
+    //       Fluttertoast.showToast(msg: 'Could not open RD Service app');
+    //     });
+    //   } catch (e) {
+    //     ConsoleLog.printError('Error launching RD Service: $e');
+    //     Fluttertoast.showToast(msg: 'Please open RD Service app manually');
+    //   }
+    // } else {
+    //   Fluttertoast.showToast(msg: 'Please open RD Service app manually');
+    // }
+  }
 
-      ConsoleLog.printError('❌ Error: $e');
-
-      return BiometricResult(
-        success: false,
-        errorCode: 'EXCEPTION',
-        errorMessage: e.toString(),
-      );
+  /// Launch app via platform channel
+  Future<bool> _launchAppViaChannel(String packageName) async {
+    try {
+      const channel = MethodChannel('aeps_biometric_channel');
+      final result = await channel.invokeMethod('launchApp', {
+        'package': packageName,
+      });
+      return result == true;
+    } catch (e) {
+      ConsoleLog.printError('Platform channel launch failed: $e');
+      return false;
     }
   }
 
   /// Get user-friendly error message for biometric errors
   String _getBiometricErrorMessage(String code, String message) {
     switch (code) {
+    // Device Installation Errors
       case 'DEVICE_NOT_INSTALLED':
-        return 'Please install RD Service app from Play Store';
+        return 'RD Service app not installed. Please download from Play Store.';
+
+    // ✅ NEW: Device Connection Errors
+      case 'DEVICE_NOT_CONNECTED':
+        return 'Biometric device not connected. Please connect your device and try again.';
+      case 'DEVICE_NOT_READY':
+        return 'Device is not ready. Please wait and try again.';
+      case 'DEVICE_NOT_REGISTERED':
+        return 'Device is not registered. Please register in RD Service app.';
+
+    // Capture Errors
+      case 'CAPTURE_FAILED':
+        return 'Fingerprint capture failed. Please try again.';
+      case 'CAPTURE_TIMEOUT':
+        return 'Capture timeout. Please place finger on device and try again.';
+      case 'POOR_QUALITY':
+        return 'Poor fingerprint quality. Clean your finger and try again.';
+
+    // User Actions
       case 'CANCELLED':
         return 'Scan cancelled. Please try again.';
       case 'NO_DATA':
-        return 'No fingerprint data. Ensure device is connected.';
+        return 'No fingerprint data received. Please try again.';
+
+    // Device Errors
       case 'UNKNOWN_DEVICE':
         return 'Unknown device selected. Please choose a valid device.';
+      case 'NO_DEVICE':
+        return 'No device selected. Please select a biometric device.';
+
+    // Legacy RD Error Codes (direct from RD Service)
+      case '100':
+      case '700':
+        return 'Device not found. Please connect your biometric device.';
       case '710':
-        return 'Device not ready. Please connect and try again.';
       case '720':
-        return 'Capture failed. Clean finger and retry.';
+        return 'Device not ready. Please connect device and try again.';
       case '730':
-        return 'Poor quality. Try with different finger.';
+        return 'Poor quality fingerprint. Clean finger and retry.';
+      case '740':
+        return 'Capture timeout. Please try again.';
+
+    // Validation Errors
+      case 'VALIDATION_ERROR':
+        return 'Failed to validate fingerprint data. Please try again.';
+
       default:
-        return message.isNotEmpty ? message : 'Scan failed. Please retry.';
+        return message.isNotEmpty ? message : 'Biometric scan failed. Please retry.';
+    }
+  }
+
+  /// Show RD Service installation dialog with Play Store link
+  void _showRdServiceInstallDialog(String device) {
+    // Device info with package names
+    final Map<String, Map<String, String>> deviceInfo = {
+      'MANTRA': {
+        'package': 'com.mantra.rdservice',
+        'name': 'Mantra MFS100 RD Service',
+      },
+      'MFS110': {
+        'package': 'com.mantra.mfs110.rdservice',
+        'name': 'Mantra MFS110 RD Service',
+      },
+      'MIS100V2': {
+        'package': 'com.mantra.mis100v2.rdservice',
+        'name': 'Mantra Iris MIS100V2 RD Service',
+      },
+      'MORPHO': {
+        'package': 'com.scl.rdservice',
+        'name': 'Morpho SCL RD Service',
+      },
+      'Idemia': {
+        'package': 'com.idemia.l1rdservice',
+        'name': 'Idemia L1 RD Service',
+      },
+      'SecuGen Corp.': {
+        'package': 'com.secugen.rdservice',
+        'name': 'SecuGen RD Service',
+      },
+      'STARTEK': {
+        'package': 'com.acpl.registersdk',
+        'name': 'Startek FM220 RD Service',
+      },
+      'TATVIK': {
+        'package': 'com.aborygen.rdservice',
+        'name': 'Tatvik TMF20 RD Service',
+      },
+    };
+
+    final info = deviceInfo[device];
+    final packageName = info?['package'] ?? '';
+    final deviceName = info?['name'] ?? '$device RD Service';
+    final playStoreUrl = 'https://play.google.com/store/apps/details?id=$packageName';
+
+    // Show GetX Snackbar with Download button
+    // ✅ Use Get.dialog instead of Get.snackbar to avoid Overlay errors
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange.shade700,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'RD Service Required',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'To use fingerprint authentication, please install:',
+              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade100),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.fingerprint, color: Colors.blue.shade700, size: 32),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          deviceName,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'from Google Play Store',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'After installation:',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildInstallStep('1', 'Open the RD Service app'),
+            _buildInstallStep('2', 'Connect your biometric device'),
+            _buildInstallStep('3', 'Come back here and try again'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Get.back();
+              await _openPlayStore(packageName);
+            },
+            icon: const Icon(Icons.download, size: 18),
+            label: const Text('Download Now'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2E5BFF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+    // Get.snackbar(
+    //   'RD Service Not Installed',
+    //   'Please install $deviceName to continue',
+    //   snackPosition: SnackPosition.BOTTOM,
+    //   backgroundColor: Colors.orange.shade100,
+    //   colorText: Colors.orange.shade900,
+    //   duration: const Duration(seconds: 6),
+    //   margin: const EdgeInsets.all(16),
+    //   borderRadius: 12,
+    //   icon: Icon(
+    //     Icons.warning_amber_rounded,
+    //     color: Colors.orange.shade700,
+    //     size: 28,
+    //   ),
+    //   mainButton: TextButton(
+    //     onPressed: () async {
+    //       Get.back(); // Close snackbar
+    //       await _openPlayStore(packageName);
+    //     },
+    //     child: Container(
+    //       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    //       decoration: BoxDecoration(
+    //         color: const Color(0xFF2E5BFF),
+    //         borderRadius: BorderRadius.circular(8),
+    //       ),
+    //       child: const Row(
+    //         mainAxisSize: MainAxisSize.min,
+    //         children: [
+    //           Icon(Icons.download, color: Colors.white, size: 16),
+    //           SizedBox(width: 6),
+    //           Text(
+    //             'Download',
+    //             style: TextStyle(
+    //               color: Colors.white,
+    //               fontWeight: FontWeight.w600,
+    //               fontSize: 13,
+    //             ),
+    //           ),
+    //         ],
+    //       ),
+    //     ),
+    //   ),
+    // );
+  }
+
+  /// Helper method to build installation steps
+  Widget _buildInstallStep(String number, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  // /// Show RD Service installation dialog (Alternative - More prominent)
+  // void _showRdServiceInstallDialogFull(String device) {
+  //   final Map<String, Map<String, String>> deviceInfo = {
+  //     'MANTRA': {'package': 'com.mantra.rdservice', 'name': 'Mantra MFS100 RD Service'},
+  //     'MFS110': {'package': 'com.mantra.mfs110.rdservice', 'name': 'Mantra MFS110 RD Service'},
+  //     'MIS100V2': {'package': 'com.mantra.mis100v2.rdservice', 'name': 'Mantra Iris RD Service'},
+  //     'MORPHO': {'package': 'com.scl.rdservice', 'name': 'Morpho SCL RD Service'},
+  //     'Idemia': {'package': 'com.idemia.l1rdservice', 'name': 'Idemia L1 RD Service'},
+  //     'SecuGen Corp.': {'package': 'com.secugen.rdservice', 'name': 'SecuGen RD Service'},
+  //     'STARTEK': {'package': 'com.acpl.registersdk', 'name': 'Startek FM220 RD Service'},
+  //     'TATVIK': {'package': 'com.aborygen.rdservice', 'name': 'Tatvik TMF20 RD Service'},
+  //   };
+  //
+  //   final info = deviceInfo[device];
+  //   final packageName = info?['package'] ?? '';
+  //   final deviceName = info?['name'] ?? '$device RD Service';
+  //
+  //   Get.dialog(
+  //     AlertDialog(
+  //       // contentPadding: EdgeInsets.all(0),
+  //       actionsPadding: EdgeInsets.symmetric(horizontal: 0, vertical: 20),
+  //       backgroundColor: Colors.white,
+  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  //       title: Row(
+  //         children: [
+  //           Container(
+  //             padding: const EdgeInsets.all(8),
+  //             decoration: BoxDecoration(
+  //               color: Colors.orange.shade50,
+  //               borderRadius: BorderRadius.circular(8),
+  //             ),
+  //             child: Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 28),
+  //           ),
+  //           const SizedBox(width: 12),
+  //           const Expanded(
+  //             child: Text('RD Service Required', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black)),
+  //           ),
+  //         ],
+  //       ),
+  //       content: Column(
+  //         mainAxisSize: MainAxisSize.min,
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Text(
+  //             'To use fingerprint authentication, please install:',
+  //             style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+  //           ),
+  //           const SizedBox(height: 16),
+  //           Container(
+  //             padding: const EdgeInsets.all(12),
+  //             decoration: BoxDecoration(
+  //               color: Colors.blue.shade50,
+  //               borderRadius: BorderRadius.circular(8),
+  //               border: Border.all(color: Colors.blue.shade100),
+  //             ),
+  //             child: Row(
+  //               children: [
+  //                 Icon(Icons.fingerprint, color: Colors.blue.shade700, size: 32),
+  //                 const SizedBox(width: 12),
+  //                 Expanded(
+  //                   child: Column(
+  //                     crossAxisAlignment: CrossAxisAlignment.start,
+  //                     children: [
+  //                       Text(deviceName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
+  //                       const SizedBox(height: 2),
+  //                       Text('from Google Play Store', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+  //                     ],
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //           const SizedBox(height: 16),
+  //           Text('After installation:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[800])),
+  //           const SizedBox(height: 8),
+  //           _buildStepRow('1', 'Open the RD Service app'),
+  //           _buildStepRow('2', 'Connect your biometric device'),
+  //           _buildStepRow('3', 'Come back here and try again'),
+  //         ],
+  //       ),
+  //       actions: [
+  //         Row(
+  //           mainAxisAlignment: MainAxisAlignment.center,
+  //           children: [
+  //             TextButton(
+  //               onPressed: () => Get.back(),
+  //               child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+  //             ),
+  //             GlobalUtils.CustomButton(
+  //               onPressed: () async {
+  //                 Get.back();
+  //                 await _openPlayStore(packageName);
+  //               },
+  //               icon: const Icon(Icons.download, size: 18),
+  //               text: 'Download Now',
+  //               textStyle: GoogleFonts.albertSans(
+  //                 fontSize: 16,
+  //                 color: Colors.white,
+  //                 fontWeight: FontWeight.w600,
+  //               ),
+  //               height: GlobalUtils.screenWidth * (60 / 393),
+  //               backgroundGradient: GlobalUtils.blueBtnGradientColor,
+  //               borderColor: Color(0xFF71A9FF),
+  //               showShadow: false,
+  //               textColor: Colors.white,
+  //               animation: ButtonAnimation.fade,
+  //               animationDuration: const Duration(milliseconds: 150),
+  //               buttonType: ButtonType.elevated,
+  //               borderRadius: 16,
+  //             ),
+  //           ],
+  //         )
+  //       ],
+  //     ),
+  //     barrierDismissible: true,
+  //   );
+  // }
+
+  Widget _buildStepRow(String number, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Text(number, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[700])),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(text, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+        ],
+      ),
+    );
+  }
+
+  /// Open Play Store for package
+  Future<void> _openPlayStore(String packageName) async {
+    try {
+      // Try Play Store URL first
+      final playStoreUrl = Uri.parse('https://play.google.com/store/apps/details?id=$packageName');
+
+      if (await canLaunchUrl(playStoreUrl)) {
+        await launchUrl(playStoreUrl, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback to market URI
+        final marketUrl = Uri.parse('market://details?id=$packageName');
+        if (await canLaunchUrl(marketUrl)) {
+          await launchUrl(marketUrl);
+        } else {
+          Fluttertoast.showToast(msg: 'Could not open Play Store');
+        }
+      }
+    } catch (e) {
+      ConsoleLog.printError('Error opening Play Store: $e');
+      Fluttertoast.showToast(msg: 'Error opening Play Store');
     }
   }
 
   /// Scan fingerprint for 2FA authentication
+  /// Uses MethodChannel to call native Android code
   Future<bool> scanFingerprintFor2FA() async {
     if (selectedDevice.value.isEmpty) {
       Fluttertoast.showToast(msg: 'Please select a biometric device');
@@ -2650,26 +3419,19 @@ class AepsController extends GetxController {
     showBiometricModal.value = true;
 
     try {
-      // Use AepsBiometricService
-      // final result = await biometricService.scanFingerprint(
-      //   device: selectedDevice.value,
-      //   wadh: WADH_EMPTY,
-      //   aadhaar: aadhaarController.text,
-      // );
-
-      // Simulated result for testing - replace with actual biometric call
-      await Future.delayed(Duration(seconds: 2));
-      final result = BiometricResultMock(
-        success: true,
-        pidData: '<PidData>MOCK_PID_DATA_FOR_TESTING</PidData>',
+      // ✅ REAL biometric call - NOT MOCK DATA
+      final result = await scanFingerprint(
+        device: selectedDevice.value,
+        forEkyc: false, // Empty WADH for 2FA
       );
 
       isBiometricScanning.value = false;
 
-      if (result.success && result.pidData != null) {
+      if (result.success && result.pidData != null && result.pidData!.isNotEmpty) {
         lastPidData.value = result.pidData!;
         biometricSuccess.value = true;
         showBiometricModal.value = false;
+        ConsoleLog.printSuccess("✅ 2FA Fingerprint captured: ${result.pidData!.length} chars");
         return true;
       } else {
         Fluttertoast.showToast(msg: result.errorMessage ?? 'Fingerprint scan failed');
@@ -2679,12 +3441,14 @@ class AepsController extends GetxController {
     } catch (e) {
       isBiometricScanning.value = false;
       showBiometricModal.value = false;
+      ConsoleLog.printError("❌ scanFingerprintFor2FA Error: $e");
       Fluttertoast.showToast(msg: 'Error: $e');
       return false;
     }
   }
 
   /// Scan fingerprint for eKYC (Fingpay onboarding)
+  /// Uses WADH_FOR_EKYC for eKYC authentication
   Future<bool> scanFingerprintForEkyc() async {
     if (selectedDevice.value.isEmpty) {
       Fluttertoast.showToast(msg: 'Please select a biometric device');
@@ -2695,26 +3459,19 @@ class AepsController extends GetxController {
     showBiometricModal.value = true;
 
     try {
-      // Use AepsBiometricService with eKYC WADH
-      // final result = await biometricService.scanFingerprint(
-      //   device: selectedDevice.value,
-      //   wadh: WADH_FOR_EKYC,
-      //   aadhaar: aadhaarController.text,
-      // );
-
-      // Simulated result for testing
-      await Future.delayed(Duration(seconds: 2));
-      final result = BiometricResultMock(
-        success: true,
-        pidData: '<PidData>MOCK_PID_DATA_FOR_EKYC</PidData>',
+      // ✅ REAL biometric call with eKYC WADH
+      final result = await scanFingerprint(
+        device: selectedDevice.value,
+        forEkyc: true, // Uses WADH_FOR_EKYC
       );
 
       isBiometricScanning.value = false;
 
-      if (result.success && result.pidData != null) {
+      if (result.success && result.pidData != null && result.pidData!.isNotEmpty) {
         lastPidData.value = result.pidData!;
         biometricSuccess.value = true;
         showBiometricModal.value = false;
+        ConsoleLog.printSuccess("✅ eKYC Fingerprint captured: ${result.pidData!.length} chars");
         return true;
       } else {
         Fluttertoast.showToast(msg: result.errorMessage ?? 'Fingerprint scan failed');
@@ -2724,6 +3481,7 @@ class AepsController extends GetxController {
     } catch (e) {
       isBiometricScanning.value = false;
       showBiometricModal.value = false;
+      ConsoleLog.printError("❌ scanFingerprintForEkyc Error: $e");
       Fluttertoast.showToast(msg: 'Error: $e');
       return false;
     }
@@ -2740,26 +3498,19 @@ class AepsController extends GetxController {
     showBiometricModal.value = true;
 
     try {
-      // Use AepsBiometricService
-      // final result = await biometricService.scanFingerprint(
-      //   device: serviceSelectedDevice.value,
-      //   wadh: WADH_EMPTY,
-      //   aadhaar: serviceAadhaarController.text,
-      // );
-
-      // Simulated result for testing
-      await Future.delayed(Duration(seconds: 2));
-      final result = BiometricResultMock(
-        success: true,
-        pidData: '<PidData>MOCK_PID_DATA_FOR_TRANSACTION</PidData>',
+      // ✅ REAL biometric call for transaction
+      final result = await scanFingerprint(
+        device: serviceSelectedDevice.value,
+        forEkyc: false, // Empty WADH for transactions
       );
 
       isBiometricScanning.value = false;
 
-      if (result.success && result.pidData != null) {
+      if (result.success && result.pidData != null && result.pidData!.isNotEmpty) {
         lastPidData.value = result.pidData!;
         biometricSuccess.value = true;
         showBiometricModal.value = false;
+        ConsoleLog.printSuccess("✅ Transaction Fingerprint captured: ${result.pidData!.length} chars");
         return true;
       } else {
         Fluttertoast.showToast(msg: result.errorMessage ?? 'Fingerprint scan failed');
@@ -2769,6 +3520,7 @@ class AepsController extends GetxController {
     } catch (e) {
       isBiometricScanning.value = false;
       showBiometricModal.value = false;
+      ConsoleLog.printError("❌ scanFingerprintForTransaction Error: $e");
       Fluttertoast.showToast(msg: 'Error: $e');
       return false;
     }
@@ -2814,6 +3566,26 @@ class AepsController extends GetxController {
     try {
       isFingpay2FA_ProcessLoading.value = true;
 
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        isFingpay2FA_ProcessLoading.value = false;
+        throw Exception("No Internet Connection!");
+      }
+
+      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
+      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
+
+      // Auth credentials check with reload
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Auth credentials are empty");
+        await loadAuthCredentials();
+      }
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        isFingpay2FA_ProcessLoading.value = false;
+        throw Exception("Authentication required!");
+      }
+
       // First scan fingerprint
       bool scanSuccess = await scanFingerprintFor2FA();
       if (!scanSuccess) {
@@ -2821,15 +3593,26 @@ class AepsController extends GetxController {
         return;
       }
 
+      // ✅ FIX: Encode PID Data to Base64 (consistent with Ionic App)
+      // Ionic App sends: encdata: authData (where authData comes from fingerprint plugin)
+      // Flutter 'pidData' is typically XML. We need to Base64 encode it.
+      String encData = "";
+      if (lastPidData.value.isNotEmpty) {
+        encData = base64Encode(utf8.encode(lastPidData.value));
+      }
+
       // Make API call
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
-        "lat": "26.912434", // Get from homeScreenController.latitude.value
-        "long": "75.787270", // Get from homeScreenController.longitude.value
+        "lat": homeScreenController.latitude.value,
+        "long": homeScreenController.longitude.value,
         "device": selectedDevice.value,
         "aadhar_no": aadhaarController.text,
         "skey": SKEY_TWO_FACTOR_AUTH,
-        "encdata": lastPidData.value,
+        "encdata": encData,
+        // "encdata": PidDataConverter.convertPidToEncdata(lastPidData.value ?? ''),
+        // "encdata": base64Encode(utf8.encode(lastPidData.value ?? '')),  // Base64 encoded
+        // "encdata": lastPidData.value,
       };
 
       print('📤 Fingpay 2FA Request: ${jsonEncode(body)}');
@@ -2883,8 +3666,8 @@ class AepsController extends GetxController {
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
-        "lat": "26.912434",
-        "long": "75.787270",
+        "lat": homeScreenController.latitude.value,
+        "long": homeScreenController.longitude.value,
         "req_type": "PROCESSEKYC",
         "aadhar": aadhaarController.text,
         "account_no": selectedMyBank.value?.accountNo ?? "",
@@ -2894,7 +3677,9 @@ class AepsController extends GetxController {
           "primaryKeyId": otpReference.value?.primaryKeyId ?? "",
           "encodeFPTxnId": otpReference.value?.encodeFPTxnId ?? "",
         },
-        "encdata": lastPidData.value,
+        "encdata": PidDataConverter.convertPidToEncdata(lastPidData.value ?? ''),  // ✅ Base64 JSON
+        // "encdata": base64Encode(utf8.encode(lastPidData.value ?? '')),  // Base64 encoded
+        // "encdata": lastPidData.value,
       };
 
       print('📤 Fingpay eKYC Request: ${jsonEncode(body)}');
@@ -2934,8 +3719,8 @@ class AepsController extends GetxController {
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
-        "lat": "26.912434",
-        "long": "75.787270",
+        "lat": homeScreenController.latitude.value,
+        "long": homeScreenController.longitude.value,
         "request_type": "PROCESS AEPS TXN REQUEST",
         "device": serviceSelectedDevice.value,
         "bank_iin": selectedBankIin.value,
@@ -2943,7 +3728,9 @@ class AepsController extends GetxController {
         "mobile_no": serviceMobileController.text,
         "amount": amount,
         "skey": getSkey(),
-        "encdata": lastPidData.value,
+        "encdata": PidDataConverter.convertPidToEncdata(lastPidData.value ?? ''),  // ✅ Base64 JSON
+        // "encdata": base64Encode(utf8.encode(lastPidData.value ?? '')),  // Base64 encoded
+        // "encdata": lastPidData.value,
       };
 
       print('📤 Fingpay Transaction Request: ${jsonEncode(body)}');
@@ -2966,7 +3753,7 @@ class AepsController extends GetxController {
         txnStatus: 'SUCCESS',
         txnDesc: 'Transaction completed successfully',
         balance: '25000.00',
-        txnid: 'TXN${DateTime.now().millisecondsSinceEpoch}',
+        txnId: 'TXN${DateTime.now().millisecondsSinceEpoch}',
       );
       showResultModal.value = true;
 
@@ -2993,12 +3780,14 @@ class AepsController extends GetxController {
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
-        "lat": "26.912434",
-        "long": "75.787270",
+        "lat": homeScreenController.latitude.value,
+        "long": homeScreenController.longitude.value,
         "device": selectedDevice.value,
         "aadhar_no": aadhaarController.text,
         "skey": SKEY_TWO_FACTOR_AUTH,
-        "encdata": lastPidData.value,
+        "encdata": PidDataConverter.convertPidToEncdata(lastPidData.value ?? ''),  // ✅ Base64 JSON
+        // "encdata": base64Encode(utf8.encode(lastPidData.value ?? '')),  // Base64 encoded
+        // "encdata": lastPidData.value,
       };
 
       print('📤 Instantpay 2FA Request: ${jsonEncode(body)}');
@@ -3133,8 +3922,25 @@ class AepsController extends GetxController {
         return;
       }
 
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(message: "No Internet Connection!");
+        return;
+      }
+
+      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
+      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
+
+      // Auth credentials check with reload
       if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Auth credentials are empty");
         await loadAuthCredentials();
+      }
+
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        CustomDialog.error(message: "Authentication required!");
+        return;
       }
 
       Map<String, dynamic> body = {
@@ -3187,8 +3993,25 @@ class AepsController extends GetxController {
   /// ✅ Resend Fingpay Onboarding OTP
   Future<void> resendFingpayOnboardingOTP() async {
     try {
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(message: "No Internet Connection!");
+        return;
+      }
+
+      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
+      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
+
+      // Auth credentials check with reload
       if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Auth credentials are empty");
         await loadAuthCredentials();
+      }
+
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        CustomDialog.error(message: "Authentication required!");
+        return;
       }
 
       Map<String, dynamic> body = {
@@ -3239,8 +4062,8 @@ class AepsController extends GetxController {
 
       Map<String, dynamic> confirmBody = {
         "request_id": generateRequestId(),
-        "lat": "26.912434",
-        "long": "75.787270",
+        "lat": homeScreenController.latitude.value,
+        "long": homeScreenController.longitude.value,
         "device": serviceSelectedDevice.value,
         "bank_iin": selectedBankIin.value,
         "aadhar_no": serviceAadhaarController.text,
@@ -3258,8 +4081,10 @@ class AepsController extends GetxController {
       // Show confirmation modal
       confirmationData.value = AepsConfirmData(
         commission: '2.50',
-        totalcharge: '5.00',
-        trasamt: amount,
+        totalCharge: '5.00',
+        chargedAmt: amount,
+        tds: "",
+        txnPin: ""
       );
       showConfirmationModal.value = true;
 
@@ -3270,65 +4095,65 @@ class AepsController extends GetxController {
   }
 
   /// Complete Instantpay transaction after confirmation
-  Future<void> confirmInstantpayTransaction() async {
-    try {
-      showConfirmationModal.value = false;
-      isInstantpayTransactionLoading.value = true;
-
-      // Scan fingerprint
-      bool scanSuccess = await scanFingerprintForTransaction();
-      if (!scanSuccess) {
-        isInstantpayTransactionLoading.value = false;
-        return;
-      }
-
-      String amount = '0';
-      if (selectedService.value == 'cashWithdrawal') {
-        amount = serviceAmountController.text;
-      }
-
-      Map<String, dynamic> body = {
-        "request_id": generateRequestId(),
-        "lat": "26.912434",
-        "long": "75.787270",
-        "device": serviceSelectedDevice.value,
-        "bank_iin": selectedBankIin.value,
-        "aadhar_no": serviceAadhaarController.text,
-        "mobile_no": serviceMobileController.text,
-        "skey": getSkey(),
-        "amount": amount,
-        "request_type": "PROCESS AEPS TXN REQUEST",
-        "encdata": lastPidData.value,
-      };
-
-      print('📤 Instantpay Transaction Request: ${jsonEncode(body)}');
-
-      // Make API call
-      // var response = await ApiProvider().requestPostForApi(
-      //   WebApiConstant.API_URL_AEPS_START_TRANSACTION_PROCESS,
-      //   body,
-      //   userAuthToken.value,
-      //   userSignature.value,
-      // );
-
-      await Future.delayed(Duration(seconds: 2));
-
-      isInstantpayTransactionLoading.value = false;
-
-      // Show result
-      transactionResult.value = AepsTransactionData(
-        txnStatus: 'SUCCESS',
-        txnDesc: 'Transaction completed successfully',
-        balance: '18500.00',
-        txnid: 'TXN${DateTime.now().millisecondsSinceEpoch}',
-      );
-      showResultModal.value = true;
-
-    } catch (e) {
-      isInstantpayTransactionLoading.value = false;
-      print('❌ confirmInstantpayTransaction ERROR: $e');
-    }
-  }
+  // Future<void> confirmInstantpayTransaction() async {
+  //   try {
+  //     showConfirmationModal.value = false;
+  //     isInstantpayTransactionLoading.value = true;
+  //
+  //     // Scan fingerprint
+  //     bool scanSuccess = await scanFingerprintForTransaction();
+  //     if (!scanSuccess) {
+  //       isInstantpayTransactionLoading.value = false;
+  //       return;
+  //     }
+  //
+  //     String amount = '0';
+  //     if (selectedService.value == 'cashWithdrawal') {
+  //       amount = serviceAmountController.text;
+  //     }
+  //
+  //     Map<String, dynamic> body = {
+  //       "request_id": generateRequestId(),
+  //       "lat": "26.912434",
+  //       "long": "75.787270",
+  //       "device": serviceSelectedDevice.value,
+  //       "bank_iin": selectedBankIin.value,
+  //       "aadhar_no": serviceAadhaarController.text,
+  //       "mobile_no": serviceMobileController.text,
+  //       "skey": getSkey(),
+  //       "amount": amount,
+  //       "request_type": "PROCESS AEPS TXN REQUEST",
+  //       "encdata": lastPidData.value,
+  //     };
+  //
+  //     print('📤 Instantpay Transaction Request: ${jsonEncode(body)}');
+  //
+  //     // Make API call
+  //     // var response = await ApiProvider().requestPostForApi(
+  //     //   WebApiConstant.API_URL_AEPS_START_TRANSACTION_PROCESS,
+  //     //   body,
+  //     //   userAuthToken.value,
+  //     //   userSignature.value,
+  //     // );
+  //
+  //     await Future.delayed(Duration(seconds: 2));
+  //
+  //     isInstantpayTransactionLoading.value = false;
+  //
+  //     // Show result
+  //     transactionResult.value = AepsTransactionData(
+  //       txnStatus: 'SUCCESS',
+  //       txnDesc: 'Transaction completed successfully',
+  //       balance: '18500.00',
+  //       txnId: 'TXN${DateTime.now().millisecondsSinceEpoch}',
+  //     );
+  //     showResultModal.value = true;
+  //
+  //   } catch (e) {
+  //     isInstantpayTransactionLoading.value = false;
+  //     print('❌ confirmInstantpayTransaction ERROR: $e');
+  //   }
+  // }
 
 
   /// ✅ FIX 9: Complete Fingpay 2FA with Biometric
@@ -3343,8 +4168,8 @@ class AepsController extends GetxController {
         return false;
       }
 
-      // Validate Aadhaar
-      if (aadhaarController.value.text.isEmpty) {
+      // ✅ FIX: Use aadhaarController.text instead of aadhaarController.value.text
+      if (aadhaarController.text.isEmpty) {
         Fluttertoast.showToast(msg: 'Please enter Aadhaar number');
         isFingpay2FA_ProcessLoading.value = false;
         return false;
@@ -3362,20 +4187,48 @@ class AepsController extends GetxController {
         return false;
       }
 
-      // Load auth credentials
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(message: "No Internet Connection!");
+        return false;
+      }
+
+      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
+      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
+
+      // Auth credentials check with reload
       if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Auth credentials are empty");
         await loadAuthCredentials();
       }
 
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        CustomDialog.error(message: "Authentication required!");
+        return false;
+      }
+      // ✅ FIX: Encode PID Data to Base64 (consistent with Ionic App)
+      // Ionic App sends: encdata: authData (where authData comes from fingerprint plugin)
+      // Flutter 'pidData' is typically XML. We need to Base64 encode it.
+      String encData = "";
+      if (lastPidData.value.isNotEmpty) {
+        encData = base64Encode(utf8.encode(lastPidData.value));
+      }
+      // // Result se encdata generate karein
+      // String finalEncData = PidDataConverter.convertPidToEncdata(result.pidData ?? '');
       // Make 2FA API call
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
         "lat": homeScreenController.latitude.value.toString(),
         "long": homeScreenController.longitude.value.toString(),
         "device": selectedDevice.value,
-        "aadhar_no": aadhaarController.value.text,
+        "aadhar_no": aadhaarController.text,  // ✅ FIXED
         "skey": "TWOFACTORAUTH",
-        "encdata": result.pidData,
+        "encdata": encData,
+        // "encdata": finalEncData,
+        // "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
+        // "encdata": base64Encode(utf8.encode(result.pidData ?? '')),  // Base64 encoded
+        // "encdata": result.pidData,
       };
 
       ConsoleLog.printColor("Fingpay 2FA Request: ${jsonEncode(body)}", color: "yellow");
@@ -3387,10 +4240,10 @@ class AepsController extends GetxController {
         userSignature.value,
       );
 
-      isFingpay2FA_ProcessLoading.value = false;
 
       if (response != null && response.statusCode == 200) {
         ConsoleLog.printColor("Fingpay 2FA Response: ${jsonEncode(response.data)}");
+        isFingpay2FA_ProcessLoading.value = false;
 
         var data = response.data;
         if (data['Resp_code'] == 'RCS') {
@@ -3403,6 +4256,10 @@ class AepsController extends GetxController {
           Fluttertoast.showToast(msg: data['Resp_desc'] ?? '2FA failed');
           return false;
         }
+      }else {
+        isFingpay2FA_ProcessLoading.value = false;
+        ConsoleLog.printError("fingpayTwoFA_Process API Error: ${response?.statusCode}");
+        Fluttertoast.showToast(msg: "Failed to send 2FA Request.");
       }
 
       Fluttertoast.showToast(msg: 'API Error');
@@ -3427,7 +4284,8 @@ class AepsController extends GetxController {
         return false;
       }
 
-      if (aadhaarController.value.text.isEmpty) {
+      // ✅ FIX: Use aadhaarController.text
+      if (aadhaarController.text.isEmpty) {
         Fluttertoast.showToast(msg: 'Please enter Aadhaar number');
         isInstantpay2FA_ProcessLoading.value = false;
         return false;
@@ -3444,18 +4302,39 @@ class AepsController extends GetxController {
         return false;
       }
 
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(message: "No Internet Connection!");
+        return false;
+      }
+
+      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
+      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
+
+      // Auth credentials check with reload
       if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Auth credentials are empty");
         await loadAuthCredentials();
       }
+
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        CustomDialog.error(message: "Authentication required!");
+        return false;
+      }
+      String finalEncData = PidDataConverter.convertPidToEncdata(result.pidData ?? '');
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
         "lat": homeScreenController.latitude.value.toString(),
         "long": homeScreenController.longitude.value.toString(),
         "device": selectedDevice.value,
-        "aadhar_no": aadhaarController.value.text,
+        "aadhar_no": aadhaarController.text,  // ✅ FIXED
         "skey": "TWOFACTORAUTH",
-        "encdata": result.pidData,
+        // "encdata": finalEncData,
+        // "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
+        "encdata": base64Encode(utf8.encode(result.pidData ?? '')),  // Base64 encoded
+        // "encdata": result.pidData,
       };
 
       ConsoleLog.printColor("Instantpay 2FA Request: ${jsonEncode(body)}", color: "yellow");
@@ -3515,8 +4394,25 @@ class AepsController extends GetxController {
         return false;
       }
 
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(message: "No Internet Connection!");
+        return false;
+      }
+
+      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
+      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
+
+      // Auth credentials check with reload
       if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Auth credentials are empty");
         await loadAuthCredentials();
+      }
+
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        CustomDialog.error(message: "Authentication required!");
+        return false;
       }
 
       Map<String, dynamic> body = {
@@ -3524,7 +4420,7 @@ class AepsController extends GetxController {
         "lat": homeScreenController.latitude.value.toString(),
         "long": homeScreenController.longitude.value.toString(),
         "req_type": "PROCESSEKYC",
-        "aadhar": aadhaarController.value.text,
+        "aadhar": aadhaarController.text,  // ✅ FIXED
         "account_no": selectedMyBank.value?.accountNo ?? "",
         "ifsc": selectedMyBank.value?.ifsc ?? "",
         "bank_id": selectedMyBank.value?.aepsBankid ?? "",
@@ -3532,7 +4428,9 @@ class AepsController extends GetxController {
           "primaryKeyId": otpReference.value?.primaryKeyId ?? "",
           "encodeFPTxnId": otpReference.value?.encodeFPTxnId ?? "",
         },
-        "encdata": result.pidData,
+        "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
+        // "encdata": base64Encode(utf8.encode(result.pidData ?? '')),  // Base64 encoded
+        // "encdata": result.pidData,
       };
 
       ConsoleLog.printColor("Fingpay eKYC Request: ${jsonEncode(body)}", color: "yellow");
@@ -3568,8 +4466,508 @@ class AepsController extends GetxController {
     }
   }
 
+  // ============== AEPS Choose Service Methods ==============
 
-// ============== Status Helpers ==============
+  /// ✅ Fetch AEPS Bank List
+  Future<void> fetchAepsBankList() async {
+    try {
+      isGetAepsBanklistLoading.value = true;
+
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(message: "No Internet Connection!");
+        return;
+      }
+
+      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
+      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
+
+      // Auth credentials check with reload
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Auth credentials are empty");
+        await loadAuthCredentials();
+      }
+
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        CustomDialog.error(message: "Authentication required!");
+        return;
+      }
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": homeScreenController.latitude.value.toString(),
+        "long": homeScreenController.longitude.value.toString(),
+      };
+
+      ConsoleLog.printColor("📤 fetchAepsBankList Request", color: "yellow");
+
+      var response = await ApiProvider().requestPostForApi(
+        WebApiConstant.API_URL_GET_AEPS_BANK_LIST,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      isGetAepsBanklistLoading.value = false;
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+        if (data['Resp_code'] == 'RCS' && data['data'] != null) {
+          // Parse bank list
+          List<dynamic> bankData = data['data'];
+          allBankList.clear();
+
+          for (var bank in bankData) {
+            allBankList.add(AepsBank(
+              id: bank['id']?.toString() ?? '',
+              bankName: bank['bank_name'] ?? '',
+              bankIin: bank['bank_iin'] ?? '',
+              isFav: bank['is_fav'] ?? '0',
+            ));
+          }
+
+          // Initialize filtered list
+          filteredBankList.assignAll(allBankList);
+
+          // Set favorites
+          favoritesList.assignAll(allBankList.where((b) => b.isFav == '1'));
+
+          ConsoleLog.printSuccess("✅ Bank list loaded: ${allBankList.length} banks");
+        }
+      }
+    } catch (e) {
+      isGetAepsBanklistLoading.value = false;
+      ConsoleLog.printError("❌ fetchAepsBankList Error: $e");
+    }
+  }
+
+  /// ✅ Filter AEPS Bank List
+  void filterAepsBankList(String query) {
+    if (query.isEmpty) {
+      filteredBankList.assignAll(allBankList);
+    } else {
+      filteredBankList.assignAll(
+        allBankList.where((bank) =>
+        bank.bankName!.toLowerCase().contains(query.toLowerCase()) ||
+            bank.bankIin!.toLowerCase().contains(query.toLowerCase())
+        ),
+      );
+    }
+  }
+
+  /// ✅ Fetch Recent Transactions
+  Future<void> fetchRecentTransactions(String serviceType) async {
+    try {
+      isGetRecentTransactionsLoading.value = true;
+
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(message: "No Internet Connection!");
+        return;
+      }
+
+      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
+      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
+
+      // Auth credentials check with reload
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Auth credentials are empty");
+        await loadAuthCredentials();
+      }
+
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        CustomDialog.error(message: "Authentication required!");
+        return;
+      }
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": homeScreenController.latitude.value.toString(),
+        "long": homeScreenController.longitude.value.toString(),
+        "service_type": serviceType,
+      };
+
+      var response = await ApiProvider().requestPostForApi(
+        WebApiConstant.API_URL_GET_RECENT_TXN_DATA,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      isGetRecentTransactionsLoading.value = false;
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+        if (data['Resp_code'] == 'RCS' && data['data'] != null) {
+          List<dynamic> txnData = data['data'];
+          recentTransactions.clear();
+
+          for (var txn in txnData) {
+            recentTransactions.add(RecentTransaction(
+              requestDt: txn['request_dt'],
+              recordType: txn['record_type'],
+              txnAmt: txn['txn_amt']?.toString(),
+              portalStatus: txn['portal_status'],
+              portalTxnId: txn['portal_txn_id'],
+            ));
+          }
+
+          ConsoleLog.printSuccess("✅ Recent transactions loaded: ${recentTransactions.length}");
+        }
+      }
+    } catch (e) {
+      isGetRecentTransactionsLoading.value = false;
+      ConsoleLog.printError("❌ fetchRecentTransactions Error: $e");
+    }
+  }
+
+  /// ✅ Mark Favorite Bank
+  Future<void> markFavoriteBank({
+    required String bankId,
+    required String action,
+  }) async {
+    try {
+      isMarkFavoriteBankLoading.value = true;
+
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(message: "No Internet Connection!");
+        return;
+      }
+
+      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
+      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
+
+      // Auth credentials check with reload
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Auth credentials are empty");
+        await loadAuthCredentials();
+      }
+
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        CustomDialog.error(message: "Authentication required!");
+        return;
+      }
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": homeScreenController.latitude.value.toString(),
+        "long": homeScreenController.longitude.value.toString(),
+        "bank_id": bankId,
+        "action": action,
+      };
+
+      var response = await ApiProvider().requestPostForApi(
+        WebApiConstant.API_URL_MARK_FAV_BANK,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      isMarkFavoriteBankLoading.value = false;
+
+      if (response != null && response.statusCode == 200) {
+        var data = response.data;
+        if (data['Resp_code'] == 'RCS') {
+          // Update local list
+          final index = allBankList.indexWhere((b) => b.id == bankId);
+          if (index != -1) {
+            allBankList[index] = AepsBank(
+              id: allBankList[index].id,
+              bankName: allBankList[index].bankName,
+              bankIin: allBankList[index].bankIin,
+              isFav: action == 'ADD' ? '1' : '0',
+            );
+            filteredBankList.assignAll(allBankList);
+          }
+          ConsoleLog.printSuccess("✅ Bank favorite updated");
+        }
+      }
+    } catch (e) {
+      isMarkFavoriteBankLoading.value = false;
+      ConsoleLog.printError("❌ markFavoriteBank Error: $e");
+    }
+  }
+
+  /// ✅ Confirm Instantpay Transaction (Step 1 - Get Charges)
+  Future<bool> confirmInstantpayTransaction({required String skey}) async {
+    try {
+      isInstantpayTransactionLoading.value = true;
+
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(message: "No Internet Connection!");
+        return false;
+      }
+
+      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
+      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
+
+      // Auth credentials check with reload
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Auth credentials are empty");
+        await loadAuthCredentials();
+      }
+
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        CustomDialog.error(message: "Authentication required!");
+        return false;
+      }
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": homeScreenController.latitude.value.toString(),
+        "long": homeScreenController.longitude.value.toString(),
+        "req_type": "CONFIRM AEPS TXN REQUEST",
+        "skey": skey,
+        "bank_iin": selectedBankIin.value,
+        "bank_id": selectedBankId.value,
+        "aadhar_no": serviceAadhaarController.text,
+        "mobile_no": serviceMobileController.text,
+        "txn_amt": serviceAmountController.text.isEmpty ? "0" : serviceAmountController.text,
+      };
+
+      ConsoleLog.printColor("📤 confirmInstantpayTransaction Request: ${jsonEncode(body)}", color: "yellow");
+
+      var response = await ApiProvider().requestPostForApi(
+        WebApiConstant.API_URL_AEPS_START_TRANSACTION_PROCESS,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      isInstantpayTransactionLoading.value = false;
+
+      if (response != null && response.statusCode == 200) {
+        ConsoleLog.printColor("📥 confirmInstantpayTransaction Response: ${jsonEncode(response.data)}", color: "green");
+
+        var data = response.data;
+        if (data['Resp_code'] == 'RCS' && data['data'] != null) {
+          confirmationData.value = AepsConfirmData(
+            commission: data['data']['commission']?.toString() ?? '0',
+            tds: data['data']['tds']?.toString() ?? '0',
+            totalCharge: data['data']['totalcharge']?.toString() ?? '0',
+            chargedAmt: data['data']['chargedamt']?.toString() ?? '0',
+            txnPin: data['data']['txnpin']?.toString() ?? '0',
+          );
+          return true;
+        } else {
+          Fluttertoast.showToast(msg: data['Resp_desc'] ?? 'Confirmation failed');
+          return false;
+        }
+      }
+      return false;
+    } catch (e) {
+      isInstantpayTransactionLoading.value = false;
+      ConsoleLog.printError("❌ confirmInstantpayTransaction Error: $e");
+      return false;
+    }
+  }
+
+  /// ✅ Process Instantpay Transaction with Biometric (Step 2)
+  Future<bool> processInstantpayTransactionWithBiometric({required String skey}) async {
+    try {
+      isInstantpayTransactionLoading.value = true;
+
+      // Validate device
+      if (serviceSelectedDevice.value.isEmpty) {
+        Fluttertoast.showToast(msg: 'Please select a biometric device');
+        isInstantpayTransactionLoading.value = false;
+        return false;
+      }
+
+      // Scan fingerprint
+      final result = await scanFingerprint(
+        device: serviceSelectedDevice.value,
+        forEkyc: false,
+      );
+
+      if (!result.success) {
+        Fluttertoast.showToast(msg: result.errorMessage ?? 'Fingerprint scan failed');
+        isInstantpayTransactionLoading.value = false;
+        return false;
+      }
+
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(message: "No Internet Connection!");
+        return false;
+      }
+
+      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
+      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
+
+      // Auth credentials check with reload
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Auth credentials are empty");
+        await loadAuthCredentials();
+      }
+
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        CustomDialog.error(message: "Authentication required!");
+        return false;
+      }
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": homeScreenController.latitude.value.toString(),
+        "long": homeScreenController.longitude.value.toString(),
+        "req_type": "PROCESS AEPS TXN REQUEST",
+        "skey": skey,
+        "bank_iin": selectedBankIin.value,
+        "bank_id": selectedBankId.value,
+        "aadhar_no": serviceAadhaarController.text,
+        "mobile_no": serviceMobileController.text,
+        "txn_amt": serviceAmountController.text.isEmpty ? "0" : serviceAmountController.text,
+        "device": serviceSelectedDevice.value,
+        "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
+        // "encdata": base64Encode(utf8.encode(result.pidData ?? '')),  // Base64 encoded
+        // "encdata": result.pidData,
+      };
+
+      ConsoleLog.printColor("📤 processInstantpayTransaction Request: ${jsonEncode(body)}", color: "yellow");
+
+      var response = await ApiProvider().requestPostForApi(
+        WebApiConstant.API_URL_AEPS_START_TRANSACTION_PROCESS,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      isInstantpayTransactionLoading.value = false;
+
+      if (response != null && response.statusCode == 200) {
+        ConsoleLog.printColor("📥 processInstantpayTransaction Response: ${jsonEncode(response.data)}", color: "green");
+
+        var data = response.data;
+        if (data['Resp_code'] == 'RCS') {
+          transactionResult.value = AepsTransactionData(
+            txnStatus: data['data']?['txn_status'] ?? 'Success',
+            txnDesc: data['data']?['txn_desc'] ?? 'Transaction completed',
+            balance: data['data']?['balance']?.toString(),
+            txnId: data['data']?['txnid']?.toString(),
+            opId: data['data']?['opid']?.toString(),
+          );
+          Fluttertoast.showToast(msg: 'Transaction successful!');
+          return true;
+        } else {
+          Fluttertoast.showToast(msg: data['Resp_desc'] ?? 'Transaction failed');
+          return false;
+        }
+      }
+      return false;
+    } catch (e) {
+      isInstantpayTransactionLoading.value = false;
+      ConsoleLog.printError("❌ processInstantpayTransaction Error: $e");
+      return false;
+    }
+  }
+
+  /// ✅ Process Fingpay Transaction with Biometric (Direct)
+  Future<bool> processFingpayTransactionWithBiometric({required String skey}) async {
+    try {
+      isFingpayTransactionLoading.value = true;
+
+      // Validate device
+      if (serviceSelectedDevice.value.isEmpty) {
+        Fluttertoast.showToast(msg: 'Please select a biometric device');
+        isFingpayTransactionLoading.value = false;
+        return false;
+      }
+
+      // Scan fingerprint
+      final result = await scanFingerprint(
+        device: serviceSelectedDevice.value,
+        forEkyc: false,
+      );
+
+      if (!result.success) {
+        Fluttertoast.showToast(msg: result.errorMessage ?? 'Fingerprint scan failed');
+        isFingpayTransactionLoading.value = false;
+        return false;
+      }
+
+      // Check Internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        CustomDialog.error(message: "No Internet Connection!");
+        return false;
+      }
+
+      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
+      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
+
+      // Auth credentials check with reload
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        ConsoleLog.printError("Auth credentials are empty");
+        await loadAuthCredentials();
+      }
+
+      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
+        CustomDialog.error(message: "Authentication required!");
+        return false;
+      }
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": homeScreenController.latitude.value.toString(),
+        "long": homeScreenController.longitude.value.toString(),
+        "skey": skey,
+        "bank_iin": selectedBankIin.value,
+        "bank_id": selectedBankId.value,
+        "aadhar_no": serviceAadhaarController.text,
+        "mobile_no": serviceMobileController.text,
+        "txn_amt": serviceAmountController.text.isEmpty ? "0" : serviceAmountController.text,
+        "device": serviceSelectedDevice.value,
+        "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
+        // "encdata": base64Encode(utf8.encode(result.pidData ?? '')),  // Base64 encoded
+        // "encdata": result.pidData,
+      };
+
+      ConsoleLog.printColor("📤 processFingpayTransaction Request: ${jsonEncode(body)}", color: "yellow");
+
+      var response = await ApiProvider().requestPostForApi(
+        WebApiConstant.API_URL_FINGPAY_TRANSACTION_PROCESS,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      isFingpayTransactionLoading.value = false;
+
+      if (response != null && response.statusCode == 200) {
+        ConsoleLog.printColor("📥 processFingpayTransaction Response: ${jsonEncode(response.data)}", color: "green");
+
+        var data = response.data;
+        if (data['Resp_code'] == 'RCS') {
+          transactionResult.value = AepsTransactionData(
+            txnStatus: data['data']?['txn_status'] ?? 'Success',
+            txnDesc: data['data']?['txn_desc'] ?? 'Transaction completed',
+            balance: data['data']?['balance']?.toString(),
+            txnId: data['data']?['txnid']?.toString(),
+            opId: data['data']?['opid']?.toString(),
+          );
+          Fluttertoast.showToast(msg: 'Transaction successful!');
+          return true;
+        } else {
+          Fluttertoast.showToast(msg: data['Resp_desc'] ?? 'Transaction failed');
+          return false;
+        }
+      }
+      return false;
+    } catch (e) {
+      isFingpayTransactionLoading.value = false;
+      ConsoleLog.printError("❌ processFingpayTransaction Error: $e");
+      return false;
+    }
+  }
+
+  // ============== Status Helpers ==============
 
   Color getStatusColor(String? status) {
     switch (status?.toUpperCase()) {
@@ -3637,23 +5035,21 @@ class BiometricResultMock {
   BiometricResultMock({required this.success, this.pidData, this.errorMessage});
 }
 
+// AEPS Bank Model
 class AepsBank {
-  final String? id;
-  final String? bankName;
-  final String? bankIin;
-  final String? isFav;
+  final String id;
+  final String bankName;
+  final String bankIin;
+  final String isFav;
 
-  AepsBank({this.id, this.bankName, this.bankIin, this.isFav});
-
-  factory AepsBank.fromJson(Map<String, dynamic> json) {
-    return AepsBank(
-      id: json['id']?.toString(),
-      bankName: json['bank_name'],
-      bankIin: json['bank_iin'],
-      isFav: json['is_fav']?.toString(),
-    );
-  }
+  AepsBank({
+    required this.id,
+    required this.bankName,
+    required this.bankIin,
+    required this.isFav,
+  });
 }
+
 
 class MyBankAccount {
   final String? id;
@@ -3675,74 +5071,39 @@ class MyBankAccount {
   }
 }
 
+/// AEPS Confirmation Data Model
 class AepsConfirmData {
-  final String? commission;
-  final String? tds;
-  final String? totalcharge;
-  final String? totalccf;
-  final String? trasamt;
-  final String? chargedamt;
+  final String commission;
+  final String tds;
+  final String totalCharge;
+  final String chargedAmt;
+  final String txnPin;
 
   AepsConfirmData({
-    this.commission,
-    this.tds,
-    this.totalcharge,
-    this.totalccf,
-    this.trasamt,
-    this.chargedamt,
+    required this.commission,
+    required this.tds,
+    required this.totalCharge,
+    required this.chargedAmt,
+    required this.txnPin,
   });
-
-  factory AepsConfirmData.fromJson(Map<String, dynamic> json) {
-    return AepsConfirmData(
-      commission: json['commission']?.toString(),
-      tds: json['tds']?.toString(),
-      totalcharge: json['totalcharge']?.toString(),
-      totalccf: json['totalccf']?.toString(),
-      trasamt: json['trasamt']?.toString(),
-      chargedamt: json['chargedamt']?.toString(),
-    );
-  }
 }
 
+
+/// AEPS Transaction Data Model
 class AepsTransactionData {
-  final String? txnStatus;
-  final String? txnDesc;
+  final String txnStatus;
+  final String txnDesc;
   final String? balance;
-  final String? date;
-  final String? txnid;
-  final String? opid;
-  final String? trasamt;
-  final List<MiniStatementItem>? statement;
+  final String? txnId;
+  final String? opId;
 
   AepsTransactionData({
-    this.txnStatus,
-    this.txnDesc,
+    required this.txnStatus,
+    required this.txnDesc,
     this.balance,
-    this.date,
-    this.txnid,
-    this.opid,
-    this.trasamt,
-    this.statement,
+    this.txnId,
+    this.opId,
   });
-
-  factory AepsTransactionData.fromJson(Map<String, dynamic> json) {
-    List<MiniStatementItem>? statementList;
-    if (json['statement'] != null && json['statement'] is List) {
-      statementList = (json['statement'] as List)
-          .map((e) => MiniStatementItem.fromJson(e))
-          .toList();
-    }
-    return AepsTransactionData(
-      txnStatus: json['txn_status'],
-      txnDesc: json['txn_desc'],
-      balance: json['balance']?.toString(),
-      date: json['date'],
-      txnid: json['txnid'],
-      opid: json['opid'],
-      trasamt: json['trasamt']?.toString(),
-      statement: statementList,
-    );
-  }
 }
 
 class MiniStatementItem {
@@ -3763,6 +5124,7 @@ class MiniStatementItem {
   }
 }
 
+/// AEPS Onboarding Data Model
 class AepsOnboardingData {
   final String? aadhaar;
   final String? otpReferenceID;
@@ -3777,20 +5139,11 @@ class AepsOnboardingData {
     this.primaryKeyId,
     this.encodeFPTxnId,
   });
-
-  factory AepsOnboardingData.fromJson(Map<String, dynamic> json) {
-    return AepsOnboardingData(
-      aadhaar: json['aadhaar'],
-      otpReferenceID: json['otpReferenceID'],
-      hash: json['hash'],
-      primaryKeyId: json['primaryKeyId'],
-      encodeFPTxnId: json['encodeFPTxnId'],
-    );
-  }
 }
 
+
+/// Recent Transaction Model
 class RecentTransaction {
-  final String? customerId;
   final String? requestDt;
   final String? recordType;
   final String? txnAmt;
@@ -3798,22 +5151,10 @@ class RecentTransaction {
   final String? portalTxnId;
 
   RecentTransaction({
-    this.customerId,
     this.requestDt,
     this.recordType,
     this.txnAmt,
     this.portalStatus,
     this.portalTxnId,
   });
-
-  factory RecentTransaction.fromJson(Map<String, dynamic> json) {
-    return RecentTransaction(
-      customerId: json['customer_id'],
-      requestDt: json['request_dt'],
-      recordType: json['record_type'],
-      txnAmt: json['txn_amt']?.toString(),
-      portalStatus: json['portal_status'],
-      portalTxnId: json['portal_txn_id'],
-    );
-  }
 }

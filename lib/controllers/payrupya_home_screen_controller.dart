@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:payrupya/models/check_fingpay_onboard_status_response_model.dart';
@@ -36,6 +37,8 @@ class PayrupyaHomeScreenController extends GetxController {
   RxString walletBalance = "".obs;
   RxDouble latitude = 0.0.obs;
   RxDouble longitude = 0.0.obs;
+  // ✅ NEW: Address ke liye variable
+  RxString currentAddress = "Locating...".obs;
 
   // Services related variables
   RxList<dynamic> services = <dynamic>[].obs;
@@ -101,6 +104,9 @@ class PayrupyaHomeScreenController extends GetxController {
         longitude.value = position.longitude;
         ConsoleLog.printSuccess("Location updated: ${latitude.value}, ${longitude.value}");
 
+        // ✅ NEW: Coordinates se Address nikalein
+        _getAddressFromCoordinates(position.latitude, position.longitude);
+
         // Load auth credentials और balance
         await loadAuthCredentials();
         await getWalletBalance();
@@ -110,9 +116,26 @@ class PayrupyaHomeScreenController extends GetxController {
         await fetchMyBanks("true");
       } else {
         ConsoleLog.printError("Failed to get location");
+        currentAddress.value = "Location not available";
       }
     } catch (e) {
       ConsoleLog.printError("Error in getLocationAndLoadData: $e");
+    }
+  }
+
+  // ✅ NEW: Helper function to get Address
+  Future<void> _getAddressFromCoordinates(double lat, double long) async {
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(lat, long);
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        // Format: "Jaipur, Rajasthan"
+        currentAddress.value = "${place.locality ?? ''}, ${place.administrativeArea ?? ''}";
+        ConsoleLog.printSuccess("Address found: ${currentAddress.value}");
+      }
+    } catch (e) {
+      ConsoleLog.printError("Geocoding error: $e");
+      currentAddress.value = "Unknown Location";
     }
   }
 
@@ -957,7 +980,10 @@ class PayrupyaHomeScreenController extends GetxController {
   // ✅ NEW: Reset initialization state (useful for re-login)
   void resetInitialization() {
     isInitialized.value = false;
-    walletBalance.value = "";
-    services.clear();
+    walletBalance.value = "0.00"; // Reset balance
+    userAuthToken.value = "";     // Clear old token
+    userSignature.value = "";     // Clear old signature
+    services.clear();             // Clear old services
+    ConsoleLog.printSuccess("♻️ Home Screen Controller Reset Successfully");
   }
 }

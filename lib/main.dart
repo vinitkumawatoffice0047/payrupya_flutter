@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:payrupya/view/splash_screen.dart';
+import 'controllers/aeps_biometric_service.dart';
 import 'controllers/aeps_controller.dart';
 import 'controllers/biometric_service.dart';
 import 'controllers/dmt_wallet_controller.dart';
@@ -48,6 +49,11 @@ class _MyAppState extends State<MyApp> {
       Get.put(BiometricService(), permanent: true);
     }
 
+    // ✅ ADD: AEPS Biometric Service (for fingerprint devices)
+    if (!Get.isRegistered<AepsBiometricService>()) {
+      Get.put(AepsBiometricService(), permanent: true);
+    }
+
     // 2. Login Controller (No circular dependency)
     if (!Get.isRegistered<LoginController>()) {
       Get.put(LoginController(), permanent: true);
@@ -68,6 +74,13 @@ class _MyAppState extends State<MyApp> {
       Get.put(PayrupyaHomeScreenController(), permanent: true);
     }
     ConsoleLog.printSuccess("✅ Services initialized");
+    ConsoleLog.printInfo("   - SessionManager");
+    ConsoleLog.printInfo("   - BiometricService (Local Auth)");
+    ConsoleLog.printInfo("   - AepsBiometricService (RD Service)");
+    ConsoleLog.printInfo("   - LoginController");
+    ConsoleLog.printInfo("   - DmtWalletController");
+    ConsoleLog.printInfo("   - AepsController");
+    ConsoleLog.printInfo("   - PayrupyaHomeScreenController");
   }
 
   // This widget is the root of your application.
