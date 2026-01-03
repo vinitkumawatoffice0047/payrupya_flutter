@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:payrupya/controllers/payrupya_home_screen_controller.dart';
+import 'package:payrupya/controllers/saved_credentials_service.dart';
 import 'package:payrupya/controllers/session_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_provider.dart';
@@ -15,6 +16,7 @@ import '../utils/custom_loading.dart';
 import '../utils/global_utils.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../utils/save_credential_dialog.dart';
 import '../view/other_users_screen.dart';
 import '../view/payrupya_main_screen.dart';
 
@@ -251,7 +253,7 @@ class LoginController extends GetxController {
   // ============================================
   // LOGIN API
   // ============================================
-  Future<void> loginApi(BuildContext context, {bool fromBiometric = false}) async {
+  Future<void> loginApi(BuildContext context, {bool fromBiometric = false, bool fromSavedCredential = false}) async {
     String mobile = mobileController.value.text.trim();
     String password = passwordController.value.text.trim();
 
@@ -347,6 +349,27 @@ class LoginController extends GetxController {
             ConsoleLog.printSuccess("✅ Biometric auto-enabled for future logins");
           }
 
+          // ============================================
+          // SHOW SAVE CREDENTIALS DIALOG (NEW FEATURE)
+          // Only show if:
+          // 1. Not from biometric login
+          // 2. Not from saved credential auto-fill
+          // 3. Credential is not already saved
+          // ============================================
+          if (!fromBiometric && !fromSavedCredential) {
+            final isAlreadySaved = await SavedCredentialsService.instance.isCredentialSaved(mobile);
+
+            if (!isAlreadySaved && context.mounted) {
+              // Show save credentials dialog
+              final shouldSave = await SaveCredentialDialog.show(context, mobile);
+
+              if (shouldSave == true) {
+                await SavedCredentialsService.instance.saveCredential(mobile, password);
+                ConsoleLog.printSuccess("✅ Credentials saved for quick login");
+              }
+            }
+          }
+
           // Start session
           if (Get.isRegistered<SessionManager>()) {
             await SessionManager.instance.startSession();
@@ -385,7 +408,7 @@ class LoginController extends GetxController {
   // ============================================
   // LOGOUT
   // ============================================
-  Future<void> logout({bool clearBiometric = false}) async {
+  Future<void> logout({bool clearBiometric = false, bool clearSavedCredentials = false}) async {
     try {
       CustomLoading.showLoading();
 
@@ -408,6 +431,11 @@ class LoginController extends GetxController {
       // Clear biometric if requested
       if (clearBiometric) {
         await biometricService.disableBiometric();
+      }
+
+      // Clear saved credentials if requested
+      if (clearSavedCredentials) {
+        await SavedCredentialsService.instance.clearAllCredentials();
       }
 
       // Clear fields

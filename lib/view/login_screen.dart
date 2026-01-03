@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controllers/login_controller.dart';
+import '../controllers/saved_credentials_service.dart';
 import '../utils/global_utils.dart';
+import '../utils/saved_credentials_bottom_sheet.dart';
 import 'forgot_password_screen.dart';
 import 'signup_screen.dart';
 
@@ -19,19 +21,94 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   LoginController loginController = Get.put(LoginController());
 
+  // Track if we've shown the bottom sheet already for this session
+  bool _hasShownCredentialsSheet = false;
+
+  // Reactive state for saved credentials availability
+  final RxBool _hasSavedCredentials = false.obs;
+
+  // Track if fields are empty (to show bottom sheet only when fields are empty)
+  bool get _areFieldsEmpty =>
+      loginController.mobileController.value.text.trim().isEmpty &&
+          loginController.passwordController.value.text.trim().isEmpty;
+
   @override
   void initState() {
     super.initState();
     // Pre-fill mobile if saved for biometric
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadSavedMobile();
+      _refreshSavedCredentialsState();
+      _checkAndShowSavedCredentials();
     });
+  }
+
+  @override
+  void dispose() {
+    _hasSavedCredentials.close();
+    super.dispose();
+  }
+
+  /// Refresh the saved credentials state
+  Future<void> _refreshSavedCredentialsState() async {
+    final hasCredentials = await SavedCredentialsService.instance.hasSavedCredentials();
+    _hasSavedCredentials.value = hasCredentials;
   }
 
   Future<void> loadSavedMobile() async {
     final savedMobile = await loginController.biometricService.getSavedMobile();
     if (savedMobile != null && savedMobile.isNotEmpty) {
       loginController.mobileController.value.text = savedMobile;
+    }
+  }
+
+  /// Check and show saved credentials on screen load (not on focus)
+  Future<void> _checkAndShowSavedCredentials() async {
+    // Don't show if already shown or fields are filled
+    if (_hasShownCredentialsSheet || !_areFieldsEmpty) return;
+
+    // Check if there are saved credentials
+    final hasCredentials = await SavedCredentialsService.instance.hasSavedCredentials();
+
+    if (hasCredentials && mounted) {
+      _hasShownCredentialsSheet = true;
+
+      // Small delay for screen to settle
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      if (!mounted) return;
+
+      final selectedCredential = await SavedCredentialsBottomSheet.show(context);
+
+      if (selectedCredential != null && mounted) {
+        // Auto-fill the fields
+        loginController.mobileController.value.text = selectedCredential.mobile;
+        loginController.passwordController.value.text = selectedCredential.password;
+
+        // Update validation states
+        loginController.isValidUserID.value = true;
+        loginController.isValidPassword.value = true;
+      }
+    }
+  }
+
+  /// Manually show saved credentials (for the button tap)
+  Future<void> _showSavedCredentials() async {
+    final hasCredentials = await SavedCredentialsService.instance.hasSavedCredentials();
+
+    if (hasCredentials && mounted) {
+      final selectedCredential = await SavedCredentialsBottomSheet.show(context);
+      // Refresh state after bottom sheet closes (in case user deleted credentials)
+      await _refreshSavedCredentialsState();
+      if (selectedCredential != null && mounted) {
+        // Auto-fill the fields
+        loginController.mobileController.value.text = selectedCredential.mobile;
+        loginController.passwordController.value.text = selectedCredential.password;
+
+        // Update validation states
+        loginController.isValidUserID.value = true;
+        loginController.isValidPassword.value = true;
+      }
     }
   }
 
@@ -79,6 +156,83 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
+
+  // ============================================
+  // SAVED CREDENTIALS QUICK ACCESS BUTTON
+  // ============================================
+  Widget buildSavedCredentialsButton() {
+    return Obx(() {
+      if (!_hasSavedCredentials.value) {
+        return const SizedBox.shrink();
+      }
+
+        return GestureDetector(
+          onTap: _showSavedCredentials,
+          child: Container(
+            width: GlobalUtils.screenWidth * 0.9,
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0054D3).withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF0054D3).withOpacity(0.15),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0054D3).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.person_outline_rounded,
+                    color: Color(0xFF0054D3),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Saved Logins Available',
+                        style: GoogleFonts.albertSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF1B1C1C),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tap to auto-fill your credentials',
+                        style: GoogleFonts.albertSans(
+                          fontSize: 12,
+                          color: const Color(0xFF6B707E),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: Colors.grey.shade400,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
 
   // ============================================
   // BIOMETRIC LOGIN BUTTON - Always Visible
@@ -259,7 +413,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
 
                           // SizedBox(height: GlobalUtils.screenHeight * 0.03),
-                          SizedBox(height: GlobalUtils.screenHeight * 0.035,),
+                          // SizedBox(height: GlobalUtils.screenHeight * 0.035,),
+                          SizedBox(height: GlobalUtils.screenHeight * 0.025,),
+
+                          // ============================================
+                          // SAVED CREDENTIALS QUICK ACCESS BUTTON
+                          // ============================================
+                          buildSavedCredentialsButton(),
 
                           // GlobalUtils.CustomGradientText(
                           //   gradient: LinearGradient(
@@ -275,47 +435,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           // SizedBox(height: GlobalUtils.screenHeight * 0.1,),
 
                           GlobalUtils.CustomTextField(
-                            label: "Mobile Number",
-                            showLabel: false,
-                            controller: loginController.mobileController.value.obs(),
-                            prefixIcon: Icon(Icons.phone, color: Color(0xFF6B707E)),
-                            isMobileNumber: true,
-                            placeholder: "Mobile number",
-                            placeholderColor: Colors.white,
-                            placeholderStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF6B707E),
-                            ),
-                            inputTextStyle: GoogleFonts.albertSans(
-                              fontSize: GlobalUtils.screenWidth * (14 / 393),
-                              color: Color(0xFF1B1C1C),
-                            ),
-                            height: GlobalUtils.screenWidth * (60 / 393),
-                            width: GlobalUtils.screenWidth*0.9,
-                            autoValidate: false,
-                            backgroundColor: Colors.white,
-                            borderRadius: 16,
-                            // backgroundGradient: LinearGradient(
-                            //   colors: [Colors.blueAccent, Colors.purple.shade300],
-                            // ),
-                            errorColor:  Colors.red,
-                            errorFontSize: 12
-                          ),
-
-                          SizedBox(height: 20,),
-
-                          GlobalUtils.CustomTextField(
-                              label: "Password",
+                              label: "Mobile Number",
                               showLabel: false,
-                              controller: loginController.passwordController.value.obs(),
-                              prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF6B707E)),
-                              isPassword: true,
-                              placeholder: "Password",
+                              controller: loginController.mobileController.value.obs(),
+                              prefixIcon: Icon(Icons.phone, color: Color(0xFF6B707E)),
+                              isMobileNumber: true,
+                              placeholder: "Mobile number",
                               placeholderColor: Colors.white,
-                              height: GlobalUtils.screenWidth * (60 / 393),
-                              width: GlobalUtils.screenWidth * 0.9,
-                              autoValidate: false,
-                              backgroundColor: Colors.white,
                               placeholderStyle: GoogleFonts.albertSans(
                                 fontSize: GlobalUtils.screenWidth * (14 / 393),
                                 color: Color(0xFF6B707E),
@@ -324,12 +450,46 @@ class _LoginScreenState extends State<LoginScreen> {
                                 fontSize: GlobalUtils.screenWidth * (14 / 393),
                                 color: Color(0xFF1B1C1C),
                               ),
+                              height: GlobalUtils.screenWidth * (60 / 393),
+                              width: GlobalUtils.screenWidth*0.9,
+                              autoValidate: false,
+                              backgroundColor: Colors.white,
                               borderRadius: 16,
                               // backgroundGradient: LinearGradient(
                               //   colors: [Colors.blueAccent, Colors.purple.shade300],
                               // ),
                               errorColor:  Colors.red,
-                              errorFontSize: 12,
+                              errorFontSize: 12
+                          ),
+
+                          SizedBox(height: 20,),
+
+                          GlobalUtils.CustomTextField(
+                            label: "Password",
+                            showLabel: false,
+                            controller: loginController.passwordController.value.obs(),
+                            prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF6B707E)),
+                            isPassword: true,
+                            placeholder: "Password",
+                            placeholderColor: Colors.white,
+                            height: GlobalUtils.screenWidth * (60 / 393),
+                            width: GlobalUtils.screenWidth * 0.9,
+                            autoValidate: false,
+                            backgroundColor: Colors.white,
+                            placeholderStyle: GoogleFonts.albertSans(
+                              fontSize: GlobalUtils.screenWidth * (14 / 393),
+                              color: Color(0xFF6B707E),
+                            ),
+                            inputTextStyle: GoogleFonts.albertSans(
+                              fontSize: GlobalUtils.screenWidth * (14 / 393),
+                              color: Color(0xFF1B1C1C),
+                            ),
+                            borderRadius: 16,
+                            // backgroundGradient: LinearGradient(
+                            //   colors: [Colors.blueAccent, Colors.purple.shade300],
+                            // ),
+                            errorColor:  Colors.red,
+                            errorFontSize: 12,
                           ),
 
                           Row(
