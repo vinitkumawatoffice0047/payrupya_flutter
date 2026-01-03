@@ -4214,6 +4214,9 @@ class AepsController extends GetxController {
       if (lastPidData.value.isNotEmpty) {
         encData = base64Encode(utf8.encode(lastPidData.value));
       }
+
+      // String encData = PidDataConverter.convertPidToEncdata(lastPidData.value); //*****
+
       // // Result se encdata generate karein
       // String finalEncData = PidDataConverter.convertPidToEncdata(result.pidData ?? '');
       // Make 2FA API call
@@ -4224,7 +4227,8 @@ class AepsController extends GetxController {
         "device": selectedDevice.value,
         "aadhar_no": aadhaarController.text,  // ✅ FIXED
         "skey": "TWOFACTORAUTH",
-        "encdata": encData,
+        "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),
+        // "encdata": encData,
         // "encdata": finalEncData,
         // "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
         // "encdata": base64Encode(utf8.encode(result.pidData ?? '')),  // Base64 encoded
@@ -4260,6 +4264,7 @@ class AepsController extends GetxController {
         isFingpay2FA_ProcessLoading.value = false;
         ConsoleLog.printError("fingpayTwoFA_Process API Error: ${response?.statusCode}");
         Fluttertoast.showToast(msg: "Failed to send 2FA Request.");
+        return false;
       }
 
       Fluttertoast.showToast(msg: 'API Error');
@@ -4322,7 +4327,15 @@ class AepsController extends GetxController {
         CustomDialog.error(message: "Authentication required!");
         return false;
       }
-      String finalEncData = PidDataConverter.convertPidToEncdata(result.pidData ?? '');
+      // String finalEncData = PidDataConverter.convertPidToEncdata(result.pidData ?? '');
+      // ✅ FIX: Encode PID Data to Base64
+      String encData = "";
+      if (result.pidData!.isNotEmpty) {
+        encData = base64Encode(utf8.encode(result.pidData!));
+      }//UIDAI_ERROR810 Missing biometric data as specified in Uses
+
+      // ✅ FIX: Use PidDataConverter
+      // String encData = PidDataConverter.convertPidToEncdata(lastPidData.value); //add_info data missing
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -4331,9 +4344,11 @@ class AepsController extends GetxController {
         "device": selectedDevice.value,
         "aadhar_no": aadhaarController.text,  // ✅ FIXED
         "skey": "TWOFACTORAUTH",
+        "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),
+        // "encdata": encData, //UIDAI_ERROR810 Missing biometric data as specified in Uses
         // "encdata": finalEncData,
         // "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
-        "encdata": base64Encode(utf8.encode(result.pidData ?? '')),  // Base64 encoded
+        // "encdata": base64Encode(utf8.encode(lastPidData.value ?? '')),  //UIDAI_ERROR810 Missing biometric data as specified in Uses
         // "encdata": result.pidData,
       };
 
@@ -4346,9 +4361,11 @@ class AepsController extends GetxController {
         userSignature.value,
       );
 
-      isInstantpay2FA_ProcessLoading.value = false;
 
       if (response != null && response.statusCode == 200) {
+        ConsoleLog.printColor("instantpayTwoFA_Process Response: ${jsonEncode(response.data)}");
+        isInstantpay2FA_ProcessLoading.value = false;
+
         var data = response.data;
         if (data['Resp_code'] == 'RCS') {
           isInstantpay2FACompleted.value = true;
@@ -4360,6 +4377,11 @@ class AepsController extends GetxController {
           Fluttertoast.showToast(msg: data['Resp_desc'] ?? '2FA failed');
           return false;
         }
+      }else {
+        isInstantpay2FA_ProcessLoading.value = false;
+        ConsoleLog.printError("instantpayTwoFA_Process API Error: ${response?.statusCode}");
+        Fluttertoast.showToast(msg: "Failed to send 2FA Request.");
+        return false;
       }
 
       return false;

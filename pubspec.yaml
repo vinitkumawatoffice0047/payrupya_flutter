@@ -67,7 +67,7 @@ dependencies:
   # NEW: For Biometric Authentication (Fingerprint/Face ID)
   local_auth: ^2.2.0
   android_intent_plus: ^4.0.3
-  xml: ^6.3.0
+  xml: ^6.5.0
   # For secure storage of credentials (recommended)
   flutter_secure_storage: ^9.0.0
 
