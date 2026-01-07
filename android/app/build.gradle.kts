@@ -8,6 +8,7 @@ plugins {
 android {
     namespace = "com.example.payrupya"
     compileSdk = 36/*flutter.compileSdkVersion*/
+//    compileSdk = 36/*flutter.compileSdkVersion*/
     ndkVersion = "28.2.13676358"/*flutter.ndkVersion*/
 
     compileOptions {
@@ -25,7 +26,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24/*flutter.minSdkVersion*/
-        targetSdk = 35/*flutter.targetSdkVersion*/
+        targetSdk = 36/*flutter.targetSdkVersion*/
         versionCode = 1
         versionName = "1.0.0"
 
@@ -48,6 +49,26 @@ android {
             useLegacyPackaging = false  // Modern packaging
         }
     }
+}
+
+// ✅ ADD DEPENDENCIES BLOCK
+dependencies {
+    // Kotlin Standard Library
+    implementation("org.jetbrains.kotlin:kotlin-stdlib: 1.9.20")
+
+    // AndroidX Core Libraries
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.core:core:1.12.0")
+    implementation("androidx.fragment:fragment:1.6.2")
+    implementation("androidx.activity:activity: 1.8.0")
+
+    // Lifecycle
+    implementation("androidx.lifecycle:lifecycle-runtime: 2.6.2")
+
+    // Testing
+    testImplementation("junit: junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test. espresso:espresso-core: 3.5.1")
 }
 
 flutter {

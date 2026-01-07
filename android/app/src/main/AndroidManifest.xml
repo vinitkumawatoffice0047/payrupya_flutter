@@ -36,14 +36,42 @@
 
         <package android:name="com.mantra.rdservice" />
         <package android:name="com.scl.rdservice" />
-        <package android:name="com.mantra.mfs110.rdservice" />
+<!--        <package android:name="com.mantra.mfs110.rdservice" />-->
         <package android:name="com.scl.rdservice" />
-        <package android:name="com.idemia.l1rdservice" />
+<!--        <package android:name="com.idemia.l1rdservice" />-->
         <package android:name="com.secugen.rdservice" />
         <package android:name="com.acpl.registersdk" />
         <package android:name="com.acpl.registersdk_l1" />
         <package android:name="com.aborygen.rdservice" />
         <package android:name="com.precision.pb510.rdservice" />
+        <!-- ✅ AEPS RD Service Packages (Updated January 2026) -->
+        <!-- Morpho L1 (Idemia) -->
+        <package android:name="com.idemia.l1rdservice" />
+
+        <!-- Mantra MFS110 L1 -->
+        <package android:name="com.mantra.mfs110.rdservice" />
+
+        <!-- Mantra IRIS MIS100V2 -->
+        <package android:name="com.mantra.mis100v2.rdservice" />
+
+        <!-- UIDAI Face RD (Face Authentication - Mandatory for Fingpay 2FA) -->
+        <package android:name="in.gov.uidai.facerd" />
+
+        <!-- ✅ RD Service Intent Actions -->
+        <!-- Fingerprint Capture -->
+        <intent>
+            <action android:name="in.gov.uidai.rdservice.fp.CAPTURE" />
+        </intent>
+
+        <!-- IRIS Capture -->
+        <intent>
+            <action android:name="in.gov.uidai.rdservice.iris.CAPTURE" />
+        </intent>
+
+        <!-- Face Capture (UIDAI FaceRD) -->
+        <intent>
+            <action android:name="in.gov.uidai.rdservice.face.CAPTURE" />
+        </intent>
 
         <intent>
             <action android:name="android.intent.action.VIEW"/>
