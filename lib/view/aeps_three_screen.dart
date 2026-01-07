@@ -47,17 +47,25 @@ class _AepsThreeScreenState extends State<AepsThreeScreen> {
   AepsController get aepsController => Get.find<AepsController>();
 
   // Device list
+  // Updated Device List - Only 4 devices as per Fingpay requirement (January 2026)
   final List<Map<String, String>> deviceList = [
     {'name': 'Select Device', 'value': ''},
-    {'name': 'Mantra', 'value': 'MANTRA'},
-    {'name': 'Mantra MFS110', 'value': 'MFS110'},
-    {'name': 'Mantra Iris', 'value': 'MIS100V2'},
-    {'name': 'Morpho L0', 'value': 'MORPHO'},
-    {'name': 'Morpho L1', 'value': 'Idemia'},
-    {'name': 'TATVIK', 'value': 'TATVIK'},
-    {'name': 'Secugen', 'value': 'SecuGen Corp.'},
-    {'name': 'Startek', 'value': 'STARTEK'},
+    {'name': 'Morpho L1', 'value': 'Idemia'},              // Morpho L1 Fingerprint
+    {'name': 'Mantra MFS110', 'value': 'MFS110'},          // Mantra MFS110 Fingerprint
+    {'name': 'Mantra IRIS', 'value': 'MIS100V2'},          // Mantra IRIS Scanner
+    {'name': 'Face Authentication', 'value': 'FACE_AUTH'}, // Face Auth
   ];
+  // final List<Map<String, String>> deviceList = [
+  //   {'name': 'Select Device', 'value': ''},
+  //   {'name': 'Mantra', 'value': 'MANTRA'},
+  //   {'name': 'Mantra MFS110', 'value': 'MFS110'},
+  //   {'name': 'Mantra Iris', 'value': 'MIS100V2'},
+  //   {'name': 'Morpho L0', 'value': 'MORPHO'},
+  //   {'name': 'Morpho L1', 'value': 'Idemia'},
+  //   {'name': 'TATVIK', 'value': 'TATVIK'},
+  //   {'name': 'Secugen', 'value': 'SecuGen Corp.'},
+  //   {'name': 'Startek', 'value': 'STARTEK'},
+  // ];
 
   // Form controllers
   final formKey = GlobalKey<FormState>();
@@ -555,7 +563,7 @@ class _AepsThreeScreenState extends State<AepsThreeScreen> {
 
           // Authenticate Button
           _buildPrimaryButton(
-            label: 'Scan Fingerprint',
+            label: 'Authenticate',
             onPressed: _initFingerprint2FA,
             icon: Icons.fingerprint,
           ),

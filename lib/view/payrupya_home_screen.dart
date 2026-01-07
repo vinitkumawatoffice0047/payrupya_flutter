@@ -8,7 +8,9 @@ import 'package:payrupya/view/add_sender_screen.dart';
 import 'package:payrupya/controllers/login_controller.dart';
 import 'package:payrupya/view/aeps_one_screen.dart';
 import 'package:payrupya/view/aeps_three_screen.dart';
+import 'package:talker_flutter/talker_flutter.dart';
 import 'dart:async';
+import '../main.dart';
 import '../utils/custom_loading.dart';
 import 'add_sender_upi_screen.dart';
 
@@ -260,7 +262,13 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
                     SizedBox(width: 12),
                     buildHeaderIcon("assets/icons/notification_bell.png", () {}, isActive: false),
                     SizedBox(width: 12),
-                    buildHeaderIcon("assets/icons/menu_icon.png", () {}, isActive: false),
+                    buildHeaderIcon("assets/icons/menu_icon.png", () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => TalkerScreen(talker: talker),
+                        ),
+                      );
+                    }, isActive: true),
                   ],
                 ),
               ],

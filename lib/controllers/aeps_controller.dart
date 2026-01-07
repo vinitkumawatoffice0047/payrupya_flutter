@@ -2153,7 +2153,6 @@ import 'aeps_biometric_service.dart';
 import 'payrupya_home_screen_controller.dart';
 import 'package:payrupya/models/check_fingpay_auth_status_response_model.dart';
 import 'package:payrupya/models/check_instantpay_bio_auth_status_response_model.dart';
-import 'package:android_intent_plus/android_intent.dart';
 
 // Import your project files - adjust paths as needed
 // import '../api/api_provider.dart';
@@ -2263,16 +2262,23 @@ class AepsController extends GetxController {
   RxBool showBiometricModal = false.obs;
 
   // ============== Device List ==============
+  // final List<Map<String, String>> deviceList = [
+  //   {'name': 'Select Device', 'value': ''},
+  //   {'name': 'Mantra', 'value': 'MANTRA'},
+  //   {'name': 'Mantra MFS110', 'value': 'MFS110'},
+  //   {'name': 'Mantra Iris', 'value': 'MIS100V2'},
+  //   {'name': 'Morpho L0', 'value': 'MORPHO'},
+  //   {'name': 'Morpho L1', 'value': 'Idemia'},
+  //   {'name': 'TATVIK', 'value': 'TATVIK'},
+  //   {'name': 'Secugen', 'value': 'SecuGen Corp.'},
+  //   {'name': 'Startek', 'value': 'STARTEK'},
+  // ];
   final List<Map<String, String>> deviceList = [
     {'name': 'Select Device', 'value': ''},
-    {'name': 'Mantra', 'value': 'MANTRA'},
-    {'name': 'Mantra MFS110', 'value': 'MFS110'},
-    {'name': 'Mantra Iris', 'value': 'MIS100V2'},
-    {'name': 'Morpho L0', 'value': 'MORPHO'},
-    {'name': 'Morpho L1', 'value': 'Idemia'},
-    {'name': 'TATVIK', 'value': 'TATVIK'},
-    {'name': 'Secugen', 'value': 'SecuGen Corp.'},
-    {'name': 'Startek', 'value': 'STARTEK'},
+    {'name': 'Morpho L1', 'value': 'Idemia'},              // Morpho L1 Fingerprint
+    {'name': 'Mantra MFS110', 'value': 'MFS110'},          // Mantra MFS110 Fingerprint
+    {'name': 'Mantra IRIS', 'value': 'MIS100V2'},          // Mantra IRIS Scanner
+    {'name': 'Face Authentication', 'value': 'FACE_AUTH'}, // Face Auth (Mandatory for Fingpay 2FA)
   ];
 
   // ============== Form Controllers ==============
@@ -2309,7 +2315,8 @@ class AepsController extends GetxController {
   static const MethodChannel _biometricChannel = MethodChannel('aeps_biometric_channel');
 
   // ============== WADH Constants ==============
-  static const String WADH_FOR_EKYC = 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=';
+  // static const String WADH_FOR_EKYC = 'E0jzJ/P8UopUHAieZn8CKqS4WPMi5ZSYXgfnlfkWjrc=';
+  static const String WADH_FOR_EKYC = 'sgydIC09zzy6f8Lb3xaAqzKquKe9lFcNR9uTvYxFp+A=';
   static const String WADH_EMPTY = '';
 
   // ============== Service Keys ==============
@@ -2326,6 +2333,14 @@ class AepsController extends GetxController {
 
   // Common
   static const String SKEY_TWO_FACTOR_AUTH = 'TWOFACTORAUTH';
+
+  // Play Store URLs for device RD Services
+  static const Map<String, String> PLAY_STORE_URLS = {
+    'Idemia': 'https://play.google.com/store/apps/details?id=com.idemia.morpho.rdservice',
+    'MFS110': 'https://play.google.com/store/apps/details?id=com.mantra.rdservice',
+    'MIS100V2': 'https://play.google.com/store/apps/details?id=com.mantra.mis100v2.rdservice',
+    'FACE_AUTH': 'https://play.google.com/store/apps/details?id=com.fingpay.faceauth',
+  };
 
   // ============== Lifecycle ==============
 
@@ -2955,128 +2970,319 @@ class AepsController extends GetxController {
   }
 
   /// Get user-friendly error message for biometric errors
-  String _getBiometricErrorMessage(String code, String message) {
+  // String _getBiometricErrorMessage(String code, String message) {
+  //   switch (code) {
+  //   // Device Installation Errors
+  //     case 'DEVICE_NOT_INSTALLED':
+  //       return 'RD Service app not installed. Please download from Play Store.';
+  //
+  //   // ✅ NEW: Device Connection Errors
+  //     case 'DEVICE_NOT_CONNECTED':
+  //       return 'Biometric device not connected. Please connect your device and try again.';
+  //     case 'DEVICE_NOT_READY':
+  //       return 'Device is not ready. Please wait and try again.';
+  //     case 'DEVICE_NOT_REGISTERED':
+  //       return 'Device is not registered. Please register in RD Service app.';
+  //
+  //   // Capture Errors
+  //     case 'CAPTURE_FAILED':
+  //       return 'Fingerprint capture failed. Please try again.';
+  //     case 'CAPTURE_TIMEOUT':
+  //       return 'Capture timeout. Please place finger on device and try again.';
+  //     case 'POOR_QUALITY':
+  //       return 'Poor fingerprint quality. Clean your finger and try again.';
+  //
+  //   // User Actions
+  //     case 'CANCELLED':
+  //       return 'Scan cancelled. Please try again.';
+  //     case 'NO_DATA':
+  //       return 'No fingerprint data received. Please try again.';
+  //
+  //   // Device Errors
+  //     case 'UNKNOWN_DEVICE':
+  //       return 'Unknown device selected. Please choose a valid device.';
+  //     case 'NO_DEVICE':
+  //       return 'No device selected. Please select a biometric device.';
+  //
+  //   // Legacy RD Error Codes (direct from RD Service)
+  //     case '100':
+  //     case '700':
+  //       return 'Device not found. Please connect your biometric device.';
+  //     case '710':
+  //     case '720':
+  //       return 'Device not ready. Please connect device and try again.';
+  //     case '730':
+  //       return 'Poor quality fingerprint. Clean finger and retry.';
+  //     case '740':
+  //       return 'Capture timeout. Please try again.';
+  //
+  //   // Validation Errors
+  //     case 'VALIDATION_ERROR':
+  //       return 'Failed to validate fingerprint data. Please try again.';
+  //
+  //     default:
+  //       return message.isNotEmpty ? message : 'Biometric scan failed. Please retry.';
+  //   }
+  // }
+  String _getBiometricErrorMessage(String code, String defaultMessage) {
     switch (code) {
-    // Device Installation Errors
       case 'DEVICE_NOT_INSTALLED':
-        return 'RD Service app not installed. Please download from Play Store.';
-
-    // ✅ NEW: Device Connection Errors
+        return 'RD Service app is not installed. Please install it from Play Store.';
       case 'DEVICE_NOT_CONNECTED':
-        return 'Biometric device not connected. Please connect your device and try again.';
+        return 'Biometric device is not connected. Please connect the device and try again.';
       case 'DEVICE_NOT_READY':
-        return 'Device is not ready. Please wait and try again.';
-      case 'DEVICE_NOT_REGISTERED':
-        return 'Device is not registered. Please register in RD Service app.';
-
-    // Capture Errors
-      case 'CAPTURE_FAILED':
-        return 'Fingerprint capture failed. Please try again.';
-      case 'CAPTURE_TIMEOUT':
-        return 'Capture timeout. Please place finger on device and try again.';
-      case 'POOR_QUALITY':
-        return 'Poor fingerprint quality. Clean your finger and try again.';
-
-    // User Actions
+        return 'Biometric device is not ready. Please wait and try again.';
+      case 'CAPTURE_CANCELLED':
       case 'CANCELLED':
-        return 'Scan cancelled. Please try again.';
+        return 'Biometric capture was cancelled.';
+      case 'CAPTURE_FAILED':
+        return 'Failed to capture biometric. Please try again.';
+      case 'POOR_QUALITY':
+        return 'Poor quality capture. Please clean the sensor and try again.';
+      case 'CAPTURE_TIMEOUT':
+        return 'Biometric capture timed out. Please try again.';
       case 'NO_DATA':
-        return 'No fingerprint data received. Please try again.';
-
-    // Device Errors
+      case 'NO_PID_DATA':
+        return 'No biometric data received. Please try again.';
       case 'UNKNOWN_DEVICE':
-        return 'Unknown device selected. Please choose a valid device.';
-      case 'NO_DEVICE':
-        return 'No device selected. Please select a biometric device.';
-
-    // Legacy RD Error Codes (direct from RD Service)
-      case '100':
-      case '700':
-        return 'Device not found. Please connect your biometric device.';
-      case '710':
-      case '720':
-        return 'Device not ready. Please connect device and try again.';
-      case '730':
-        return 'Poor quality fingerprint. Clean finger and retry.';
-      case '740':
-        return 'Capture timeout. Please try again.';
-
-    // Validation Errors
+        return 'Unknown device selected. Please select a valid device.';
       case 'VALIDATION_ERROR':
-        return 'Failed to validate fingerprint data. Please try again.';
-
+        return 'Failed to validate biometric data. Please try again.';
       default:
-        return message.isNotEmpty ? message : 'Biometric scan failed. Please retry.';
+        return defaultMessage.isNotEmpty ? defaultMessage : 'Biometric capture failed. Please try again.';
     }
   }
 
   /// Show RD Service installation dialog with Play Store link
-  void _showRdServiceInstallDialog(String device) {
-    // Device info with package names
-    final Map<String, Map<String, String>> deviceInfo = {
-      'MANTRA': {
-        'package': 'com.mantra.rdservice',
-        'name': 'Mantra MFS100 RD Service',
-      },
-      'MFS110': {
-        'package': 'com.mantra.mfs110.rdservice',
-        'name': 'Mantra MFS110 RD Service',
-      },
-      'MIS100V2': {
-        'package': 'com.mantra.mis100v2.rdservice',
-        'name': 'Mantra Iris MIS100V2 RD Service',
-      },
-      'MORPHO': {
-        'package': 'com.scl.rdservice',
-        'name': 'Morpho SCL RD Service',
-      },
-      'Idemia': {
-        'package': 'com.idemia.l1rdservice',
-        'name': 'Idemia L1 RD Service',
-      },
-      'SecuGen Corp.': {
-        'package': 'com.secugen.rdservice',
-        'name': 'SecuGen RD Service',
-      },
-      'STARTEK': {
-        'package': 'com.acpl.registersdk',
-        'name': 'Startek FM220 RD Service',
-      },
-      'TATVIK': {
-        'package': 'com.aborygen.rdservice',
-        'name': 'Tatvik TMF20 RD Service',
-      },
-    };
+  // void _showRdServiceInstallDialog(String device) {
+  //   // Device info with package names
+  //   final Map<String, Map<String, String>> deviceInfo = {
+  //     'MANTRA': {
+  //       'package': 'com.mantra.rdservice',
+  //       'name': 'Mantra MFS100 RD Service',
+  //     },
+  //     'MFS110': {
+  //       'package': 'com.mantra.mfs110.rdservice',
+  //       'name': 'Mantra MFS110 RD Service',
+  //     },
+  //     'MIS100V2': {
+  //       'package': 'com.mantra.mis100v2.rdservice',
+  //       'name': 'Mantra Iris MIS100V2 RD Service',
+  //     },
+  //     'MORPHO': {
+  //       'package': 'com.scl.rdservice',
+  //       'name': 'Morpho SCL RD Service',
+  //     },
+  //     'Idemia': {
+  //       'package': 'com.idemia.l1rdservice',
+  //       'name': 'Idemia L1 RD Service',
+  //     },
+  //     'SecuGen Corp.': {
+  //       'package': 'com.secugen.rdservice',
+  //       'name': 'SecuGen RD Service',
+  //     },
+  //     'STARTEK': {
+  //       'package': 'com.acpl.registersdk',
+  //       'name': 'Startek FM220 RD Service',
+  //     },
+  //     'TATVIK': {
+  //       'package': 'com.aborygen.rdservice',
+  //       'name': 'Tatvik TMF20 RD Service',
+  //     },
+  //   };
+  //
+  //   final info = deviceInfo[device];
+  //   final packageName = info?['package'] ?? '';
+  //   final deviceName = info?['name'] ?? '$device RD Service';
+  //   final playStoreUrl = 'https://play.google.com/store/apps/details?id=$packageName';
+  //
+  //   // Show GetX Snackbar with Download button
+  //   // ✅ Use Get.dialog instead of Get.snackbar to avoid Overlay errors
+  //   Get.dialog(
+  //     AlertDialog(
+  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+  //       title: Row(
+  //         children: [
+  //           Container(
+  //             padding: const EdgeInsets.all(8),
+  //             decoration: BoxDecoration(
+  //               color: Colors.orange.shade50,
+  //               borderRadius: BorderRadius.circular(8),
+  //             ),
+  //             child: Icon(
+  //               Icons.warning_amber_rounded,
+  //               color: Colors.orange.shade700,
+  //               size: 28,
+  //             ),
+  //           ),
+  //           const SizedBox(width: 12),
+  //           const Expanded(
+  //             child: Text(
+  //               'RD Service Required',
+  //               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //       content: Column(
+  //         mainAxisSize: MainAxisSize.min,
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Text(
+  //             'To use fingerprint authentication, please install:',
+  //             style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+  //           ),
+  //           const SizedBox(height: 16),
+  //           Container(
+  //             padding: const EdgeInsets.all(12),
+  //             decoration: BoxDecoration(
+  //               color: Colors.blue.shade50,
+  //               borderRadius: BorderRadius.circular(8),
+  //               border: Border.all(color: Colors.blue.shade100),
+  //             ),
+  //             child: Row(
+  //               children: [
+  //                 Icon(Icons.fingerprint, color: Colors.blue.shade700, size: 32),
+  //                 const SizedBox(width: 12),
+  //                 Expanded(
+  //                   child: Column(
+  //                     crossAxisAlignment: CrossAxisAlignment.start,
+  //                     children: [
+  //                       Text(
+  //                         deviceName,
+  //                         style: const TextStyle(
+  //                           fontSize: 14,
+  //                           fontWeight: FontWeight.w600,
+  //                         ),
+  //                       ),
+  //                       const SizedBox(height: 2),
+  //                       Text(
+  //                         'from Google Play Store',
+  //                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+  //                       ),
+  //                     ],
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //           const SizedBox(height: 16),
+  //           Text(
+  //             'After installation:',
+  //             style: TextStyle(
+  //               fontSize: 13,
+  //               fontWeight: FontWeight.w500,
+  //               color: Colors.grey[800],
+  //             ),
+  //           ),
+  //           const SizedBox(height: 8),
+  //           _buildInstallStep('1', 'Open the RD Service app'),
+  //           _buildInstallStep('2', 'Connect your biometric device'),
+  //           _buildInstallStep('3', 'Come back here and try again'),
+  //         ],
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Get.back(),
+  //           child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+  //         ),
+  //         ElevatedButton.icon(
+  //           onPressed: () async {
+  //             Get.back();
+  //             await _openPlayStore(packageName);
+  //           },
+  //           icon: const Icon(Icons.download, size: 18),
+  //           label: const Text('Download Now'),
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: const Color(0xFF2E5BFF),
+  //             foregroundColor: Colors.white,
+  //             shape: RoundedRectangleBorder(
+  //               borderRadius: BorderRadius.circular(8),
+  //             ),
+  //             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //     barrierDismissible: true,
+  //   );
+  //   // Get.snackbar(
+  //   //   'RD Service Not Installed',
+  //   //   'Please install $deviceName to continue',
+  //   //   snackPosition: SnackPosition.BOTTOM,
+  //   //   backgroundColor: Colors.orange.shade100,
+  //   //   colorText: Colors.orange.shade900,
+  //   //   duration: const Duration(seconds: 6),
+  //   //   margin: const EdgeInsets.all(16),
+  //   //   borderRadius: 12,
+  //   //   icon: Icon(
+  //   //     Icons.warning_amber_rounded,
+  //   //     color: Colors.orange.shade700,
+  //   //     size: 28,
+  //   //   ),
+  //   //   mainButton: TextButton(
+  //   //     onPressed: () async {
+  //   //       Get.back(); // Close snackbar
+  //   //       await _openPlayStore(packageName);
+  //   //     },
+  //   //     child: Container(
+  //   //       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  //   //       decoration: BoxDecoration(
+  //   //         color: const Color(0xFF2E5BFF),
+  //   //         borderRadius: BorderRadius.circular(8),
+  //   //       ),
+  //   //       child: const Row(
+  //   //         mainAxisSize: MainAxisSize.min,
+  //   //         children: [
+  //   //           Icon(Icons.download, color: Colors.white, size: 16),
+  //   //           SizedBox(width: 6),
+  //   //           Text(
+  //   //             'Download',
+  //   //             style: TextStyle(
+  //   //               color: Colors.white,
+  //   //               fontWeight: FontWeight.w600,
+  //   //               fontSize: 13,
+  //   //             ),
+  //   //           ),
+  //   //         ],
+  //   //       ),
+  //   //     ),
+  //   //   ),
+  //   // );
+  // }
+  void _showRdServiceInstallDialog(String deviceName) {
+    // Get device display name
+    String displayName = deviceName;
+    switch (deviceName) {
+      case 'Idemia':
+        displayName = 'Morpho L1';
+        break;
+      case 'MFS110':
+        displayName = 'Mantra MFS110';
+        break;
+      case 'MIS100V2':
+        displayName = 'Mantra IRIS';
+        break;
+      case 'FACE_AUTH':
+        displayName = 'Face Authentication';
+        break;
+    }
 
-    final info = deviceInfo[device];
-    final packageName = info?['package'] ?? '';
-    final deviceName = info?['name'] ?? '$device RD Service';
-    final playStoreUrl = 'https://play.google.com/store/apps/details?id=$packageName';
+    final playStoreUrl = PLAY_STORE_URLS[deviceName] ?? '';
 
-    // Show GetX Snackbar with Download button
-    // ✅ Use Get.dialog instead of Get.snackbar to avoid Overlay errors
     Get.dialog(
       AlertDialog(
+        backgroundColor: Colors.white,
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
+        title: const Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.orange.shade700,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
+            Icon(Icons.error_outline, color: Colors.orange, size: 28),
+            SizedBox(width: 8),
+            Expanded(
               child: Text(
                 'RD Service Required',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
               ),
             ),
           ],
@@ -3086,126 +3292,48 @@ class AepsController extends GetxController {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'To use fingerprint authentication, please install:',
-              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              '$displayName RD Service app is not installed on your device.',
+              style: const TextStyle(fontSize: 14, color: Colors.black),
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade100),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.fingerprint, color: Colors.blue.shade700, size: 32),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          deviceName,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'from Google Play Store',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            const SizedBox(height: 12),
+            const Text(
+              'Please install it from Play Store to use biometric authentication.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'After installation:',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[800],
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildInstallStep('1', 'Open the RD Service app'),
-            _buildInstallStep('2', 'Connect your biometric device'),
-            _buildInstallStep('3', 'Come back here and try again'),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+            child: const Text('Cancel', style: TextStyle(color: Colors.black),),
           ),
-          ElevatedButton.icon(
-            onPressed: () async {
-              Get.back();
-              await _openPlayStore(packageName);
-            },
-            icon: const Icon(Icons.download, size: 18),
-            label: const Text('Download Now'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2E5BFF),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          if (playStoreUrl.isNotEmpty)
+            ElevatedButton.icon(
+              onPressed: () async {
+                Get.back();
+                // Open Play Store via Method Channel
+                try {
+                  await _biometricChannel.invokeMethod('openPlayStore', {
+                    'device': deviceName,
+                  });
+                } catch (e) {
+                  // Fallback: Open URL directly
+                  final uri = Uri.parse(playStoreUrl);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                }
+              },
+              icon: const Icon(Icons.download, size: 18),
+              label: const Text('Install'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
-          ),
         ],
       ),
-      barrierDismissible: true,
     );
-    // Get.snackbar(
-    //   'RD Service Not Installed',
-    //   'Please install $deviceName to continue',
-    //   snackPosition: SnackPosition.BOTTOM,
-    //   backgroundColor: Colors.orange.shade100,
-    //   colorText: Colors.orange.shade900,
-    //   duration: const Duration(seconds: 6),
-    //   margin: const EdgeInsets.all(16),
-    //   borderRadius: 12,
-    //   icon: Icon(
-    //     Icons.warning_amber_rounded,
-    //     color: Colors.orange.shade700,
-    //     size: 28,
-    //   ),
-    //   mainButton: TextButton(
-    //     onPressed: () async {
-    //       Get.back(); // Close snackbar
-    //       await _openPlayStore(packageName);
-    //     },
-    //     child: Container(
-    //       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    //       decoration: BoxDecoration(
-    //         color: const Color(0xFF2E5BFF),
-    //         borderRadius: BorderRadius.circular(8),
-    //       ),
-    //       child: const Row(
-    //         mainAxisSize: MainAxisSize.min,
-    //         children: [
-    //           Icon(Icons.download, color: Colors.white, size: 16),
-    //           SizedBox(width: 6),
-    //           Text(
-    //             'Download',
-    //             style: TextStyle(
-    //               color: Colors.white,
-    //               fontWeight: FontWeight.w600,
-    //               fontSize: 13,
-    //             ),
-    //           ),
-    //         ],
-    //       ),
-    //     ),
-    //   ),
-    // );
   }
 
   /// Helper method to build installation steps
@@ -3609,7 +3737,12 @@ class AepsController extends GetxController {
         "device": selectedDevice.value,
         "aadhar_no": aadhaarController.text,
         "skey": SKEY_TWO_FACTOR_AUTH,
-        "encdata": encData,
+        // ✅ CORRECT - Device-specific conversion
+        // "encdata": PidDataConverter.convertWithDeviceType(
+        //   lastPidData.value ?? '',
+        //   selectedDevice.value,  // Pass the selected device value
+        // ),
+        // "encdata": encData,
         // "encdata": PidDataConverter.convertPidToEncdata(lastPidData.value ?? ''),
         // "encdata": base64Encode(utf8.encode(lastPidData.value ?? '')),  // Base64 encoded
         // "encdata": lastPidData.value,
@@ -3677,7 +3810,12 @@ class AepsController extends GetxController {
           "primaryKeyId": otpReference.value?.primaryKeyId ?? "",
           "encodeFPTxnId": otpReference.value?.encodeFPTxnId ?? "",
         },
-        "encdata": PidDataConverter.convertPidToEncdata(lastPidData.value ?? ''),  // ✅ Base64 JSON
+        // ✅ CORRECT - Device-specific conversion
+        // "encdata": PidDataConverter.convertWithDeviceType(
+        //   lastPidData.value ?? '',
+        //   selectedDevice.value,  // Pass the selected device value
+        // ),
+        // "encdata": PidDataConverter.convertPidToEncdata(lastPidData.value ?? ''),  // ✅ Base64 JSON
         // "encdata": base64Encode(utf8.encode(lastPidData.value ?? '')),  // Base64 encoded
         // "encdata": lastPidData.value,
       };
@@ -3728,7 +3866,12 @@ class AepsController extends GetxController {
         "mobile_no": serviceMobileController.text,
         "amount": amount,
         "skey": getSkey(),
-        "encdata": PidDataConverter.convertPidToEncdata(lastPidData.value ?? ''),  // ✅ Base64 JSON
+        // ✅ CORRECT - Device-specific conversion
+        // "encdata": PidDataConverter.convertWithDeviceType(
+        //   lastPidData.value ?? '',
+        //   selectedDevice.value,  // Pass the selected device value
+        // ),
+        // "encdata": PidDataConverter.convertPidToEncdata(lastPidData.value ?? ''),  // ✅ Base64 JSON
         // "encdata": base64Encode(utf8.encode(lastPidData.value ?? '')),  // Base64 encoded
         // "encdata": lastPidData.value,
       };
@@ -3785,7 +3928,12 @@ class AepsController extends GetxController {
         "device": selectedDevice.value,
         "aadhar_no": aadhaarController.text,
         "skey": SKEY_TWO_FACTOR_AUTH,
-        "encdata": PidDataConverter.convertPidToEncdata(lastPidData.value ?? ''),  // ✅ Base64 JSON
+        // ✅ CORRECT - Device-specific conversion
+        // "encdata": PidDataConverter.convertWithDeviceType(
+        //   lastPidData.value ?? '',
+        //   selectedDevice.value,  // Pass the selected device value
+        // ),
+        // "encdata": PidDataConverter.convertPidToEncdata(lastPidData.value ?? ''),  // ✅ Base64 JSON
         // "encdata": base64Encode(utf8.encode(lastPidData.value ?? '')),  // Base64 encoded
         // "encdata": lastPidData.value,
       };
@@ -4157,7 +4305,7 @@ class AepsController extends GetxController {
 
 
   /// ✅ FIX 9: Complete Fingpay 2FA with Biometric
-  Future<bool> completeFingpay2FAWithBiometric() async {
+  Future<bool> completeFingpay2FAWithBiometric(bool isFacialTan) async {
     try {
       isFingpay2FA_ProcessLoading.value = true;
 
@@ -4169,8 +4317,8 @@ class AepsController extends GetxController {
       }
 
       // ✅ FIX: Use aadhaarController.text instead of aadhaarController.value.text
-      if (aadhaarController.text.isEmpty) {
-        Fluttertoast.showToast(msg: 'Please enter Aadhaar number');
+      if (aadhaarController.text.isEmpty || aadhaarController.text.length != 12) {
+        Fluttertoast.showToast(msg: 'Please enter valid 12-digit Aadhaar number');
         isFingpay2FA_ProcessLoading.value = false;
         return false;
       }
@@ -4178,11 +4326,11 @@ class AepsController extends GetxController {
       // Scan fingerprint (empty WADH for 2FA)
       final result = await scanFingerprint(
         device: selectedDevice.value,
-        forEkyc: false,
+        forEkyc: true,
       );
 
-      if (!result.success) {
-        Fluttertoast.showToast(msg: result.errorMessage ?? 'Fingerprint scan failed');
+      if (!result.success || result.pidData == null || result.pidData!.isEmpty) {
+        Fluttertoast.showToast(msg: result.errorMessage ?? 'Biometric scan failed');
         isFingpay2FA_ProcessLoading.value = false;
         return false;
       }
@@ -4191,6 +4339,7 @@ class AepsController extends GetxController {
       bool isConnected = await ConnectionValidator.isConnected();
       if (!isConnected) {
         CustomDialog.error(message: "No Internet Connection!");
+        isFingpay2FA_ProcessLoading.value = false;
         return false;
       }
 
@@ -4199,26 +4348,44 @@ class AepsController extends GetxController {
 
       // Auth credentials check with reload
       if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
-        ConsoleLog.printError("Auth credentials are empty");
-        await loadAuthCredentials();
-      }
-
-      if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
         CustomDialog.error(message: "Authentication required!");
+        isFingpay2FA_ProcessLoading.value = false;
         return false;
       }
-      // ✅ FIX: Encode PID Data to Base64 (consistent with Ionic App)
-      // Ionic App sends: encdata: authData (where authData comes from fingerprint plugin)
-      // Flutter 'pidData' is typically XML. We need to Base64 encode it.
-      String encData = "";
-      if (lastPidData.value.isNotEmpty) {
-        encData = base64Encode(utf8.encode(lastPidData.value));
+
+      // ✅ CRITICAL FIX: Generate captureResponse in Fingpay format
+      final captureResponse = PidDataConverter.convertToCaptureResponse(result.pidData ?? '');
+      // Convert object to JSON string
+      final jsonString = jsonEncode(captureResponse);
+      print('📊 JSON String length: ${jsonString.length}');
+
+      // Base64 encode the JSON string
+      final base64Encoded = base64Encode(utf8.encode(jsonString));
+      print('📊 Base64 Encdata length: ${base64Encoded.length}');
+
+
+      if (captureResponse.isEmpty) {
+        Fluttertoast.showToast(msg: 'Failed to process biometric data');
+        isFingpay2FA_ProcessLoading.value = false;
+        return false;
       }
 
-      // String encData = PidDataConverter.convertPidToEncdata(lastPidData.value); //*****
+      // ✅ Auto-detect if Face Authentication
+      final isFacial = PidDataConverter.isFaceAuth(selectedDevice.value);
 
-      // // Result se encdata generate karein
-      // String finalEncData = PidDataConverter.convertPidToEncdata(result.pidData ?? '');
+      // Debug log
+      ConsoleLog.printInfo("🔍 Device: ${selectedDevice.value}");
+      ConsoleLog.printInfo("🔍 isFacialTan: $isFacial");
+      // PidDataConverter.debugCaptureResponse(captureResponse);
+
+      /*Map<String, dynamic> body = PidDataConverter.build2FARequestBody(
+        pidXml: result.pidData ?? '',
+        aadhaarNumber: aadhaarController.text,
+        latitude: homeScreenController.latitude.value.toString(),
+        longitude: homeScreenController.longitude.value.toString(),
+        deviceValue: selectedDevice.value,
+        requestId: generateRequestId(),
+      );*/
       // Make 2FA API call
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
@@ -4227,14 +4394,32 @@ class AepsController extends GetxController {
         "device": selectedDevice.value,
         "aadhar_no": aadhaarController.text,  // ✅ FIXED
         "skey": "TWOFACTORAUTH",
-        "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),
+        // "encdata": result.pidData,
+        "isFacialTan": isFacial,
+        "encdata": base64Encoded,
+        // "encdata": base64Encode(utf8.encode(captureResponse.toString() ?? '')),
+        // ✅ CORRECT - Device-specific conversion
+        // "encdata": PidDataConverter.convertWithDeviceType(
+        //   result.pidData ?? '',
+        //   selectedDevice.value,  // Pass the selected device value
+        // ),
+        // "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),
         // "encdata": encData,
         // "encdata": finalEncData,
         // "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
         // "encdata": base64Encode(utf8.encode(result.pidData ?? '')),  // Base64 encoded
         // "encdata": result.pidData,
       };
+      // Map<String, dynamic> body = PidDataConverter.build2FARequestBodyWithJsonBase64(
+      //   pidXml: result.pidData ?? '',
+      //   aadhaarNumber: aadhaarController.text,
+      //   latitude: homeScreenController.latitude.value.toString(),
+      //   longitude: homeScreenController.longitude.value.toString(),
+      //   deviceValue: selectedDevice.value,
+      //   requestId: generateRequestId(),
+      // );
 
+      ConsoleLog.printColor("PID Data===>>> ${result.pidData}", color: "yellow");
       ConsoleLog.printColor("Fingpay 2FA Request: ${jsonEncode(body)}", color: "yellow");
 
       var response = await ApiProvider().requestPostForApi(
@@ -4344,7 +4529,12 @@ class AepsController extends GetxController {
         "device": selectedDevice.value,
         "aadhar_no": aadhaarController.text,  // ✅ FIXED
         "skey": "TWOFACTORAUTH",
-        "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),
+        // ✅ CORRECT - Device-specific conversion
+        // "encdata": PidDataConverter.convertWithDeviceType(
+        //   result.pidData ?? '',
+        //   selectedDevice.value,  // Pass the selected device value
+        // ),
+        // "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),
         // "encdata": encData, //UIDAI_ERROR810 Missing biometric data as specified in Uses
         // "encdata": finalEncData,
         // "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
@@ -4450,7 +4640,12 @@ class AepsController extends GetxController {
           "primaryKeyId": otpReference.value?.primaryKeyId ?? "",
           "encodeFPTxnId": otpReference.value?.encodeFPTxnId ?? "",
         },
-        "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
+        // ✅ CORRECT - Device-specific conversion
+        // "encdata": PidDataConverter.convertWithDeviceType(
+        //   result.pidData ?? '',
+        //   selectedDevice.value,  // Pass the selected device value
+        // ),
+        // "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
         // "encdata": base64Encode(utf8.encode(result.pidData ?? '')),  // Base64 encoded
         // "encdata": result.pidData,
       };
@@ -4645,42 +4840,42 @@ class AepsController extends GetxController {
     }
   }
 
-  /// ✅ Mark Favorite Bank
-  Future<void> markFavoriteBank({
+  /// Mark/Unmark favorite bank with API call
+  Future<bool> markFavoriteBank({
+    required String bankIIN,
     required String bankId,
-    required String action,
+    required String action, // 'ADD' or 'REMOVE'
   }) async {
     try {
       isMarkFavoriteBankLoading.value = true;
 
-      // Check Internet
       bool isConnected = await ConnectionValidator.isConnected();
       if (!isConnected) {
-        CustomDialog.error(message: "No Internet Connection!");
-        return;
+        Fluttertoast.showToast(msg: "No Internet Connection!");
+        isMarkFavoriteBankLoading.value = false;
+        return false;
       }
 
-      ConsoleLog.printInfo("======>>>>> Token: ${userAuthToken.value}");
-      ConsoleLog.printInfo("======>>>>> Signature: ${userSignature.value}");
-
-      // Auth credentials check with reload
       if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
-        ConsoleLog.printError("Auth credentials are empty");
         await loadAuthCredentials();
       }
 
       if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
-        CustomDialog.error(message: "Authentication required!");
-        return;
+        Fluttertoast.showToast(msg: "Authentication required!");
+        isMarkFavoriteBankLoading.value = false;
+        return false;
       }
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
         "lat": homeScreenController.latitude.value.toString(),
         "long": homeScreenController.longitude.value.toString(),
+        "bank_iin": bankIIN,
         "bank_id": bankId,
-        "action": action,
+        "action": action, // 'ADD' or 'REMOVE'
       };
+
+      ConsoleLog.printColor("📤 markFavoriteBank Request: ${jsonEncode(body)}", color: "yellow");
 
       var response = await ApiProvider().requestPostForApi(
         WebApiConstant.API_URL_MARK_FAV_BANK,
@@ -4692,27 +4887,48 @@ class AepsController extends GetxController {
       isMarkFavoriteBankLoading.value = false;
 
       if (response != null && response.statusCode == 200) {
+        ConsoleLog.printColor("📥 markFavoriteBank Response: ${jsonEncode(response.data)}", color: "green");
+
         var data = response.data;
         if (data['Resp_code'] == 'RCS') {
-          // Update local list
+          // ✅ Update local state for immediate UI feedback
           final index = allBankList.indexWhere((b) => b.id == bankId);
           if (index != -1) {
+            final oldBank = allBankList[index];
+            // Create new AepsBank with updated isFav
             allBankList[index] = AepsBank(
-              id: allBankList[index].id,
-              bankName: allBankList[index].bankName,
-              bankIin: allBankList[index].bankIin,
+              id: oldBank.id,
+              bankName: oldBank.bankName,
+              bankIin: oldBank.bankIin,
               isFav: action == 'ADD' ? '1' : '0',
             );
-            filteredBankList.assignAll(allBankList);
           }
-          ConsoleLog.printSuccess("✅ Bank favorite updated");
+
+          // ✅ Update favorites list
+          favoritesList.clear();
+          favoritesList.addAll(allBankList.where((b) => b.isFav == '1'));
+
+          Fluttertoast.showToast(
+            msg: action == 'ADD' ? 'Added to favorites' : 'Removed from favorites',
+          );
+          return true;
+        } else {
+          Fluttertoast.showToast(msg: data['Resp_desc'] ?? 'Failed to update favorite');
+          return false;
         }
       }
+
+      Fluttertoast.showToast(msg: "Failed to update favorite");
+      return false;
+
     } catch (e) {
       isMarkFavoriteBankLoading.value = false;
       ConsoleLog.printError("❌ markFavoriteBank Error: $e");
+      Fluttertoast.showToast(msg: "Error updating favorite");
+      return false;
     }
   }
+
 
   /// ✅ Confirm Instantpay Transaction (Step 1 - Get Charges)
   Future<bool> confirmInstantpayTransaction({required String skey}) async {
@@ -4847,7 +5063,12 @@ class AepsController extends GetxController {
         "mobile_no": serviceMobileController.text,
         "txn_amt": serviceAmountController.text.isEmpty ? "0" : serviceAmountController.text,
         "device": serviceSelectedDevice.value,
-        "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
+        // ✅ CORRECT - Device-specific conversion
+        // "encdata": PidDataConverter.convertWithDeviceType(
+        //   result.pidData ?? '',
+        //   selectedDevice.value,  // Pass the selected device value
+        // ),
+        // // "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
         // "encdata": base64Encode(utf8.encode(result.pidData ?? '')),  // Base64 encoded
         // "encdata": result.pidData,
       };
@@ -4946,7 +5167,12 @@ class AepsController extends GetxController {
         "mobile_no": serviceMobileController.text,
         "txn_amt": serviceAmountController.text.isEmpty ? "0" : serviceAmountController.text,
         "device": serviceSelectedDevice.value,
-        "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
+        // ✅ CORRECT - Device-specific conversion
+        // "encdata": PidDataConverter.convertWithDeviceType(
+        //   result.pidData ?? '',
+        //   selectedDevice.value,  // Pass the selected device value
+        // ),
+        // "encdata": PidDataConverter.convertPidToEncdata(result.pidData ?? ''),  // ✅ Base64 JSON
         // "encdata": base64Encode(utf8.encode(result.pidData ?? '')),  // Base64 encoded
         // "encdata": result.pidData,
       };

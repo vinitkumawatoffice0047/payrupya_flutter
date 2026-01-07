@@ -180,6 +180,8 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
+import 'package:payrupya/main.dart';
+import 'package:talker_flutter/talker_flutter.dart';
 
 /// Console Print Utility with Colors 🎨
 /// Use ANSI escape codes to print colorful messages in the console.
@@ -206,6 +208,9 @@ class ConsoleLog {
 
     final colorCode = _colors[color.toLowerCase()] ?? _colors['yellow']!;
     log('$colorCode$text${_colors['reset']}');
+
+    // ✅ Send to Talker
+    talker.debug(text);
   }
 
   /// Success message (Green)
@@ -213,6 +218,9 @@ class ConsoleLog {
     if (!enableLogs) return;
 
     log('${_colors['green']}✅ SUCCESS: $message${_colors['reset']}');
+
+    // ✅ Send to Talker (Info logs usually appear green/blue)
+    talker.info('SUCCESS: $message');
   }
 
   /// Error message (Red)
@@ -220,6 +228,9 @@ class ConsoleLog {
     if (!enableLogs) return;
 
     log('${_colors['red']}❌ ERROR: $message${_colors['reset']}');
+
+    // ✅ Send to Talker (Yeh Talker UI mein Red dikhega)
+    talker.error(message);
   }
 
   /// Warning message (Yellow)
@@ -227,6 +238,9 @@ class ConsoleLog {
     if (!enableLogs) return;
 
     log('${_colors['yellow']}⚠️ WARNING: $message${_colors['reset']}');
+
+    // ✅ Send to Talker (Yellow/Orange in UI)
+    talker.warning(message);
   }
 
   /// Info message (Blue)
@@ -234,6 +248,9 @@ class ConsoleLog {
     if (!enableLogs) return;
 
     log('${_colors['blue']}ℹ️ INFO: $message${_colors['reset']}');
+
+    // ✅ Send to Talker
+    talker.verbose(message);
   }
 
   /// Custom tag log (e.g., [DEBUG], [API], etc.)
@@ -242,6 +259,9 @@ class ConsoleLog {
 
     final colorCode = _colors[color.toLowerCase()] ?? _colors['white']!;
     log('$colorCode[$tag] $message${_colors['reset']}');
+
+    // ✅ Send to Talker
+    talker.log(message, logLevel: LogLevel.debug);
   }
 
   /// 🧩 Pretty Print Full JSON Response with Colors (no truncation)
@@ -262,9 +282,16 @@ class ConsoleLog {
           _safePrint('$colorCode========== [$tag] ==========');
           _safePrint('$colorCode$data');
           _safePrint('$colorCode========== [END $tag] ==========$resetCode');
+
+          // Talker mein raw data bhejein
+          talker.debug("[$tag] $data");
           return;
         }
       }
+
+      // Talker handle karta hai Objects ko ache se, toh hum direct bhej sakte hain
+      // ✅ Send to Talker (Talker has built-in JSON formatter)
+      talker.debug("[$tag]", jsonData);
 
       final jsonStr = const JsonEncoder.withIndent('  ').convert(jsonData);
 
@@ -310,6 +337,10 @@ class ConsoleLog {
   static void printFullResponse(dynamic data, {String tag = 'FULL RESPONSE', String color = 'cyan'}) {
     if (!enableLogs) return;
 
+    // Simple redirect to printJsonResponse logic for Talker, but keep console logic separate if needed
+    // For simplicity, let's just log it to Talker
+    talker.debug("[$tag]", data);
+
     try {
       final colorCode = _colors[color.toLowerCase()] ?? _colors['white']!;
       final resetCode = _colors['reset']!;
@@ -350,6 +381,9 @@ class ConsoleLog {
   static void printObject(dynamic object, {String tag = 'OBJECT', String color = 'magenta'}) {
     if (!enableLogs) return;
 
+    // ✅ Talker mein object bhej do direct
+    talker.debug("[$tag]", object);
+
     try {
       final colorCode = _colors[color.toLowerCase()] ?? _colors['white']!;
       final resetCode = _colors['reset']!;
@@ -382,11 +416,13 @@ class ConsoleLog {
   static void enableAllLogs() {
     enableLogs = true;
     log('✅ Console Logs ENABLED');
+    talker.info('Console Logs ENABLED');
   }
 
   /// Logs ko OFF karo (Disable all logs)
   static void disableAllLogs() {
     log('❌ Console Logs DISABLED');
+    talker.info('Console Logs DISABLED');
     enableLogs = false;
   }
 
@@ -400,6 +436,7 @@ class ConsoleLog {
     enableLogs = !enableLogs;
     if (enableLogs) {
       log('✅ Console Logs ENABLED');
+      talker.info('Console Logs ENABLED');
     } else {
       log('❌ Console Logs DISABLED');
     }

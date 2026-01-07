@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -10,18 +12,37 @@ import 'controllers/login_controller.dart';
 import 'controllers/payrupya_home_screen_controller.dart';
 import 'controllers/session_manager.dart';
 import 'utils/ConsoleLog.dart';
+import 'package:talker_flutter/talker_flutter.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final talker = TalkerFlutter.init();
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
+  // 1. Zone Guarded use karein taaki saare errors pakad sakein
+  runZonedGuarded(() {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  ConsoleLog.enableLogs = kDebugMode;
+    ConsoleLog.enableLogs = kDebugMode;
+    ConsoleLog.printSuccess("✅ App initialized");
 
-  ConsoleLog.printSuccess("✅ App initialized");
+    // 2. Flutter Errors ko Talker mein bhejein
+    FlutterError.onError = (details) => talker.handle(details.exception, details.stack);
 
-  runApp(const MyApp());
+    runApp(const MyApp());
+  }, (error, stack) {
+    // 3. Platform errors ko Talker mein bhejein
+    talker.handle(error, stack);
+  });
 }
+// void main() {
+//   WidgetsFlutterBinding.ensureInitialized();
+//
+//   ConsoleLog.enableLogs = kDebugMode;
+//
+//   ConsoleLog.printSuccess("✅ App initialized");
+//
+//   runApp(const MyApp());
+// }
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -81,6 +102,8 @@ class _MyAppState extends State<MyApp> {
     ConsoleLog.printInfo("   - DmtWalletController");
     ConsoleLog.printInfo("   - AepsController");
     ConsoleLog.printInfo("   - PayrupyaHomeScreenController");
+    // Logs ko Talker mein bhi bhej sakte hain
+    talker.info("✅ Services initialized");
   }
 
   // This widget is the root of your application.
@@ -90,6 +113,12 @@ class _MyAppState extends State<MyApp> {
       title: 'PAYRUPYA',
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
+
+      // 4. Navigation Observer add karein (Screen changes log karne ke liye)
+      navigatorObservers: [
+        TalkerRouteObserver(talker),
+      ],
+
       theme: ThemeData(
         brightness: Brightness.light,
         primaryColor: Color(0xff80a8ff),
@@ -101,11 +130,24 @@ class _MyAppState extends State<MyApp> {
         scaffoldBackgroundColor: Color(0xff1a1a1a),
       ),
       themeMode: ThemeMode.system,
+      // 5. Builder mein TalkerWrapper lagayein
       builder: (context, child) {
-        return ActivityDetector(
-          child: child ?? SizedBox.shrink(),
+        // ActivityDetector ko TalkerWrapper ke andar rakhein
+        return TalkerWrapper(
+          talker: talker, // Talker instance pass karein
+          options: const TalkerWrapperOptions(
+            enableErrorAlerts: true, // Error aane par upar popup dikhayega
+          ),
+          child: ActivityDetector(
+            child: child ?? SizedBox.shrink(),
+          ),
         );
       },
+      // builder: (context, child) {
+      //   return ActivityDetector(
+      //     child: child ?? SizedBox.shrink(),
+      //   );
+      // },
       home: SplashScreen(),
     );
   }

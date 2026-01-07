@@ -50,16 +50,25 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
   Map<String, String>? selectedBank;
 
   // Device list
+  // final List<Map<String, String>> deviceList = [
+  //   {'name': 'Select Device', 'value': ''},
+  //   {'name': 'Mantra', 'value': 'MANTRA'},
+  //   {'name': 'Mantra MFS110', 'value': 'MFS110'},
+  //   {'name': 'Mantra Iris', 'value': 'MIS100V2'},
+  //   {'name': 'Morpho L0', 'value': 'MORPHO'},
+  //   {'name': 'Morpho L1', 'value': 'Idemia'},
+  //   {'name': 'TATVIK', 'value': 'TATVIK'},
+  //   {'name': 'Secugen', 'value': 'SecuGen Corp.'},
+  //   {'name': 'Startek', 'value': 'STARTEK'},
+  // ];
+  // Updated Device List - Only 4 devices as per Fingpay requirement (January 2026)
+  // Note: Face Authentication is MANDATORY for Fingpay 2FA
   final List<Map<String, String>> deviceList = [
     {'name': 'Select Device', 'value': ''},
-    {'name': 'Mantra', 'value': 'MANTRA'},
-    {'name': 'Mantra MFS110', 'value': 'MFS110'},
-    {'name': 'Mantra Iris', 'value': 'MIS100V2'},
-    {'name': 'Morpho L0', 'value': 'MORPHO'},
-    {'name': 'Morpho L1', 'value': 'Idemia'},
-    {'name': 'TATVIK', 'value': 'TATVIK'},
-    {'name': 'Secugen', 'value': 'SecuGen Corp.'},
-    {'name': 'Startek', 'value': 'STARTEK'},
+    {'name': 'Morpho L1', 'value': 'Idemia'},              // Morpho L1 Fingerprint
+    {'name': 'Mantra MFS110', 'value': 'MFS110'},          // Mantra MFS110 Fingerprint
+    {'name': 'Mantra IRIS', 'value': 'MIS100V2'},          // Mantra IRIS Scanner
+    {'name': 'Face Authentication', 'value': 'FACE_AUTH'}, // Face Auth (Mandatory for Fingpay 2FA)
   ];
 
   // Form controllers
@@ -92,6 +101,14 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
 
       await homeScreenController.checkFingpayUserOnboardStatus();
 
+      // ✅ FIX: If 2FA already done today, navigate directly without extra loading
+      if (aepsController.isFingpay2FACompleted.value &&
+          aepsController.canProceedToFingpayServices.value) {
+        isInitializing.value = false;  // Hide loading before navigation
+        // Use Get.off to replace current screen (no back button to loading)
+        Get.off(() => AepsChooseServiceScreen(aepsType: 'AEPS1'));
+        return;
+      }
       isInitializing.value = false;
     } catch (e) {
       ConsoleLog.printError("Error initializing AEPS One: $e");
@@ -406,7 +423,7 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
 
           // Authenticate Button
           _buildPrimaryButton(
-            label: 'Authenticate with Fingerprint',
+            label: 'Authenticate',
             onPressed: _initFingerprint2FA,
           ),
         ],
@@ -1587,8 +1604,9 @@ class _AepsOneScreenState extends State<AepsOneScreen> {
       return;
     }
 
+    ConsoleLog.printInfo('Selected Device: ${aepsController.selectedDevice.value}');
     // Call the biometric 2FA method
-    bool success = await aepsController.completeFingpay2FAWithBiometric();
+    bool success = await aepsController.completeFingpay2FAWithBiometric(aepsController.selectedDevice.value == "FACE_AUTH" ? true : false);
 
     if (success) {
       // Navigate to Choose Service Screen
