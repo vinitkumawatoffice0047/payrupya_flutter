@@ -4,25 +4,10 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:payrupya/controllers/aeps_controller.dart';
 import 'package:payrupya/controllers/payrupya_home_screen_controller.dart';
-import 'package:payrupya/models/get_profile_data_response_model.dart';
 import 'package:payrupya/utils/ConsoleLog.dart';
-import 'package:payrupya/view/categories_screen.dart';
-
-import '../models/get_all_my_bank_list_response_model.dart';
 import '../utils/global_utils.dart';
 import 'aeps_choose_service_screen.dart';
 
-// Import your controllers and services
-// import '../controllers/aeps_api_service.dart';
-// import 'aeps_choose_service_screen.dart';
-
-/// AEPS One Screen - Fingpay Integration
-/// This screen handles:
-/// 1. Check onboarding status
-/// 2. Onboarding form (if not onboarded)
-/// 3. OTP verification
-/// 4. eKYC authentication
-/// 5. Two-factor authentication
 class AepsOneScreen extends StatefulWidget {
   final bool showBackButton;
   
@@ -33,9 +18,6 @@ class AepsOneScreen extends StatefulWidget {
 }
 
 class _AepsOneScreenState extends State<AepsOneScreen> {
-  // Controller - Replace with your actual controller
-  // final AepsController aepsController = Get.put(AepsController());
-  // final PayrupyaHomeScreenController homeScreenController = Get.put(PayrupyaHomeScreenController());
   PayrupyaHomeScreenController get homeScreenController => Get.find<PayrupyaHomeScreenController>();
   AepsController get aepsController => Get.find<AepsController>();
 

@@ -7,7 +7,6 @@ import 'package:get/get.dart';
 import 'package:payrupya/models/check_fingpay_onboard_status_response_model.dart';
 import 'package:payrupya/models/check_instantpay_bio_auth_status_response_model.dart';
 import 'package:payrupya/models/check_instantpay_onboard_status_response_model.dart';
-import 'package:payrupya/view/home_screen.dart';
 import '../api/api_provider.dart';
 import '../api/web_api_constant.dart';
 import '../models/check_fingpay_auth_status_response_model.dart';

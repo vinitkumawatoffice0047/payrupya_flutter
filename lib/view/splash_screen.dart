@@ -1,17 +1,9 @@
-// import 'package:e_commerce_app/utils/global_utils.dart';
-// import 'package:e_commerce_app/view/login_screen.dart';
-// import 'package:e_commerce_app/view/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:payrupya/view/payrupya_main_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/app_shared_preferences.dart';
-import '../utils/comming_soon_dialog.dart';
 import '../utils/global_utils.dart';
 import 'onboarding_screen.dart';
-import 'other_users_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
