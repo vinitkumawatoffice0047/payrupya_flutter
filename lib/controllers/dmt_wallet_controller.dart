@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -264,6 +265,20 @@ class DmtWalletController extends GetxController {
   RxBool showConfirmation = false.obs;
 
   final GlobalKey<OtpInputFieldsState> deleteOtpKey = GlobalKey<OtpInputFieldsState>();
+
+  //It's all for Search Accounts in Add Sender Screen
+  Rx<TextEditingController> searchAccountController = TextEditingController().obs;
+  RxList<BeneficiaryData> searchSuggestions = <BeneficiaryData>[]. obs;
+  RxBool isSearching = false.obs;
+  RxString lastSearchQuery = ''.obs;
+  RxInt searchPageStart = 0.obs;
+  final int searchPageLimit = 10; // Items per API call
+  RxBool hasMoreSuggestions = true.obs;
+  RxBool isLoadingMore = false.obs;
+
+  // Add this Timer for debouncing
+  Timer? _searchDebounceTimer;
+  static const Duration _searchDebounceDelay = Duration(milliseconds: 400);
 
   //region generateRequestId
   String generateRequestId() {
@@ -708,6 +723,219 @@ class DmtWalletController extends GetxController {
       // CustomDialog.error(context: context, message: "Technical issue!");
     }
   }
+  //endregion
+
+  //region Search Accounts
+//   //region onSearchQueryChanged (with debounce)
+//   void onSearchQueryChanged(String query) {
+//     // Cancel previous timer
+//     _searchDebounceTimer?.cancel();
+//
+//     if (query.isEmpty) {
+//       searchSuggestions.clear();
+//       return;
+//     }
+//
+//     // Set new timer
+//     _searchDebounceTimer = Timer(_searchDebounceDelay, () {
+//       fetchAccountSuggestions(query);
+//     });
+//   }
+// //endregion
+
+//region fetchAccountSuggestions (Updated with pagination)
+  Future<void> fetchAccountSuggestions(String query, {bool reset = false}) async {
+    try {
+      if (query.length < 2) {
+        searchSuggestions.clear();
+        hasMoreSuggestions. value = true;
+        return;
+      }
+
+      // Reset page if new search
+      if (reset) {
+        searchPageStart.value = 0;
+        searchSuggestions.clear();
+        hasMoreSuggestions. value = true;
+      }
+
+      // Mark as searching/loading
+      if (reset) {
+        isSearching.value = true;
+      } else {
+        isLoadingMore.value = true;
+      }
+
+      lastSearchQuery.value = query;
+
+      // Check internet
+      bool isConnected = await ConnectionValidator.isConnected();
+      if (!isConnected) {
+        if (reset) isSearching.value = false;
+        else isLoadingMore.value = false;
+        return;
+      }
+
+      Map<String, dynamic> body = {
+        "request_id": generateRequestId(),
+        "lat": loginController.latitude. value. toString(),
+        "long": loginController.longitude.value. toString(),
+        "start":  searchPageStart.value.toString(),
+        "limit": searchPageLimit.toString(),
+        "searchby": query,
+      };
+
+      ConsoleLog.printColor("SEARCH SUGGESTIONS REQ:  $body");
+
+      var response = await ApiProvider().requestPostForApi(
+        WebApiConstant.API_URL_GET_ALL_BENEFICIARY_DETAILS,
+        body,
+        userAuthToken.value,
+        userSignature.value,
+      );
+
+      if (response != null && response.statusCode == 200) {
+        GetBeneficiaryListResponseModel suggestionResponse =
+        GetBeneficiaryListResponseModel.fromJson(response.data);
+
+        if (suggestionResponse.respCode == "RCS" && suggestionResponse.data != null) {
+          List<BeneficiaryData> newData = suggestionResponse.data!;
+
+          // If first page, replace.  If load more, append
+          if (reset || searchPageStart.value == 0) {
+            searchSuggestions.value = newData;
+          } else {
+            searchSuggestions.addAll(newData);
+          }
+
+          // Check if there are more results
+          // Agar items returned < limit, toh sab load ho gaya
+          if (newData.length < searchPageLimit) {
+            hasMoreSuggestions.value = false;
+            ConsoleLog.printSuccess("All suggestions loaded:  ${searchSuggestions.length} total");
+          } else {
+            hasMoreSuggestions.value = true;
+          }
+
+          ConsoleLog.printSuccess("Suggestions loaded: ${newData.length}, Total: ${searchSuggestions.length}");
+        } else {
+          if (reset) {
+            searchSuggestions.clear();
+          }
+          hasMoreSuggestions.value = false;
+        }
+      } else {
+        hasMoreSuggestions.value = false;
+      }
+
+      if (reset) {
+        isSearching.value = false;
+      } else {
+        isLoadingMore.value = false;
+      }
+
+    } catch (e) {
+      ConsoleLog.printError("SEARCH SUGGESTIONS ERROR: $e");
+      if (reset) {
+        searchSuggestions.clear();
+        isSearching.value = false;
+      } else {
+        isLoadingMore.value = false;
+      }
+      hasMoreSuggestions.value = false;
+    }
+  }
+//endregion
+
+  //region loadMoreAccountSuggestions
+  void loadMoreAccountSuggestions(String query) {
+    // Only load more if:
+    // 1. We have more data to fetch
+    // 2. Not already loading
+    if (hasMoreSuggestions. value && !isLoadingMore. value) {
+      searchPageStart.value += searchPageLimit;
+      fetchAccountSuggestions(query, reset: false);
+    }
+  }
+//endregion
+
+  //region resetSearch
+  void resetSearch() {
+    searchAccountController.value.clear();
+    searchSuggestions.clear();
+    searchPageStart.value = 0;
+    hasMoreSuggestions.value = true;
+    lastSearchQuery.value = '';
+    isSearching.value = false;
+    isLoadingMore.value = false;
+  }
+//endregion
+
+  //region onSearchQueryChanged (Updated with reset)
+  void onSearchQueryChanged(String query) {
+    _searchDebounceTimer?. cancel();
+
+    if (query.isEmpty) {
+      searchSuggestions.clear();
+      searchPageStart.value = 0;
+      hasMoreSuggestions.value = true;
+      return;
+    }
+
+    _searchDebounceTimer = Timer(_searchDebounceDelay, () {
+      fetchAccountSuggestions(query, reset: true); // Reset = true for new search
+    });
+  }
+//endregion
+
+  //region onSuggestionSelected (Updated)
+  void onSuggestionSelected(BeneficiaryData selectedAccount) {
+    try {
+      senderNameController.value. text = selectedAccount.name ??  '';
+      senderMobileController.value.text = selectedAccount.mobile ?? '';
+      beneNameController.value.text = selectedAccount.name ?? '';
+      beneAccountController.value.text = selectedAccount. accountNo ?? '';
+      beneIfscController.value.text = selectedAccount.ifsc ?? '';
+      selectedBank.value = selectedAccount.bankName ?? '';
+
+      // Clear all search state
+      resetSearch();
+
+      Fluttertoast.showToast(
+        msg: "${selectedAccount.name} selected",
+        gravity: ToastGravity.TOP,
+      );
+
+    } catch (e) {
+      ConsoleLog.printError("Selection error: $e");
+    }
+  }
+//endregion
+// //region onSuggestionSelected
+//   void onSuggestionSelected(BeneficiaryData selectedAccount) {
+//     try {
+//       // Auto-fill fields
+//       senderNameController.value. text = selectedAccount.name ?? '';
+//       senderMobileController.value.text = selectedAccount.mobile ?? ''; // If available
+//       beneNameController.value.text = selectedAccount.name ?? '';
+//       beneAccountController.value.text = selectedAccount.accountNo ?? '';
+//       beneIfscController.value.text = selectedAccount.ifsc ?? '';
+//       selectedBank.value = selectedAccount.bankName ?? '';
+//
+//       // Clear suggestions
+//       searchSuggestions.clear();
+//
+//       // Optional:  Verify account immediately
+//       Fluttertoast.showToast(
+//         msg: "${selectedAccount.name} selected",
+//         gravity: ToastGravity.TOP,
+//       );
+//
+//     } catch (e) {
+//       ConsoleLog.printError("Selection error: $e");
+//     }
+//   }
+// //endregion
   //endregion
 
   //region getBeneficiaryList
@@ -2571,6 +2799,8 @@ class DmtWalletController extends GetxController {
     transferModeController.value.dispose();
     txnPinController.value.dispose();
     deleteOtpController.value.dispose();
+    _searchDebounceTimer?.cancel();
+    searchAccountController.value.dispose();
     super.onClose();
   }
   //endregion

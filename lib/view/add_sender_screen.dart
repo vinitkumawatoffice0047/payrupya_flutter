@@ -1073,6 +1073,7 @@ import 'package:payrupya/api/api_provider.dart';
 import '../controllers/dmt_wallet_controller.dart';
 import '../controllers/login_controller.dart';
 import '../controllers/signup_controller.dart';
+import '../models/get_beneficiary_list_response_model.dart';
 import '../models/transfer_money_response_model.dart';
 import '../utils/ConsoleLog.dart';
 import '../utils/custom_loading.dart';
@@ -2014,7 +2015,223 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                 // //endregion
                 //endregion
               ],
-              SizedBox(height: 10),
+              // SizedBox(height: 10),
+            ],
+          ),
+        ),
+
+          SizedBox(height: 10,),
+
+          Container(
+          padding: EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 15,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              //region SEARCH ACCOUNTS SECTION
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Color(0xFFF5F9FD),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Color(0xFFE3F0FF)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Search Existing Account',
+                      style: GoogleFonts.albertSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xff1B1C1C),
+                      ),
+                    ),
+                    SizedBox(height: 12),
+
+                    // Search Input Field
+                    Stack(
+                      children: [
+                        GlobalUtils.CustomTextField(
+                          label: "Search Account",
+                          showLabel: false,
+                          controller: dmtController.searchAccountController. value,
+                          placeholder: "Search by name, mobile, or account",
+                          height: GlobalUtils.screenWidth * (60 / 393),
+                          width: GlobalUtils.screenWidth * 0.9,
+                          backgroundColor: Colors.white,
+                          borderColor: Color(0xffE2E5EC),
+                          borderRadius: 16,
+                          placeholderStyle: GoogleFonts.albertSans(
+                            fontSize: GlobalUtils.screenWidth * (14 / 393),
+                            color: Color(0xFF6B707E),
+                          ),
+                          inputTextStyle: GoogleFonts.albertSans(
+                            fontSize: GlobalUtils.screenWidth * (14 / 393),
+                            color:  Color(0xFF1B1C1C),
+                          ),
+                          onChanged: (value) {
+                            dmtController.onSearchQueryChanged(value);
+                          },
+                        ),
+                        // Clear button
+                        Obx(() => dmtController.searchAccountController.value.text.isNotEmpty
+                            ?  Positioned(
+                          right: 12,
+                          top: 0,
+                          bottom: 0,
+                          child: GestureDetector(
+                            onTap: () {
+                              dmtController.resetSearch();
+                            },
+                            child: Icon(Icons.clear, color: Color(0xFF6B707E)),
+                          ),
+                        )
+                            : SizedBox. shrink()
+                        )
+                      ],
+                    ),
+
+                    SizedBox(height: 12),
+
+                    // Search Suggestions List with Infinite Scroll
+                    Obx(() {
+                      // Initial Loading State
+                      if (dmtController.isSearching.value && dmtController.searchSuggestions.isEmpty) {
+                        return Container(
+                          padding: EdgeInsets.all(16),
+                          alignment: Alignment.center,
+                          child: SizedBox(
+                            height: 40,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0054D3)),
+                            ),
+                          ),
+                        );
+                      }
+
+                      // No suggestions
+                      if (dmtController.searchSuggestions.isEmpty) {
+                        return SizedBox. shrink();
+                      }
+
+                      // Suggestions List
+                      return NotificationListener<ScrollNotification>(
+                        onNotification: (ScrollNotification scrollInfo) {
+                          // Check if user scrolled to bottom
+                          if (scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent &&
+                              ! dmtController.isLoadingMore.value &&
+                              dmtController.hasMoreSuggestions.value) {
+
+                            // Load more suggestions
+                            ConsoleLog.printColor("📍 Bottom reached, loading more...");
+                            dmtController.loadMoreAccountSuggestions(
+                                dmtController.lastSearchQuery.value
+                            );
+                          }
+                          return true;
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Color(0xFFE2E5EC)),
+                          ),
+                          constraints: BoxConstraints(
+                            maxHeight: GlobalUtils.screenHeight * 0.4, // Max height for list
+                          ),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            physics: ClampingScrollPhysics(),
+                            itemCount: dmtController.searchSuggestions.length + 1, // +1 for footer
+                            separatorBuilder: (_, __) => Divider(height: 1, color: Color(0xFFE2E5EC)),
+                            itemBuilder: (context, index) {
+                              // Regular items
+                              if (index < dmtController.searchSuggestions. length) {
+                                final account = dmtController.searchSuggestions[index];
+                                return buildSearchSuggestionTile(account);
+                              }
+
+                              // Footer (Loading indicator or Load More button)
+                              if (dmtController.isLoadingMore. value) {
+                                return Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                  child: SizedBox(
+                                    height:  30,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0054D3)),
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              // Show Load More button if more data available
+                              if (dmtController.hasMoreSuggestions.value) {
+                                return Padding(
+                                  padding:  EdgeInsets.symmetric(vertical: 12),
+                                  child:  Center(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        dmtController.loadMoreAccountSuggestions(
+                                            dmtController.lastSearchQuery. value
+                                        );
+                                      },
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 16, vertical:  8),
+                                        decoration:  BoxDecoration(
+                                          color: Color(0xFFE3F0FF),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          'Load More',
+                                          style: GoogleFonts.albertSans(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF0054D3),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              // No more data message
+                              return Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Center(
+                                  child: Text(
+                                    'All results loaded (${dmtController.searchSuggestions.length} total)',
+                                    style: GoogleFonts.albertSans(
+                                      fontSize: 12,
+                                      color: Color(0xFF6B707E),
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+              // SizedBox(height: 20),
+              //endregion
             ],
           ),
         ),
@@ -2024,6 +2241,74 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
   }
 
   // Helper Methods...
+  // Helper widget for suggestion tile
+  Widget buildSearchSuggestionTile(BeneficiaryData account) {
+    return InkWell(
+      onTap: () {
+        dmtController.onSuggestionSelected(account);
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      child:  Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Color(0xFFE3F0FF),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      (account.name ?? '? ')[0]. toUpperCase(),
+                      style: GoogleFonts.albertSans(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0054D3),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment:  CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        account.name ??  'Unknown',
+                        style: GoogleFonts.albertSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight. w600,
+                          color:  Color(0xFF1B1C1C),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '${account.accountNo ?? ''} • ${account.bankName ?? ''}',
+                        style: GoogleFonts.albertSans(
+                          fontSize: 12,
+                          color: Color(0xFF6B707E),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF6B707E)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void showSearchableDropdown(BuildContext context, String title, RxList<String> items, RxString selectedValue, Function(String) onSelect) {
     TextEditingController searchController = TextEditingController();
     RxList<String> filteredItems = RxList<String>.from(items);
