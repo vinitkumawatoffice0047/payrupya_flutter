@@ -67,6 +67,8 @@ class WebApiConstant{
   static const String API_URL_GET_RECENT_TXN_DATA = "${BASE_URL}Fetch/getRecentTxnData";
   static const String API_URL_MARK_FAV_BANK = "${BASE_URL}Action/markFavBank";
 
+  //Transaction History APIs
+  static const String API_URL_GET_TRANSACTION_HISTORY = "${BASE_URL}Fetch/getTransactionHistory";
 
 
 
