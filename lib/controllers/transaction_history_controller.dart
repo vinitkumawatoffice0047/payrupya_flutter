@@ -75,8 +75,10 @@ class TransactionHistoryController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    ConsoleLog.printColor("========== TransactionHistoryController onInit CALLED ==========", color: "red");
     loadAuthCredentials();
     _initializeDefaultDates();
+    ConsoleLog.printColor("After _initializeDefaultDates - fromDate: ${DateFormat('yyyy-MM-dd').format(fromDate.value)}", color: "red");
   }
 
   //region generateRequestId
@@ -101,9 +103,12 @@ class TransactionHistoryController extends GetxController {
 
   //region _initializeDefaultDates
   void _initializeDefaultDates() {
+    ConsoleLog.printColor("_initializeDefaultDates CALLED - RESETTING TO TODAY", color: "red");
     DateTime now = DateTime.now();
     fromDate.value = DateTime(now.year, now.month, now.day);
-    toDate.value = DateTime(now. year, now.month, now. day, 23, 59, 59);
+    toDate.value = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    selectedDateRange.value = 'Today';
+    ConsoleLog.printColor("_initializeDefaultDates SET - fromDate: ${DateFormat('yyyy-MM-dd').format(fromDate.value)}, toDate: ${DateFormat('yyyy-MM-dd').format(toDate.value)}", color: "red");
   }
   //endregion
 
@@ -114,23 +119,34 @@ class TransactionHistoryController extends GetxController {
   //endregion
 
   //region fetchTransactionHistory
-  Future<void> fetchTransactionHistory({bool reset = false, bool preserveDates = false}) async {
+  Future<void> fetchTransactionHistory({bool reset = false, bool resetDates = false}) async {
     try {
+      // ✅ DEBUG: Log incoming parameters and current date values
+      ConsoleLog.printColor("fetchTransactionHistory called - reset: $reset, resetDates: $resetDates", color: "cyan");
+      ConsoleLog.printColor("CURRENT DATE VALUES - fromDate: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(fromDate.value)}, toDate: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(toDate.value)}", color: "cyan");
+
       if (reset) {
         isInitialLoading.value = true;
         allTransactions.clear();
         filteredTransactions.clear();
 
-        selectedServiceFilter.value = 'All';
-        selectedStatusFilter.value = 'All';
+        // ✅ Don't reset service/status filters - only reset if explicitly needed
+        // selectedServiceFilter.value = 'All';
+        // selectedStatusFilter.value = 'All';
         searchQuery.value = '';
         searchController.value.clear();
 
-        // Only reset dates if preserveDates is false
-        if (!preserveDates) {
+        // ✅ Only reset dates if explicitly requested
+        if (resetDates) {
+          ConsoleLog.printColor("resetDates is TRUE - calling _initializeDefaultDates()", color: "red");
           _initializeDefaultDates();
+        } else {
+          ConsoleLog.printColor("resetDates is FALSE - keeping current dates", color: "green");
         }
       }
+
+      // ✅ DEBUG: Log date values that will be sent to API
+      ConsoleLog.printColor("DATES FOR API - fromDate: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(fromDate.value)}, toDate: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(toDate.value)}", color: "green");
 
       if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
         await loadAuthCredentials();
@@ -241,7 +257,10 @@ class TransactionHistoryController extends GetxController {
 
 //region quickDateFilter (✅ Updated)
   void quickDateFilter(String period) {
+    ConsoleLog.printColor("========== quickDateFilter CALLED with period: $period ==========", color: "magenta");
+    
     DateTime now = DateTime.now();
+    ConsoleLog.printColor("Current DateTime.now(): $now", color: "magenta");
 
     // ✅ Update selected date range first
     selectedDateRange.value = period;
@@ -265,7 +284,9 @@ class TransactionHistoryController extends GetxController {
     customFromDate.value = fromDate.value;
     customToDate.value = toDate.value;
 
-    ConsoleLog.printInfo("Quick date filter: $period - From: ${DateFormat('dd-MM-yyyy').format(fromDate.value)}, To: ${DateFormat('dd-MM-yyyy').format(toDate.value)}");
+    ConsoleLog.printColor("quickDateFilter SET - fromDate: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(fromDate.value)}", color: "green");
+    ConsoleLog.printColor("quickDateFilter SET - toDate: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(toDate.value)}", color: "green");
+    ConsoleLog.printColor("========== quickDateFilter END ==========", color: "magenta");
   }
 //endregion
 

@@ -20,10 +20,13 @@ class _TransactionScreenState extends State<TransactionScreen> {
   @override
   void initState() {
     super.initState();
+    ConsoleLog.printColor("========== TransactionScreen initState CALLED ==========", color: "blue");
     controller = Get.put(TransactionHistoryController());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.fetchTransactionHistory(reset: true);
+      ConsoleLog.printColor("postFrameCallback - calling fetchTransactionHistory", color: "blue");
+      // ✅ Reset dates on initial screen load
+      controller.fetchTransactionHistory(reset: true, resetDates: true);
     });
   }
 
@@ -593,7 +596,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                             Get.back();
                             
                             // ✅ Fetch with reset dates (today)
-                            controller.fetchTransactionHistory(reset: true);
+                            controller.fetchTransactionHistory(reset: true, resetDates: true);
                           },
                           style: OutlinedButton.styleFrom(
                             padding: EdgeInsets.symmetric(vertical: 12),
@@ -617,21 +620,29 @@ class _TransactionScreenState extends State<TransactionScreen> {
                         child: GlobalUtils.CustomButton(
                           text: 'Apply',
                           onPressed: () {
+                            ConsoleLog.printColor("========== APPLY BUTTON PRESSED ==========", color: "yellow");
+                            ConsoleLog.printColor("selectedDateRange: ${controller.selectedDateRange.value}", color: "yellow");
+                            ConsoleLog.printColor("fromDate BEFORE apply: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(controller.fromDate.value)}", color: "yellow");
+                            ConsoleLog.printColor("toDate BEFORE apply: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(controller.toDate.value)}", color: "yellow");
+                            
                             // ✅ If custom date range is shown, apply it
                             if (controller.showCustomDateRange.value) {
+                              ConsoleLog.printColor("Custom date range is shown - updating custom dates", color: "yellow");
                               controller.updateCustomDateRange(
                                 controller.customFromDate.value,
                                 controller.customToDate.value,
                               );
                             }
-                            ConsoleLog.printInfo(
-                                "Filters applied - From: ${DateFormat('dd-MM-yyyy').format(controller.fromDate.value)}, To: ${DateFormat('dd-MM-yyyy').format(controller.toDate.value)}");
+                            
+                            ConsoleLog.printColor("fromDate AFTER custom update: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(controller.fromDate.value)}", color: "yellow");
+                            ConsoleLog.printColor("toDate AFTER custom update: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(controller.toDate.value)}", color: "yellow");
                             
                             // ✅ Close bottom sheet first, then fetch
                             Get.back();
                             
-                            // ✅ Fetch transaction history with selected date range
-                            controller.fetchTransactionHistory(reset: true, preserveDates: true);
+                            ConsoleLog.printColor("Calling fetchTransactionHistory with resetDates: false", color: "yellow");
+                            // ✅ Fetch transaction history with selected date range (don't reset dates)
+                            controller.fetchTransactionHistory(reset: true, resetDates: false);
                           },
                           width: double.infinity,
                           height: 48,
