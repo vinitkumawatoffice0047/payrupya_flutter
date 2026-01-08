@@ -107,24 +107,26 @@ class _TransactionScreenState extends State<TransactionScreen> {
         children: [
           Expanded(
             child: Stack(
+              alignment: Alignment.centerRight,
               children: [
                 GlobalUtils.CustomTextField(
                   label: "Search",
                   showLabel: false,
-                  controller: controller.searchController. value,
-                  placeholder: "Search TXN ID, Service.. .",
-                  height: 48,
+                  controller: controller.searchController.value,
+                  placeholder: "Search TXN ID, Service...",
+                  height: GlobalUtils.screenWidth * (60 / 393),
                   width: double.infinity,
-                  backgroundColor: Color(0xFFF5F7FA),
+                  backgroundColor: Colors.white,
                   borderColor: Color(0xFFE2E5EC),
-                  borderRadius: 14,
+                  borderRadius: 16,
+                  prefixIcon: Icon(Icons.search, color: Color(0xFF6B707E), size: 20),
                   placeholderStyle: GoogleFonts.albertSans(
-                    fontSize: 13,
+                    fontSize: GlobalUtils.screenWidth * (14 / 393),
                     color: Color(0xFF6B707E),
                   ),
                   inputTextStyle: GoogleFonts.albertSans(
-                    fontSize:  13,
-                    color:  Color(0xFF1B1C1C),
+                    fontSize: GlobalUtils.screenWidth * (14 / 393),
+                    color: Color(0xFF1B1C1C),
                   ),
                   onChanged: (value) {
                     controller.onSearchChanged(value);
@@ -134,22 +136,26 @@ class _TransactionScreenState extends State<TransactionScreen> {
                     FocusManager.instance.primaryFocus?.unfocus();
                   },
                 ),
-                // Clear button
-                Obx(() => controller.searchController.value.text.isNotEmpty
-                    ?  Positioned(
-                  right: 12,
-                  top: 0,
-                  bottom: 0,
-                  child: GestureDetector(
-                    onTap: () {
-                      controller.searchController.value.clear();
-                      controller.onSearchChanged('');
-                    },
-                    child: Icon(Icons.clear,
-                        color: Color(0xFF6B707E), size: 20),
-                  ),
-                )
-                    : SizedBox. shrink()),
+                // Clear button - positioned over the text field
+                Obx(() => controller.searchQuery.value.isNotEmpty
+                    ? Positioned(
+                        right: 12,
+                        child: GestureDetector(
+                          onTap: () {
+                            controller.searchController.value.clear();
+                            controller.onSearchChanged('');
+                          },
+                          child: Container(
+                            padding: EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFF5F7FA),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.clear, color: Color(0xFF6B707E), size: 18),
+                          ),
+                        ),
+                      )
+                    : SizedBox.shrink()),
               ],
             ),
           ),
@@ -157,11 +163,11 @@ class _TransactionScreenState extends State<TransactionScreen> {
           GestureDetector(
             onTap: () => _showFilterBottomSheet(),
             child: Container(
-              width: 48,
-              height: 48,
+              width: GlobalUtils.screenWidth * (60 / 393),
+              height: GlobalUtils.screenWidth * (60 / 393),
               decoration: BoxDecoration(
-                color: Color(0xFFF5F7FA),
-                borderRadius: BorderRadius.circular(14),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Color(0xFFE2E5EC)),
               ),
               child: Icon(Icons.tune_rounded, color: Color(0xFF0054D3), size: 24),
@@ -357,8 +363,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   ),
                   SizedBox(height: 12),
 
-                  // Quick filters
-                  Wrap(
+                  // Quick filters - Wrapped with Obx for reactive updates
+                  Obx(() => Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: ['Today', 'Last 7 Days', 'Last 30 Days']
@@ -367,23 +373,23 @@ class _TransactionScreenState extends State<TransactionScreen> {
                       return GestureDetector(
                         onTap: () {
                           controller.quickDateFilter(option);
-                          controller.showCustomDateRange. value = false;
+                          controller.showCustomDateRange.value = false;
                         },
                         child: Container(
                           padding:
-                          EdgeInsets.symmetric(horizontal: 14, vertical:  8),
-                          decoration:  BoxDecoration(
+                          EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
                             color: isSelected
                                 ? Color(0xFF0054D3)
                                 : Color(0xFFF5F7FA),
-                            borderRadius:  BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(20),
                             border: isSelected
-                                ?  null
+                                ? null
                                 : Border.all(color: Color(0xFFE2E5EC)),
                           ),
                           child: Text(
                             option,
-                            style: GoogleFonts. albertSans(
+                            style: GoogleFonts.albertSans(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: isSelected
@@ -394,7 +400,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                         ),
                       );
                     }).toList(),
-                  ),
+                  )),
                   SizedBox(height: 16),
 
                   // ✅ Custom date range section
@@ -714,26 +720,31 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 //endregion
 
-//region _isDateRangeSelected (✅ NEW - Helper method)
+//region _isDateRangeSelected (✅ FIXED - Helper method with proper date comparison)
   bool _isDateRangeSelected(String period) {
     DateTime now = DateTime.now();
     DateTime todayStart = DateTime(now.year, now.month, now.day);
+    DateTime todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+    // Get the controller's current date range
+    DateTime currentFromDate = controller.fromDate.value;
+    DateTime currentToDate = controller.toDate.value;
+
+    // Helper to compare only year, month, day
+    bool isSameDay(DateTime d1, DateTime d2) {
+      return d1.year == d2.year && d1.month == d2.month && d1.day == d2.day;
+    }
 
     switch (period) {
       case 'Today':
-        return controller.fromDate.value. year == todayStart.year &&
-            controller.fromDate.value.month == todayStart.month &&
-            controller.fromDate.value.day == todayStart.day;
+        // Check if fromDate is today and toDate is today
+        return isSameDay(currentFromDate, todayStart) && isSameDay(currentToDate, todayEnd);
       case 'Last 7 Days':
-        DateTime sevenDaysAgo = now. subtract(Duration(days: 7));
-        return controller.fromDate.value.year == sevenDaysAgo.year &&
-            controller.fromDate.value.month == sevenDaysAgo. month &&
-            controller.fromDate.value.day == sevenDaysAgo.day;
+        DateTime sevenDaysAgo = todayStart.subtract(Duration(days: 7));
+        return isSameDay(currentFromDate, sevenDaysAgo) && isSameDay(currentToDate, todayEnd);
       case 'Last 30 Days':
-        DateTime thirtyDaysAgo = now.subtract(Duration(days: 30));
-        return controller.fromDate.value. year == thirtyDaysAgo.year &&
-            controller.fromDate.value.month == thirtyDaysAgo.month &&
-            controller.fromDate.value. day == thirtyDaysAgo.day;
+        DateTime thirtyDaysAgo = todayStart.subtract(Duration(days: 30));
+        return isSameDay(currentFromDate, thirtyDaysAgo) && isSameDay(currentToDate, todayEnd);
       default:
         return false;
     }
