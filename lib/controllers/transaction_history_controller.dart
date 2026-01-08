@@ -111,12 +111,12 @@ class TransactionHistoryController extends GetxController {
   //endregion
 
   //region fetchTransactionHistory
-  Future<void> fetchTransactionHistory({bool reset = false}) async {
+  Future<void> fetchTransactionHistory({bool reset = false, bool preserveDates = false}) async {
     try {
       if (reset) {
         isInitialLoading.value = true;
         allTransactions.clear();
-        filteredTransactions. clear();
+        filteredTransactions.clear();
 
         selectedServiceFilter.value = 'All';
         selectedStatusFilter.value = 'All';
@@ -124,6 +124,10 @@ class TransactionHistoryController extends GetxController {
         searchController.value.clear();
 
         _initializeDefaultDates();
+        // Only reset dates if preserveDates is false
+        if (!preserveDates) {
+          _initializeDefaultDates();
+        }
       }
 
       if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
@@ -220,15 +224,16 @@ class TransactionHistoryController extends GetxController {
   void updateCustomDateRange(DateTime from, DateTime to) {
     customFromDate.value = from;
     customToDate.value = to;
-    fromDate.value = from;
-    toDate.value = to;
+    // Set fromDate to start of day and toDate to end of day
+    fromDate.value = DateTime(from.year, from.month, from.day);
+    toDate.value = DateTime(to.year, to.month, to.day, 23, 59, 59);
 
     ConsoleLog.printInfo(
-        "Custom date range set: ${DateFormat('dd-MM-yyyy').format(from)} to ${DateFormat('dd-MM-yyyy').format(to)}"
+        "Custom date range set: ${DateFormat('dd-MM-yyyy').format(fromDate.value)} to ${DateFormat('dd-MM-yyyy').format(toDate.value)}"
     );
 
     // ✅ Apply filters and fetch new data
-    fetchTransactionHistory(reset: true);
+    fetchTransactionHistory(reset: true, preserveDates: true);
   }
 //endregion
 
@@ -244,20 +249,23 @@ class TransactionHistoryController extends GetxController {
         customToDate.value = toDate.value;
         break;
       case 'Last 7 Days':
-        fromDate.value = now.subtract(Duration(days: 7));
+        fromDate.value = DateTime(now.year, now.month, now.day).subtract(Duration(days: 7));
         toDate.value = DateTime(now.year, now.month, now.day, 23, 59, 59);
         customFromDate.value = fromDate.value;
         customToDate.value = toDate.value;
         break;
       case 'Last 30 Days':
-        fromDate.value = now. subtract(Duration(days: 30));
-        toDate.value = DateTime(now.year, now. month, now.day, 23, 59, 59);
+        fromDate.value = DateTime(now.year, now.month, now.day).subtract(Duration(days: 30));
+        toDate.value = DateTime(now.year, now.month, now.day, 23, 59, 59);
         customFromDate.value = fromDate.value;
         customToDate.value = toDate.value;
         break;
     }
 
-    fetchTransactionHistory(reset: true);
+    ConsoleLog.printInfo("Quick date filter: $period - From: ${DateFormat('dd-MM-yyyy').format(fromDate.value)}, To: ${DateFormat('dd-MM-yyyy').format(toDate.value)}");
+
+    // Preserve dates when fetching - don't reset them
+    fetchTransactionHistory(reset: true, preserveDates: true);
   }
 //endregion
 
