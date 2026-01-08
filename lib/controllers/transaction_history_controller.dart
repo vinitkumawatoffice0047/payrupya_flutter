@@ -65,9 +65,12 @@ class TransactionHistoryController extends GetxController {
   bool pendingExternalReturnCleanup = false;
 
   // ✅ Date range filter state
-  RxBool showCustomDateRange = false. obs;
+  RxBool showCustomDateRange = false.obs;
   Rx<DateTime> customFromDate = DateTime.now().obs;
   Rx<DateTime> customToDate = DateTime.now().obs;
+  
+  // ✅ Track selected quick date filter (Today, Last 7 Days, Last 30 Days, Custom)
+  RxString selectedDateRange = 'Today'.obs;
 
   @override
   void onInit() {
@@ -227,12 +230,12 @@ class TransactionHistoryController extends GetxController {
     fromDate.value = DateTime(from.year, from.month, from.day);
     toDate.value = DateTime(to.year, to.month, to.day, 23, 59, 59);
 
+    // ✅ Mark as custom date range
+    selectedDateRange.value = 'Custom';
+
     ConsoleLog.printInfo(
         "Custom date range set: ${DateFormat('dd-MM-yyyy').format(fromDate.value)} to ${DateFormat('dd-MM-yyyy').format(toDate.value)}"
     );
-
-    // ✅ Apply filters and fetch new data - preserve dates
-    fetchTransactionHistory(reset: true, preserveDates: true);
   }
 //endregion
 
@@ -240,31 +243,29 @@ class TransactionHistoryController extends GetxController {
   void quickDateFilter(String period) {
     DateTime now = DateTime.now();
 
+    // ✅ Update selected date range first
+    selectedDateRange.value = period;
+
     switch (period) {
       case 'Today':
         fromDate.value = DateTime(now.year, now.month, now.day);
         toDate.value = DateTime(now.year, now.month, now.day, 23, 59, 59);
-        customFromDate.value = fromDate.value;
-        customToDate.value = toDate.value;
         break;
       case 'Last 7 Days':
         fromDate.value = DateTime(now.year, now.month, now.day).subtract(Duration(days: 7));
         toDate.value = DateTime(now.year, now.month, now.day, 23, 59, 59);
-        customFromDate.value = fromDate.value;
-        customToDate.value = toDate.value;
         break;
       case 'Last 30 Days':
         fromDate.value = DateTime(now.year, now.month, now.day).subtract(Duration(days: 30));
         toDate.value = DateTime(now.year, now.month, now.day, 23, 59, 59);
-        customFromDate.value = fromDate.value;
-        customToDate.value = toDate.value;
         break;
     }
 
-    ConsoleLog.printInfo("Quick date filter: $period - From: ${DateFormat('dd-MM-yyyy').format(fromDate.value)}, To: ${DateFormat('dd-MM-yyyy').format(toDate.value)}");
+    // ✅ Sync custom date pickers with selected range
+    customFromDate.value = fromDate.value;
+    customToDate.value = toDate.value;
 
-    // Preserve dates when fetching - don't reset them
-    fetchTransactionHistory(reset: true, preserveDates: true);
+    ConsoleLog.printInfo("Quick date filter: $period - From: ${DateFormat('dd-MM-yyyy').format(fromDate.value)}, To: ${DateFormat('dd-MM-yyyy').format(toDate.value)}");
   }
 //endregion
 
@@ -328,7 +329,10 @@ class TransactionHistoryController extends GetxController {
   void resetFilters() {
     selectedServiceFilter.value = 'All';
     selectedStatusFilter.value = 'All';
+    selectedDateRange.value = 'Today';
     _initializeDefaultDates();
+    customFromDate.value = fromDate.value;
+    customToDate.value = toDate.value;
     searchQuery.value = '';
     searchController.value.clear();
     _applyFilters();
