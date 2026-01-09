@@ -20,79 +20,88 @@ class _TransactionScreenState extends State<TransactionScreen> {
   @override
   void initState() {
     super.initState();
+    ConsoleLog.printColor("========== TransactionScreen initState CALLED ==========", color: "blue");
     controller = Get.put(TransactionHistoryController());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.fetchTransactionHistory(reset: true);
+      ConsoleLog.printColor("postFrameCallback - calling fetchTransactionHistory", color: "blue");
+      // ✅ Reset dates on initial screen load
+      controller.fetchTransactionHistory(reset: true, resetDates: true);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFF5F7FA),
-      appBar: AppBar(
-        backgroundColor: Color(0xFF4A90E2),
-        elevation: 0,
-        title: Text(
-          'Transactions',
-          style: GoogleFonts.albertSans(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        centerTitle: false,
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Search & Filter Bar
-            _buildSearchAndFilterBar(),
-
-            // Transactions List
-            Expanded(
-              child:  Obx(() {
-                if (controller.isInitialLoading.value) {
-                  return Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xFF0054D3),
-                    ),
-                  );
-                }
-
-                if (controller.filteredTransactions.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.receipt_long_outlined,
-                            size: 64, color: Colors.grey[300]),
-                        SizedBox(height: 16),
-                        Text(
-                          'No Transactions Found',
-                          style: GoogleFonts.albertSans(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF6B707E),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical:  12),
-                  itemCount: controller.filteredTransactions.length,
-                  itemBuilder: (context, index) {
-                    final txn = controller.filteredTransactions[index];
-                    return _buildTransactionTile(txn);
-                  },
-                );
-              }),
+    return GestureDetector(
+      // for manage multiple text field keyboard and cursor
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      child: Scaffold(
+        backgroundColor: Color(0xFFF5F7FA),
+        appBar: AppBar(
+          backgroundColor: Color(0xFF4A90E2),
+          elevation: 0,
+          title: Text(
+            'Transactions',
+            style: GoogleFonts.albertSans(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
             ),
-          ],
+          ),
+          centerTitle: false,
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Search & Filter Bar
+              _buildSearchAndFilterBar(),
+
+              // Transactions List
+              Expanded(
+                child:  Obx(() {
+                  if (controller.isInitialLoading.value) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF0054D3),
+                      ),
+                    );
+                  }
+
+                  if (controller.filteredTransactions.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.receipt_long_outlined,
+                              size: 64, color: Colors.grey[300]),
+                          SizedBox(height: 16),
+                          Text(
+                            'No Transactions Found',
+                            style: GoogleFonts.albertSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF6B707E),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical:  12),
+                    itemCount: controller.filteredTransactions.length,
+                    itemBuilder: (context, index) {
+                      final txn = controller.filteredTransactions[index];
+                      return _buildTransactionTile(txn);
+                    },
+                  );
+                }),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -298,12 +307,15 @@ class _TransactionScreenState extends State<TransactionScreen> {
   void _showFilterBottomSheet() {
     // ✅ Store current filter values before opening
     final previousServiceFilter = controller.selectedServiceFilter.value;
-    final previousStatusFilter = controller. selectedStatusFilter.value;
+    final previousStatusFilter = controller.selectedStatusFilter.value;
     final previousFromDate = controller.customFromDate.value;
     final previousToDate = controller.customToDate.value;
+    final previousSelectedDateRange = controller.selectedDateRange.value;
+    final previousActualFromDate = controller.fromDate.value;
+    final previousActualToDate = controller.toDate.value;
 
     showModalBottomSheet(
-      context:  context,
+      context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => Container(
@@ -316,7 +328,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            child:  Padding(
+            child: Padding(
               padding: EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,16 +349,16 @@ class _TransactionScreenState extends State<TransactionScreen> {
                       GestureDetector(
                         onTap: () {
                           // ✅ Restore previous values if closed without applying
-                          controller.selectedServiceFilter.value =
-                              previousServiceFilter;
-                          controller.selectedStatusFilter. value =
-                              previousStatusFilter;
+                          controller.selectedServiceFilter.value = previousServiceFilter;
+                          controller.selectedStatusFilter.value = previousStatusFilter;
                           controller.customFromDate.value = previousFromDate;
                           controller.customToDate.value = previousToDate;
+                          controller.selectedDateRange.value = previousSelectedDateRange;
+                          controller.fromDate.value = previousActualFromDate;
+                          controller.toDate.value = previousActualToDate;
                           Get.back();
                         },
-                        child: Icon(Icons.close, size: 24,
-                            color: Color(0xFF1B1C1C)),
+                        child: Icon(Icons.close, size: 24, color: Color(0xFF1B1C1C)),
                       ),
                     ],
                   ),
@@ -363,45 +375,44 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   ),
                   SizedBox(height: 12),
 
-                  // Quick filters
-                  Obx(()=> Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: ['Today', 'Last 7 Days', 'Last 30 Days']
-                          .map((option) {
-                        bool isSelected = _isDateRangeSelected(option);
-                        return GestureDetector(
-                          onTap: () {
-                            controller.quickDateFilter(option);
-                            controller.showCustomDateRange.value = false;
-                          },
-                          child: Container(
+                // Quick filters - Wrapped with Obx for reactive updates
+                Obx(() {
+                  // Access reactive variable to trigger rebuild
+                  final selected = controller.selectedDateRange.value;
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: ['Today', 'Last 7 Days', 'Last 30 Days']
+                        .map((option) {
+                      bool isSelected = selected == option;
+                      return GestureDetector(
+                        onTap: () {
+                          controller.quickDateFilter(option);
+                          controller.showCustomDateRange.value = false;
+                        },
+                        child: Container(
                             padding:
                             EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Color(0xFF0054D3)
-                                  : Color(0xFFF5F7FA),
+                              color: isSelected ? Color(0xFF0054D3) : Color(0xFFF5F7FA),
                               borderRadius: BorderRadius.circular(20),
-                              border: isSelected
-                                  ? null
-                                  : Border.all(color: Color(0xFFE2E5EC)),
+                              border: isSelected ? null : Border.all(color: Color(0xFFE2E5EC)),
                             ),
-                            child: Text(
-                              option,
-                              style: GoogleFonts.albertSans(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: isSelected
-                                    ? Colors.white
-                                    : Color(0xFF1B1C1C),
-                              ),
+                          child: Text(
+                            option,
+                            style: GoogleFonts.albertSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.white
+                                  : Color(0xFF1B1C1C),
                             ),
                           ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
+                          ),
+                      );
+                    }).toList(),
+                  );
+                }),
                   SizedBox(height: 16),
 
                   // ✅ Custom date range section
@@ -453,6 +464,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                 date: controller.customFromDate.value,
                                 onDateSelected: (date) {
                                   controller.customFromDate.value = date;
+                                  // ✅ Mark as custom when user selects custom date
+                                  controller.selectedDateRange.value = 'Custom';
                                 },
                               ),
                             ),
@@ -463,6 +476,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                 date: controller.customToDate.value,
                                 onDateSelected: (date) {
                                   controller.customToDate.value = date;
+                                  // ✅ Mark as custom when user selects custom date
+                                  controller.selectedDateRange.value = 'Custom';
                                 },
                               ),
                             ),
@@ -574,56 +589,77 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            controller. resetFilters();
-                            controller.showCustomDateRange.value = false;
-                            Get.back();
-                          },
-                          style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            side: BorderSide(color: Color(0xFF0054D3)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius. circular(12),
+                        child: SizedBox(
+                          height: GlobalUtils.screenWidth * (60 / 393),
+                          child: OutlinedButton(
+                            onPressed: () {
+                              controller.resetFilters();
+                              controller.showCustomDateRange.value = false;
+
+                              // ✅ Close bottom sheet first, then fetch
+                              Get.back();
+
+                              // ✅ Fetch with reset dates (today)
+                              controller.fetchTransactionHistory(reset: true);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              // padding: EdgeInsets.symmetric(vertical: 12),
+                              side: BorderSide(color: Color(0xFF0054D3)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            'Reset',
-                            style: GoogleFonts.albertSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight. w600,
-                              color:  Color(0xFF0054D3),
+                            child: Text(
+                              'Reset',
+                              style: GoogleFonts.albertSans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0054D3),
+                              ),
                             ),
                           ),
                         ),
                       ),
                       SizedBox(width: 12),
                       Expanded(
-                        child:  GlobalUtils.CustomButton(
+                        child: GlobalUtils.CustomButton(
                           text: 'Apply',
                           onPressed: () {
+                            ConsoleLog.printColor("========== APPLY BUTTON PRESSED ==========", color: "yellow");
+                            ConsoleLog.printColor("selectedDateRange: ${controller.selectedDateRange.value}", color: "yellow");
+                            ConsoleLog.printColor("fromDate BEFORE apply: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(controller.fromDate.value)}", color: "yellow");
+                            ConsoleLog.printColor("toDate BEFORE apply: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(controller.toDate.value)}", color: "yellow");
+
                             // ✅ If custom date range is shown, apply it
                             if (controller.showCustomDateRange.value) {
+                              ConsoleLog.printColor("Custom date range is shown - updating custom dates", color: "yellow");
                               controller.updateCustomDateRange(
                                 controller.customFromDate.value,
-                                controller.customToDate. value,
+                                controller.customToDate.value,
                               );
                             }
-                            ConsoleLog.printInfo(
-                                "Filters applied - From: ${DateFormat('dd-MM-yyyy').format(controller.fromDate.value)}, To: ${DateFormat('dd-MM-yyyy').format(controller.toDate.value)}");
+                            ConsoleLog.printColor("fromDate AFTER custom update: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(controller.fromDate.value)}", color: "yellow");
+                            ConsoleLog.printColor("toDate AFTER custom update: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(controller.toDate.value)}", color: "yellow");
+
+                            // ✅ Close bottom sheet first, then fetch
                             Get.back();
+
+                            ConsoleLog.printColor("Calling fetchTransactionHistory with resetDates: false", color: "yellow");
+                            // ✅ Fetch transaction history with selected date range (don't reset dates)
+                            controller.fetchTransactionHistory(reset: true, resetDates: false);
                           },
                           width: double.infinity,
-                          height: 48,
-                          backgroundGradient:
-                          GlobalUtils.blueBtnGradientColor,
+                          height: GlobalUtils.screenWidth * (60 / 393),
+                          // height: 48,
+                          backgroundGradient: GlobalUtils.blueBtnGradientColor,
+                          borderColor: Color(0xFF71A9FF),
                           borderRadius: 12,
                           textColor: Colors.white,
+                          showShadow: false,
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height:  20),
                 ],
               ),
             ),
@@ -721,38 +757,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 //endregion
 
-//region _isDateRangeSelected (✅ NEW - Helper method)
-  bool _isDateRangeSelected(String period) {
-    DateTime now = DateTime.now();
-    DateTime todayStart = DateTime(now.year, now.month, now.day);
-    DateTime todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-
-    // Get the controller's current date range
-    DateTime currentFromDate = controller.fromDate.value;
-    DateTime currentToDate = controller.toDate.value;
-
-    // Helper to compare only year, month, day
-    bool isSameDay(DateTime d1, DateTime d2) {
-      return d1.year == d2.year && d1.month == d2.month && d1.day == d2.day;
-    }
-
-
-    switch (period) {
-      case 'Today':
-      // Check if fromDate is today and toDate is today
-        return isSameDay(currentFromDate, todayStart) && isSameDay(currentToDate, todayEnd);
-      case 'Last 7 Days':
-        DateTime sevenDaysAgo = todayStart.subtract(Duration(days: 7));
-        return isSameDay(currentFromDate, sevenDaysAgo) && isSameDay(currentToDate, todayEnd);
-      case 'Last 30 Days':
-        DateTime thirtyDaysAgo = todayStart.subtract(Duration(days: 30));
-        return isSameDay(currentFromDate, thirtyDaysAgo) && isSameDay(currentToDate, todayEnd);
-      default:
-        return false;
-    }
-  }
-//endregion
-
   //region showTransactionDetailsBottomSheet
   void _showTransactionDetailsBottomSheet(TransactionData txn) {
     showModalBottomSheet(
@@ -810,55 +814,55 @@ class _TransactionScreenState extends State<TransactionScreen> {
               ('Status', txn.portalStatus ?? 'N/A'),
               ]),
 
-          SizedBox(height:  20),
-          Divider(height: 1, color: Color(0xFFE2E5EC)),
-          SizedBox(height: 20),
-
-          // Action Buttons
-          Row(
-            children: [
-              Expanded(
-                child: GlobalUtils.CustomButton(
-                  text: 'Print',
-                  onPressed: () {
-                    Navigator.pop(context);
-                    controller.printReceipt(context, txn.portalTxnId ?? '');
-                  },
-                  width: double. infinity,
-                  height: 48,
-                  backgroundGradient: GlobalUtils.blueBtnGradientColor,
-                  borderRadius: 12,
-                  textColor: Colors.white,
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    controller.shareReceipt(context, txn.portalTxnId ?? '');
-                  },
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    side: BorderSide(color: Color(0xFF0054D3)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    'Share',
-                    style:  GoogleFonts.albertSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF0054D3),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          SizedBox(height:  16),
+          // SizedBox(height:  20),
+          // Divider(height: 1, color: Color(0xFFE2E5EC)),
+          // SizedBox(height: 20),
+          //
+          // // Action Buttons
+          // Row(
+          //   children: [
+          //     Expanded(
+          //       child: GlobalUtils.CustomButton(
+          //         text: 'Print',
+          //         onPressed: () {
+          //           Navigator.pop(context);
+          //           controller.printReceipt(context, txn.portalTxnId ?? '');
+          //         },
+          //         width: double. infinity,
+          //         height: 48,
+          //         backgroundGradient: GlobalUtils.blueBtnGradientColor,
+          //         borderRadius: 12,
+          //         textColor: Colors.white,
+          //       ),
+          //     ),
+          //     SizedBox(width: 12),
+          //     Expanded(
+          //       child: OutlinedButton(
+          //         onPressed: () {
+          //           Navigator.pop(context);
+          //           controller.shareReceipt(context, txn.portalTxnId ?? '');
+          //         },
+          //         style: OutlinedButton.styleFrom(
+          //           padding: EdgeInsets.symmetric(vertical: 12),
+          //           side: BorderSide(color: Color(0xFF0054D3)),
+          //           shape: RoundedRectangleBorder(
+          //             borderRadius: BorderRadius.circular(12),
+          //           ),
+          //         ),
+          //         child: Text(
+          //           'Share',
+          //           style:  GoogleFonts.albertSans(
+          //             fontSize: 14,
+          //             fontWeight: FontWeight.w600,
+          //             color: Color(0xFF0054D3),
+          //           ),
+          //         ),
+          //       ),
+          //     ),
+          //   ],
+          // ),
+          //
+          // SizedBox(height:  16),
           ],
         ),
       ),
@@ -879,7 +883,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
       if (isStatus) {
         if (statusValue == 'PENDING') {
           statusColor = Color(0xFFF59E0B); // Yellow/Amber
-        } else if (statusValue == 'SUCCESSFUL') {
+        } else if (statusValue == 'SUCCESS') {
           statusColor = Color(0xFF10B981); // Green
         } else if (statusValue == 'FAILED') {
           statusColor = Color(0xFFEF4444); // Red

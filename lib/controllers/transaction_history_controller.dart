@@ -65,15 +65,20 @@ class TransactionHistoryController extends GetxController {
   bool pendingExternalReturnCleanup = false;
 
   // ✅ Date range filter state
-  RxBool showCustomDateRange = false. obs;
+  RxBool showCustomDateRange = false.obs;
   Rx<DateTime> customFromDate = DateTime.now().obs;
   Rx<DateTime> customToDate = DateTime.now().obs;
+
+  // ✅ Track selected quick date filter (Today, Last 7 Days, Last 30 Days, Custom)
+  RxString selectedDateRange = 'Today'.obs;
 
   @override
   void onInit() {
     super.onInit();
+    ConsoleLog.printColor("========== TransactionHistoryController onInit CALLED ==========", color: "red");
     loadAuthCredentials();
     _initializeDefaultDates();
+    ConsoleLog.printColor("After _initializeDefaultDates - fromDate: ${DateFormat('yyyy-MM-dd').format(fromDate.value)}", color: "red");
   }
 
   //region generateRequestId
@@ -98,9 +103,12 @@ class TransactionHistoryController extends GetxController {
 
   //region _initializeDefaultDates
   void _initializeDefaultDates() {
+    ConsoleLog.printColor("_initializeDefaultDates CALLED - RESETTING TO TODAY", color: "red");
     DateTime now = DateTime.now();
     fromDate.value = DateTime(now.year, now.month, now.day);
-    toDate.value = DateTime(now. year, now.month, now. day, 23, 59, 59);
+    toDate.value = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    selectedDateRange.value = 'Today';
+    ConsoleLog.printColor("_initializeDefaultDates SET - fromDate: ${DateFormat('yyyy-MM-dd').format(fromDate.value)}, toDate: ${DateFormat('yyyy-MM-dd').format(toDate.value)}", color: "red");
   }
   //endregion
 
@@ -111,24 +119,35 @@ class TransactionHistoryController extends GetxController {
   //endregion
 
   //region fetchTransactionHistory
-  Future<void> fetchTransactionHistory({bool reset = false, bool preserveDates = false}) async {
+  Future<void> fetchTransactionHistory({bool reset = false, bool resetDates = false}) async {
     try {
+      // ✅ DEBUG: Log incoming parameters and current date values
+      ConsoleLog.printColor("fetchTransactionHistory called - reset: $reset, resetDates: $resetDates", color: "cyan");
+      ConsoleLog.printColor("CURRENT DATE VALUES - fromDate: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(fromDate.value)}, toDate: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(toDate.value)}", color: "cyan");
+
       if (reset) {
         isInitialLoading.value = true;
         allTransactions.clear();
         filteredTransactions.clear();
 
-        selectedServiceFilter.value = 'All';
-        selectedStatusFilter.value = 'All';
+        // selectedServiceFilter.value = 'All';
+        // selectedStatusFilter.value = 'All';
         searchQuery.value = '';
         searchController.value.clear();
 
-        _initializeDefaultDates();
+        // _initializeDefaultDates();
         // Only reset dates if preserveDates is false
-        if (!preserveDates) {
+        // ✅ Only reset dates if explicitly requested
+        if (resetDates) {
+          ConsoleLog.printColor("resetDates is TRUE - calling _initializeDefaultDates()", color: "red");
           _initializeDefaultDates();
+        } else {
+          ConsoleLog.printColor("resetDates is FALSE - keeping current dates", color: "green");
         }
       }
+
+      // ✅ DEBUG: Log date values that will be sent to API
+      ConsoleLog.printColor("DATES FOR API - fromDate: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(fromDate.value)}, toDate: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(toDate.value)}", color: "green");
 
       if (userAuthToken.value.isEmpty || userSignature.value.isEmpty) {
         await loadAuthCredentials();
@@ -228,46 +247,63 @@ class TransactionHistoryController extends GetxController {
     fromDate.value = DateTime(from.year, from.month, from.day);
     toDate.value = DateTime(to.year, to.month, to.day, 23, 59, 59);
 
+    // ✅ Mark as custom date range
+    selectedDateRange.value = 'Custom';
+
     ConsoleLog.printInfo(
         "Custom date range set: ${DateFormat('dd-MM-yyyy').format(fromDate.value)} to ${DateFormat('dd-MM-yyyy').format(toDate.value)}"
     );
 
     // ✅ Apply filters and fetch new data
-    fetchTransactionHistory(reset: true, preserveDates: true);
+    // fetchTransactionHistory(reset: true, preserveDates: true);
   }
 //endregion
 
 //region quickDateFilter (✅ Updated)
   void quickDateFilter(String period) {
+    ConsoleLog.printColor("========== quickDateFilter CALLED with period: $period ==========", color: "magenta");
+
     DateTime now = DateTime.now();
+    ConsoleLog.printColor("Current DateTime.now(): $now", color: "magenta");
+
+    // ✅ Update selected date range first
+    selectedDateRange.value = period;
 
     switch (period) {
       case 'Today':
         fromDate.value = DateTime(now.year, now.month, now.day);
         toDate.value = DateTime(now.year, now.month, now.day, 23, 59, 59);
-        customFromDate.value = fromDate.value;
-        customToDate.value = toDate.value;
         break;
       case 'Last 7 Days':
         fromDate.value = DateTime(now.year, now.month, now.day).subtract(Duration(days: 7));
         toDate.value = DateTime(now.year, now.month, now.day, 23, 59, 59);
-        customFromDate.value = fromDate.value;
-        customToDate.value = toDate.value;
         break;
       case 'Last 30 Days':
         fromDate.value = DateTime(now.year, now.month, now.day).subtract(Duration(days: 30));
         toDate.value = DateTime(now.year, now.month, now.day, 23, 59, 59);
-        customFromDate.value = fromDate.value;
-        customToDate.value = toDate.value;
         break;
     }
 
-    ConsoleLog.printInfo("Quick date filter: $period - From: ${DateFormat('dd-MM-yyyy').format(fromDate.value)}, To: ${DateFormat('dd-MM-yyyy').format(toDate.value)}");
+    // ✅ Sync custom date pickers with selected range
+    customFromDate.value = fromDate.value;
+    customToDate.value = toDate.value;
 
-    // Preserve dates when fetching - don't reset them
-    fetchTransactionHistory(reset: true, preserveDates: true);
+    ConsoleLog.printColor("quickDateFilter SET - fromDate: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(fromDate.value)}", color: "green");
+    ConsoleLog.printColor("quickDateFilter SET - toDate: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(toDate.value)}", color: "green");
+    ConsoleLog.printColor("========== quickDateFilter END ==========", color: "magenta");
   }
 //endregion
+
+  //region formatDate
+  String _formatDate(String?  dateString) {
+    if (dateString == null) return 'N/A';
+    try {
+      DateTime date = DateTime.parse(dateString);
+      return DateFormat('dd-MM-yyyy HH:mm').format(date);
+    } catch (e) {
+      return dateString;
+    }
+  }
 
   //region _applyFilters (✅ FIXED - Proper status filtering)
   void _applyFilters() {
@@ -279,6 +315,7 @@ class TransactionHistoryController extends GetxController {
       result = result.where((txn) {
         return (txn.portalTxnId?.toLowerCase().contains(query) ?? false) ||
             (txn.recordType?.toLowerCase().contains(query) ?? false) ||
+            (_formatDate(txn.requestDt).toLowerCase().contains(query) ?? false) ||
             (txn.txnAmt?.contains(query) ?? false) ||
             (txn.fullname?.toLowerCase().contains(query) ?? false) ||
             (txn.customerId?.toLowerCase().contains(query) ?? false);
@@ -329,7 +366,10 @@ class TransactionHistoryController extends GetxController {
   void resetFilters() {
     selectedServiceFilter.value = 'All';
     selectedStatusFilter.value = 'All';
+    selectedDateRange.value = 'Today';
     _initializeDefaultDates();
+    customFromDate.value = fromDate.value;
+    customToDate.value = toDate.value;
     searchQuery.value = '';
     searchController.value.clear();
     _applyFilters();

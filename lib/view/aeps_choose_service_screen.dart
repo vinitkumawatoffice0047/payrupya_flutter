@@ -2730,7 +2730,7 @@ class _AepsChooseServiceScreenState extends State<AepsChooseServiceScreen> {
 
   // Device list - Updated for January 2026
   final List<Map<String, String>> deviceList = [
-    {'name': 'Select Device', 'value': ''},
+    // {'name': 'Select Device', 'value': ''},
     {'name': 'Morpho L1', 'value': 'Idemia'},
     {'name': 'Mantra MFS110', 'value': 'MFS110'},
     {'name': 'Mantra IRIS', 'value': 'MIS100V2'},
@@ -2992,7 +2992,7 @@ class _AepsChooseServiceScreenState extends State<AepsChooseServiceScreen> {
     );
   }
 
-  /// Service Selection Grid
+  /// ✅ Service Selection - DROPDOWN VERSION
   Widget _buildServiceSelection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3000,97 +3000,206 @@ class _AepsChooseServiceScreenState extends State<AepsChooseServiceScreen> {
         Text(
           'Select Service',
           style: GoogleFonts.albertSans(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.grey[800],
+            color: const Color(0xff1B1C1C),
           ),
         ),
-        const SizedBox(height: 16),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.5,
+        const SizedBox(height: 12),
+
+        // ✅ DROPDOWN INSTEAD OF GRID
+        Obx(() => Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          itemCount: services.length,
-          itemBuilder: (context, index) {
-            final service = services[index];
-            return Obx(() {
-              final isSelected = selectedService.value == service['value'];
-              return _buildServiceCard(service, isSelected);
-            });
-          },
-        ),
+          child: DropdownButtonFormField<String>(
+            value: selectedService.value.isEmpty ? null : selectedService.value,
+            decoration: InputDecoration(
+              hintText: 'Choose a service',
+              hintStyle: GoogleFonts.albertSans(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+              prefixIcon: const Icon(
+                Icons.miscellaneous_services_outlined,
+                color: Color(0xFF2E5BFF),
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+            dropdownColor: Colors.white,
+            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF2E5BFF)),
+            isExpanded: true,
+            style: GoogleFonts.albertSans(
+              fontSize: 14,
+              color: const Color(0xff1B1C1C),
+            ),
+            items: services.map((service) {
+              return DropdownMenuItem<String>(
+                value: service['value'],
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2E5BFF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        _getServiceIcon(service['icon'] ?? ''),
+                        size: 18,
+                        color: const Color(0xFF2E5BFF),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        service['name'] ?? '',
+                        style: GoogleFonts.albertSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xff1B1C1C),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              selectedService.value = value ?? '';
+              amountController.clear();
+            },
+          ),
+        )),
       ],
     );
   }
 
-  /// Service Card Widget
-  Widget _buildServiceCard(Map<String, String> service, bool isSelected) {
-    IconData getIcon(String iconName) {
-      switch (iconName) {
-        case 'account_balance_wallet':
-          return Icons.account_balance_wallet;
-        case 'money':
-          return Icons.money;
-        case 'receipt_long':
-          return Icons.receipt_long;
-        case 'payments':
-          return Icons.payments;
-        default:
-          return Icons.help_outline;
-      }
+  /// Helper to get service icon
+  IconData _getServiceIcon(String iconName) {
+    switch (iconName) {
+      case 'account_balance_wallet':
+        return Icons.account_balance_wallet_outlined;
+      case 'money':
+        return Icons.money_outlined;
+      case 'receipt_long':
+        return Icons.receipt_long_outlined;
+      case 'payments':
+        return Icons.payments_outlined;
+      default:
+        return Icons.help_outline;
     }
-
-    return GestureDetector(
-      onTap: () {
-        selectedService.value = service['value'] ?? '';
-        amountController.clear();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF2E5BFF) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF2E5BFF) : Colors.grey[300]!,
-          ),
-          boxShadow: isSelected
-              ? [
-            BoxShadow(
-              color: const Color(0xFF2E5BFF).withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ]
-              : null,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              getIcon(service['icon'] ?? ''),
-              size: 32,
-              color: isSelected ? Colors.white : const Color(0xFF2E5BFF),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              service['name'] ?? '',
-              style: GoogleFonts.albertSans(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: isSelected ? Colors.white : Colors.grey[800],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
   }
+
+  // /// Service Selection Grid
+  // Widget _buildServiceSelection() {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Text(
+  //         'Select Service',
+  //         style: GoogleFonts.albertSans(
+  //           fontSize: 18,
+  //           fontWeight: FontWeight.w600,
+  //           color: Colors.grey[800],
+  //         ),
+  //       ),
+  //       const SizedBox(height: 16),
+  //       GridView.builder(
+  //         shrinkWrap: true,
+  //         physics: const NeverScrollableScrollPhysics(),
+  //         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+  //           crossAxisCount: 2,
+  //           crossAxisSpacing: 12,
+  //           mainAxisSpacing: 12,
+  //           childAspectRatio: 1.5,
+  //         ),
+  //         itemCount: services.length,
+  //         itemBuilder: (context, index) {
+  //           final service = services[index];
+  //           return Obx(() {
+  //             final isSelected = selectedService.value == service['value'];
+  //             return _buildServiceCard(service, isSelected);
+  //           });
+  //         },
+  //       ),
+  //     ],
+  //   );
+  // }
+
+  // /// Service Card Widget
+  // Widget _buildServiceCard(Map<String, String> service, bool isSelected) {
+  //   IconData getIcon(String iconName) {
+  //     switch (iconName) {
+  //       case 'account_balance_wallet':
+  //         return Icons.account_balance_wallet;
+  //       case 'money':
+  //         return Icons.money;
+  //       case 'receipt_long':
+  //         return Icons.receipt_long;
+  //       case 'payments':
+  //         return Icons.payments;
+  //       default:
+  //         return Icons.help_outline;
+  //     }
+  //   }
+  //
+  //   return GestureDetector(
+  //     onTap: () {
+  //       selectedService.value = service['value'] ?? '';
+  //       amountController.clear();
+  //     },
+  //     child: AnimatedContainer(
+  //       duration: const Duration(milliseconds: 200),
+  //       decoration: BoxDecoration(
+  //         color: isSelected ? const Color(0xFF2E5BFF) : Colors.white,
+  //         borderRadius: BorderRadius.circular(12),
+  //         border: Border.all(
+  //           color: isSelected ? const Color(0xFF2E5BFF) : Colors.grey[300]!,
+  //         ),
+  //         boxShadow: isSelected
+  //             ? [
+  //           BoxShadow(
+  //             color: const Color(0xFF2E5BFF).withOpacity(0.3),
+  //             blurRadius: 8,
+  //             offset: const Offset(0, 4),
+  //           ),
+  //         ]
+  //             : null,
+  //       ),
+  //       child: Column(
+  //         mainAxisAlignment: MainAxisAlignment.center,
+  //         children: [
+  //           Icon(
+  //             getIcon(service['icon'] ?? ''),
+  //             size: 32,
+  //             color: isSelected ? Colors.white : const Color(0xFF2E5BFF),
+  //           ),
+  //           const SizedBox(height: 8),
+  //           Text(
+  //             service['name'] ?? '',
+  //             style: GoogleFonts.albertSans(
+  //               fontSize: 14,
+  //               fontWeight: FontWeight.w500,
+  //               color: isSelected ? Colors.white : Colors.grey[800],
+  //             ),
+  //             textAlign: TextAlign.center,
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   /// Transaction Form
   Widget _buildTransactionForm() {
@@ -3257,40 +3366,145 @@ class _AepsChooseServiceScreenState extends State<AepsChooseServiceScreen> {
     required String value,
     required List<Map<String, String>> items,
     required IconData icon,
-    required Function(String?) onChanged,
+    required void Function(String?) onChanged,
   }) {
-    return DropdownButtonFormField<String>(
-      value: value.isEmpty ? null : value,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: Colors.grey[600]),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF2E5BFF), width: 2),
-        ),
-      ),
-      items: items.map((item) {
-        return DropdownMenuItem<String>(
-          value: item['value'],
-          child: Text(
-            item['name'] ?? '',
-            style: GoogleFonts.albertSans(fontSize: 16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.albertSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xff1B1C1C),
           ),
-        );
-      }).toList(),
-      onChanged: onChanged,
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: DropdownButtonFormField<String>(
+            value: value.isEmpty ? null : value,
+            decoration: InputDecoration(
+              hintText: 'Select $label',
+              hintStyle: GoogleFonts.albertSans(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+              prefixIcon: Icon(icon, color: const Color(0xFF2E5BFF)),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+            dropdownColor: Colors.white,
+            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF2E5BFF)),
+            isExpanded: true,
+            style: GoogleFonts.albertSans(
+              fontSize: 14,
+              color: const Color(0xff1B1C1C),
+            ),
+            // ✅ Filter out empty "Select Device" option
+            items: items.where((item) => item['value']!.isNotEmpty).map((item) {
+              return DropdownMenuItem<String>(
+                value: item['value'],
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2E5BFF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        _getDeviceIcon(item['value'] ?? ''),
+                        size: 16,
+                        color: const Color(0xFF2E5BFF),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        item['name'] ?? '',
+                        style: GoogleFonts.albertSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xff1B1C1C),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: onChanged,
+          ),
+        ),
+      ],
     );
   }
+
+  /// Helper to get device icon
+  IconData _getDeviceIcon(String deviceValue) {
+    switch (deviceValue) {
+      case 'Idemia':
+      case 'MFS110':
+        return Icons.fingerprint;
+      case 'MIS100V2':
+        return Icons.remove_red_eye_outlined;
+      case 'FACE_AUTH':
+        return Icons.face_outlined;
+      default:
+        return Icons.devices_outlined;
+    }
+  }
+  // Widget _buildDropdownField({
+  //   required String label,
+  //   required String value,
+  //   required List<Map<String, String>> items,
+  //   required IconData icon,
+  //   required Function(String?) onChanged,
+  // }) {
+  //   return DropdownButtonFormField<String>(
+  //     value: value.isEmpty ? null : value,
+  //     decoration: InputDecoration(
+  //       labelText: label,
+  //       prefixIcon: Icon(icon, color: Colors.grey[600]),
+  //       filled: true,
+  //       fillColor: Colors.white,
+  //       border: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(12),
+  //         borderSide: BorderSide(color: Colors.grey[300]!),
+  //       ),
+  //       enabledBorder: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(12),
+  //         borderSide: BorderSide(color: Colors.grey[300]!),
+  //       ),
+  //       focusedBorder: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(12),
+  //         borderSide: const BorderSide(color: Color(0xFF2E5BFF), width: 2),
+  //       ),
+  //     ),
+  //     items: items.map((item) {
+  //       return DropdownMenuItem<String>(
+  //         value: item['value'],
+  //         child: Text(
+  //           item['name'] ?? '',
+  //           style: GoogleFonts.albertSans(fontSize: 16),
+  //         ),
+  //       );
+  //     }).toList(),
+  //     onChanged: onChanged,
+  //   );
+  // }
 
   /// Bank Selector with favorites
   Widget _buildBankSelector() {
