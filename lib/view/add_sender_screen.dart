@@ -2059,46 +2059,115 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                     ),
                     SizedBox(height: 12),
 
-                    // Search Input Field
-                    Stack(
+                    // Search Input Field and Button
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        GlobalUtils.CustomTextField(
-                          label: "Search Account",
-                          showLabel: false,
-                          controller: dmtController.searchAccountController. value,
-                          placeholder: "Search by name, mobile, or account",
-                          height: GlobalUtils.screenWidth * (60 / 393),
-                          width: GlobalUtils.screenWidth * 0.9,
-                          backgroundColor: Colors.white,
-                          borderColor: Color(0xffE2E5EC),
-                          borderRadius: 16,
-                          placeholderStyle: GoogleFonts.albertSans(
-                            fontSize: GlobalUtils.screenWidth * (14 / 393),
-                            color: Color(0xFF6B707E),
+                        // Search Input Field
+                        Expanded(
+                          child: SizedBox(
+                            height: GlobalUtils.screenWidth * (60 / 393),
+                            child: Stack(
+                              clipBehavior: Clip.hardEdge,
+                              children: [
+                                // TextField without Column wrapper to avoid overflow
+                                Container(
+                                  height: GlobalUtils.screenWidth * (60 / 393),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Color(0xffE2E5EC),
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  child: TextField(
+                                    controller: dmtController.searchAccountController.value,
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                    ],
+                                    style: GoogleFonts.albertSans(
+                                      fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                      color: Color(0xFF1B1C1C),
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: "Search by account number",
+                                      hintStyle: GoogleFonts.albertSans(
+                                        fontSize: GlobalUtils.screenWidth * (14 / 393),
+                                        color: Color(0xFF6B707E),
+                                      ),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 18,
+                                      ),
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      errorBorder: InputBorder.none,
+                                      focusedErrorBorder: InputBorder.none,
+                                      disabledBorder: InputBorder.none,
+                                    ),
+                                  ),
+                                ),
+                                // Clear button inside input field
+                                Obx(() => Positioned(
+                                  right: 12,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: IgnorePointer(
+                                    ignoring: dmtController.searchAccountController.value.text.isEmpty,
+                                    child: AnimatedOpacity(
+                                      opacity: dmtController.searchAccountController.value.text.isNotEmpty ? 1.0 : 0.0,
+                                      duration: Duration(milliseconds: 150),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          dmtController.resetSearch();
+                                        },
+                                        child: Container(
+                                          padding: EdgeInsets.all(8),
+                                          alignment: Alignment.center,
+                                          child: Icon(Icons.clear, color: Color(0xFF6B707E), size: 20),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )),
+                              ],
+                            ),
                           ),
-                          inputTextStyle: GoogleFonts.albertSans(
-                            fontSize: GlobalUtils.screenWidth * (14 / 393),
-                            color:  Color(0xFF1B1C1C),
-                          ),
-                          onChanged: (value) {
-                            dmtController.onSearchQueryChanged(value);
-                          },
                         ),
-                        // Clear button
-                        Obx(() => dmtController.searchAccountController.value.text.isNotEmpty
-                            ?  Positioned(
-                          right: 12,
-                          top: 0,
-                          bottom: 0,
-                          child: GestureDetector(
-                            onTap: () {
-                              dmtController.resetSearch();
-                            },
-                            child: Icon(Icons.clear, color: Color(0xFF6B707E)),
+                        SizedBox(width: 12),
+                        // Search button outside input field with gradient
+                        Container(
+                          width: GlobalUtils.screenWidth * (60 / 393),
+                          height: GlobalUtils.screenWidth * (60 / 393),
+                          decoration: BoxDecoration(
+                            gradient: GlobalUtils.blueBtnGradientColor,
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                        )
-                            : SizedBox. shrink()
-                        )
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                String query = dmtController.searchAccountController.value.text.trim();
+                                if (query.isNotEmpty) {
+                                  dmtController.searchByAccountNumber(query);
+                                } else {
+                                  Fluttertoast.showToast(
+                                    msg: "Please enter account number",
+                                    gravity: ToastGravity.TOP,
+                                  );
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                alignment: Alignment.center,
+                                child: Icon(Icons.search, color: Colors.white, size: 24),
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
 
@@ -2158,17 +2227,18 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                             separatorBuilder: (_, __) => Divider(height: 1, color: Color(0xFFE2E5EC)),
                             itemBuilder: (context, index) {
                               // Regular items
-                              if (index < dmtController.searchSuggestions. length) {
+                              if (index < dmtController.searchSuggestions.length) {
                                 final account = dmtController.searchSuggestions[index];
                                 return buildSearchSuggestionTile(account);
                               }
 
                               // Footer (Loading indicator or Load More button)
-                              if (dmtController.isLoadingMore. value) {
+                              if (dmtController.isLoadingMore.value) {
                                 return Padding(
                                   padding: EdgeInsets.symmetric(vertical: 12),
                                   child: SizedBox(
-                                    height:  30,
+                                    height: 30,
+                                    width: 30,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
                                       valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0054D3)),
@@ -2180,12 +2250,12 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                               // Show Load More button if more data available
                               if (dmtController.hasMoreSuggestions.value) {
                                 return Padding(
-                                  padding:  EdgeInsets.symmetric(vertical: 12),
-                                  child:  Center(
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                  child: Center(
                                     child: GestureDetector(
                                       onTap: () {
                                         dmtController.loadMoreAccountSuggestions(
-                                            dmtController.lastSearchQuery. value
+                                            dmtController.lastSearchQuery.value
                                         );
                                       },
                                       child: Container(
@@ -2264,7 +2334,7 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      (account.name ?? '? ')[0]. toUpperCase(),
+                      (account.name ?? '? ')[0].toUpperCase(),
                       style: GoogleFonts.albertSans(
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF0054D3),
@@ -2275,14 +2345,14 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                 SizedBox(width: 12),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment:  CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        account.name ??  'Unknown',
+                        account.name ?? 'Unknown',
                         style: GoogleFonts.albertSans(
                           fontSize: 14,
-                          fontWeight: FontWeight. w600,
-                          color:  Color(0xFF1B1C1C),
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1B1C1C),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -2297,6 +2367,18 @@ class _AddSenderScreenState extends State<AddSenderScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if (account.mobile != null && account.mobile!.isNotEmpty) ...[
+                        SizedBox(height: 4),
+                        Text(
+                          'Mobile: ${account.mobile}',
+                          style: GoogleFonts.albertSans(
+                            fontSize: 12,
+                            color: Color(0xFF6B707E),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ],
                   ),
                 ),

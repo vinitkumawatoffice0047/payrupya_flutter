@@ -975,6 +975,12 @@ class GlobalUtils {
           LengthLimitingTextInputFormatter(maxLength ?? 10),
         ];
       }
+      if (isNumber || isTxnPin || isAadharNumber) {
+        return [
+          FilteringTextInputFormatter.digitsOnly,
+          if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+        ];
+      }
       if (maxLength != null) {
         return [LengthLimitingTextInputFormatter(maxLength)];
       }

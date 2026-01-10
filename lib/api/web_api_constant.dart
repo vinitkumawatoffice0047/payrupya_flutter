@@ -6,6 +6,8 @@ class WebApiConstant{
 
   // Authentication APIs
   static const String API_URL_LOGIN                            = "${BASE_URL}Action/login";                    //Done
+  static const String API_URL_VERIFY_LOGIN_OTP                 = "${BASE_URL}Action/validateLoginOtp";         //Done
+  static const String API_URL_RESEND_LOGIN_OTP                 = "${BASE_URL}Action/resend_otp_request";       //Done
   static const String API_URL_SIGNUP                           = "${BASE_URL}Action/registerLead";             //Done
 
   // Forgot Password APIs
@@ -70,6 +72,30 @@ class WebApiConstant{
   //Transaction History APIs
   static const String API_URL_GET_TRANSACTION_HISTORY = "${BASE_URL}Fetch/getTransactionHistory";
 
+  // Profile Related APIs
+  static const String API_URL_GET_ACTIVITY_LOG = '${BASE_URL}Fetch/get_activity_log';
+  static const String API_URL_CHANGE_TXN_PIN_STATUS = '${BASE_URL}Action/changeTxnPinStatus';
+  static const String API_URL_CHANGE_LOGIN_OTP_STATUS = '${BASE_URL}Action/changeLoginOtpStatus';
+  static const String API_URL_DOWNLOAD_CERTIFICATE = '${BASE_URL}Fetch/downloadCertificate';
+
+  // KYC Related APIs
+  static const String API_URL_GET_KYC_STATUS = '${BASE_URL}Fetch/fetchKycDocs';
+  static const String API_URL_UPLOAD_KYC_DOCUMENT = '${BASE_URL}Action/upload_kycdoc';
+  static const String API_URL_FETCH_UPLOADED_DOCS = '${BASE_URL}Fetch/fetchUploadedDocs';
+  static const String API_URL_DELETE_UPLOADED_KYC_DOC = '${BASE_URL}Action/deleteUploadedKycDoc';
+
+  // My Commercials Related APIs
+  static const String API_URL_GET_SERVICE_TYPE_LIST = '${BASE_URL}Fetch/getServiceTypeList';
+  static const String API_URL_GET_MYSERVICE_FOR_COMMERCIALS = '${BASE_URL}Fetch/getMyserviceForCommercials';
+  static const String API_URL_FETCH_SPECIAL_MARGINS = '${BASE_URL}Fetch/fetchSpecialMargins';
+
+  // Update Password and PIN APIs
+  static const String API_URL_UPDATE_PASSWORD = '${BASE_URL}Action/updatePassword';
+  static const String API_URL_UPDATE_TPIN = '${BASE_URL}Action/UpdateTxnPin';
+  static const String API_URL_RESET_TPIN = '${BASE_URL}Action/ResetTxnPin';
+
+
+
 
 
   static const String API_URL_HOME_DETAIL                      = "${BASE_URL}user/home";                     //Done
@@ -79,7 +105,7 @@ class WebApiConstant{
   static const String API_URL_CART_LIST                        = "${BASE_URL}user/cart";                     //Pending4
   static const String API_URL_CATEGORY_TO_PRODUCT              = "${BASE_URL}cate-to-product";               //Pending5
   static const String API_URL_PROFILE                          = "${BASE_URL}user/profile";                  //Pending6
-  static const String API_URL_UPDATE_PASSWORD                  = "${BASE_URL}user/change-password";           //Pending7
+  // static const String API_URL_UPDATE_PASSWORD                  = "${BASE_URL}user/change-password";           //Pending7
   // static const String API_URL_ADD_ADDRESS                      = BASE_URL +"user/change-address";         //Pending(Not Used)
   static const String API_URL_GET_ADDRESS                      = "${BASE_URL}user/address";                   //Pending8
   static const String API_URL_CHANGE_ADDRESS                   = "${BASE_URL}user/change-address";            //Pending9

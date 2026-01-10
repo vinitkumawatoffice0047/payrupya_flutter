@@ -22,6 +22,7 @@ import '../view/payrupya_main_screen.dart';
 
 import '../view/other_users_screen.dart';
 import '../view/payrupya_main_screen.dart';
+import '../view/login_otp_verification_screen.dart';
 import 'biometric_service.dart';
 
 class LoginController extends GetxController {
@@ -35,6 +36,10 @@ class LoginController extends GetxController {
   RxString name = "".obs;
   RxDouble latitude = 0.0.obs;
   RxDouble longitude = 0.0.obs;
+  
+  // OTP Verification Variables
+  RxString loginOtpReferenceId = "".obs;
+  RxString loginMobileNumber = "".obs;
 
   // ============================================
   // NEW: Biometric Login Variables
@@ -384,6 +389,64 @@ class LoginController extends GetxController {
 
           Get.offAll(() => PayrupyaMainScreen());
 
+        } else if (respCode == "TFA") {
+          // ✅ TWO FACTOR AUTHENTICATION - OTP Required
+          ConsoleLog.printColor("🔐 TFA Response: OTP required", color: "yellow");
+          ConsoleLog.printColor("TFA Full Response: $response", color: "cyan");
+          
+          // Extract reference ID from response - handle both Map and direct access
+          String? referenceId;
+          
+          // Try multiple ways to get reference ID
+          if (response["data"] != null) {
+            if (response["data"] is Map) {
+              referenceId = response["data"]["referenceid"]?.toString();
+            } else if (response["data"] is String) {
+              // Sometimes data might be a string
+              try {
+                Map<String, dynamic> dataMap = Map<String, dynamic>.from(response["data"]);
+                referenceId = dataMap["referenceid"]?.toString();
+              } catch (e) {
+                ConsoleLog.printError("Error parsing data as Map: $e");
+              }
+            }
+          }
+          
+          // Alternative: try direct access to referenceid in response
+          if ((referenceId == null || referenceId.isEmpty) && response["referenceid"] != null) {
+            referenceId = response["referenceid"]?.toString();
+          }
+          
+          ConsoleLog.printInfo("Extracted Reference ID: $referenceId");
+          
+          if (referenceId == null || referenceId.isEmpty) {
+            ConsoleLog.printError("❌ No reference ID in TFA response");
+            ConsoleLog.printError("Response keys: ${response.keys.toList()}");
+            if (response["data"] != null) {
+              ConsoleLog.printError("Data type: ${response["data"].runtimeType}");
+              ConsoleLog.printError("Data content: ${response["data"]}");
+            }
+            Fluttertoast.showToast(
+              msg: "OTP verification failed: Invalid response",
+              toastLength: Toast.LENGTH_LONG,
+              backgroundColor: Colors.red,
+            );
+            return;
+          }
+          
+          // Store reference ID and mobile number for OTP verification
+          loginOtpReferenceId.value = referenceId;
+          loginMobileNumber.value = mobile;
+          
+          ConsoleLog.printSuccess("✅ Reference ID stored: $referenceId");
+          ConsoleLog.printInfo("Mobile: $mobile");
+          
+          // Navigate to OTP verification screen
+          Get.to(() => LoginOtpVerificationScreen(
+            mobile: mobile,
+            referenceId: referenceId ?? "",
+          ));
+          
         } else if (respCode == "ERR") {
           String errorMessage = respDesc;
           if (respDesc.toLowerCase().contains('invalid')) {
@@ -606,6 +669,64 @@ class LoginController extends GetxController {
           );
           Get.offAll(() => PayrupyaMainScreen());
 
+        } else if (respCode == "TFA") {
+          // ✅ TWO FACTOR AUTHENTICATION - OTP Required
+          ConsoleLog.printColor("🔐 TFA Response: OTP required", color: "yellow");
+          ConsoleLog.printColor("TFA Full Response: $response", color: "cyan");
+          
+          // Extract reference ID from response - handle both Map and direct access
+          String? referenceId;
+          
+          // Try multiple ways to get reference ID
+          if (response["data"] != null) {
+            if (response["data"] is Map) {
+              referenceId = response["data"]["referenceid"]?.toString();
+            } else if (response["data"] is String) {
+              // Sometimes data might be a string
+              try {
+                Map<String, dynamic> dataMap = Map<String, dynamic>.from(response["data"]);
+                referenceId = dataMap["referenceid"]?.toString();
+              } catch (e) {
+                ConsoleLog.printError("Error parsing data as Map: $e");
+              }
+            }
+          }
+          
+          // Alternative: try direct access to referenceid in response
+          if ((referenceId == null || referenceId.isEmpty) && response["referenceid"] != null) {
+            referenceId = response["referenceid"]?.toString();
+          }
+          
+          ConsoleLog.printInfo("Extracted Reference ID: $referenceId");
+          
+          if (referenceId == null || referenceId.isEmpty) {
+            ConsoleLog.printError("❌ No reference ID in TFA response");
+            ConsoleLog.printError("Response keys: ${response.keys.toList()}");
+            if (response["data"] != null) {
+              ConsoleLog.printError("Data type: ${response["data"].runtimeType}");
+              ConsoleLog.printError("Data content: ${response["data"]}");
+            }
+            Fluttertoast.showToast(
+              msg: "OTP verification failed: Invalid response",
+              toastLength: Toast.LENGTH_LONG,
+              backgroundColor: Colors.red,
+            );
+            return;
+          }
+          
+          // Store reference ID and mobile number for OTP verification
+          loginOtpReferenceId.value = referenceId;
+          loginMobileNumber.value = mobile;
+          
+          ConsoleLog.printSuccess("✅ Reference ID stored: $referenceId");
+          ConsoleLog.printInfo("Mobile: $mobile");
+          
+          // Navigate to OTP verification screen
+          Get.to(() => LoginOtpVerificationScreen(
+            mobile: mobile,
+            referenceId: referenceId,
+          ));
+          
         } else if (respCode == "ERR") {
           // ✅ ERROR CASE - data might be a List or null
           ConsoleLog.printError("❌ Login failed: $respDesc");
@@ -924,4 +1045,178 @@ class LoginController extends GetxController {
   //     CustomDialog.error(context: context, message: "Technical issue, please try again!");
   //   }
   // }
+
+  // ============================================
+  // VERIFY LOGIN OTP
+  // ============================================
+  Future<void> verifyLoginOtp(BuildContext context, String otp, String mobile, String referenceId) async {
+    try {
+      if (otp.isEmpty || otp.length != 6) {
+        Fluttertoast.showToast(msg: "Please enter valid 6-digit OTP");
+        return;
+      }
+
+      CustomLoading.showLoading();
+
+      Map<String, dynamic> requestBody = {
+        "login": mobile,
+        "referenceid": referenceId,
+        "otp": otp,
+        "request_id": GlobalUtils.generateRandomId(8),
+        "lat": latitude.value.toString(),
+        "long": longitude.value.toString(),
+        "versionNew": 1,
+      };
+
+      ConsoleLog.printColor("VERIFY LOGIN OTP REQ: $requestBody");
+
+      var response = await ApiProvider().verifyLoginOtpApi(
+        context,
+        WebApiConstant.API_URL_VERIFY_LOGIN_OTP,
+        requestBody,
+        "",
+      );
+
+      CustomLoading.hideLoading();
+
+      if (response == null) {
+        Fluttertoast.showToast(msg: "No response from server");
+        return;
+      }
+
+      String respCode = response["Resp_code"] ?? "";
+      String respDesc = response["Resp_desc"] ?? "";
+
+      ConsoleLog.printColor("VERIFY LOGIN OTP Response Code: $respCode", color: "yellow");
+      ConsoleLog.printColor("VERIFY LOGIN OTP Response Desc: $respDesc", color: "yellow");
+
+      if (respCode == "RCS") {
+        if (response["data"] == null || response["data"] is! Map) {
+          Fluttertoast.showToast(msg: "Login failed: Invalid response");
+          return;
+        }
+
+        LoginApiResponseModel loginResponse = LoginApiResponseModel.fromJson(response);
+
+        String token = loginResponse.data?.tokenid ?? "";
+        String signature = loginResponse.data?.requestId ?? "";
+
+        if (token.isEmpty) {
+          Fluttertoast.showToast(msg: "Login failed: Invalid token");
+          return;
+        }
+
+        // Save to SharedPreferences
+        await AppSharedPreferences.saveLoginAuth(
+          token: token,
+          signature: signature,
+        );
+
+        // Save user details
+        await AppSharedPreferences.setUserId(
+            loginResponse.data?.userdata?.accountidf ?? ""
+        );
+        await AppSharedPreferences.setMobileNo(
+            loginResponse.data?.userdata?.mobile ?? ""
+        );
+        await AppSharedPreferences.setEmail(
+            loginResponse.data?.userdata?.email ?? ""
+        );
+        await AppSharedPreferences.setUserName(
+            loginResponse.data?.userdata?.contactPerson ?? ""
+        );
+        await AppSharedPreferences.saveUserRole(
+            loginResponse.data?.userdata?.roleidf ?? ""
+        );
+
+        // Start session
+        if (Get.isRegistered<SessionManager>()) {
+          await SessionManager.instance.startSession();
+        }
+
+        ConsoleLog.printSuccess("✅ Login successful after OTP verification: ${loginResponse.data?.userdata?.contactPerson}");
+
+        Fluttertoast.showToast(
+          msg: "Login successful! Welcome ${loginResponse.data?.userdata?.contactPerson}",
+          toastLength: Toast.LENGTH_LONG,
+        );
+        
+        // Navigate to Main Screen
+        Get.offAll(() => PayrupyaMainScreen());
+      } else {
+        Fluttertoast.showToast(
+          msg: respDesc.isNotEmpty ? respDesc : "OTP verification failed",
+          toastLength: Toast.LENGTH_LONG,
+          backgroundColor: Colors.red,
+        );
+      }
+    } catch (e) {
+      CustomLoading.hideLoading();
+      ConsoleLog.printError("VERIFY LOGIN OTP ERROR: $e");
+      Fluttertoast.showToast(msg: "Technical issue. Please try again.");
+    }
+  }
+
+  // ============================================
+  // RESEND LOGIN OTP
+  // ============================================
+  Future<void> resendLoginOtp(BuildContext context, String mobile, String referenceId) async {
+    try {
+      CustomLoading.showLoading();
+
+      Map<String, dynamic> requestBody = {
+        "login": mobile,
+        "referenceid": referenceId,
+        "requestfor": "LOGIN",
+        "request_id": GlobalUtils.generateRandomId(8),
+        "lat": latitude.value.toString(),
+        "long": longitude.value.toString(),
+        "versionNew": 1,
+      };
+
+      ConsoleLog.printColor("RESEND LOGIN OTP REQ: $requestBody");
+
+      var response = await ApiProvider().resendLoginOtpApi(
+        context,
+        WebApiConstant.API_URL_RESEND_LOGIN_OTP,
+        requestBody,
+        "",
+      );
+
+      CustomLoading.hideLoading();
+
+      if (response == null) {
+        Fluttertoast.showToast(msg: "No response from server");
+        return;
+      }
+
+      String respCode = response["Resp_code"] ?? "";
+      String respDesc = response["Resp_desc"] ?? "";
+
+      ConsoleLog.printColor("RESEND LOGIN OTP Response Code: $respCode", color: "yellow");
+
+      if (respCode == "RCS") {
+        // Update reference ID if new one is provided
+        String? newReferenceId = response["data"]?["referenceid"]?.toString();
+        if (newReferenceId != null && newReferenceId.isNotEmpty) {
+          loginOtpReferenceId.value = newReferenceId;
+        }
+
+        Fluttertoast.showToast(
+          msg: "OTP sent successfully",
+          toastLength: Toast.LENGTH_SHORT,
+        );
+      } else {
+        Fluttertoast.showToast(
+          msg: respDesc.isNotEmpty ? respDesc : "Failed to resend OTP",
+          toastLength: Toast.LENGTH_LONG,
+          backgroundColor: Colors.red,
+        );
+      }
+    } catch (e) {
+      CustomLoading.hideLoading();
+      ConsoleLog.printError("RESEND LOGIN OTP ERROR: $e");
+      Fluttertoast.showToast(msg: "Technical issue. Please try again.");
+    }
+  }
 }

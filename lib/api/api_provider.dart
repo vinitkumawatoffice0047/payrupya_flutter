@@ -20,6 +20,9 @@ import '../utils/global_utils.dart';
 import '../utils/will_pop_validation.dart';
 import '../view/onboarding_screen.dart';
 import 'web_api_constant.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 class ApiResponse {
   final int code;
@@ -382,6 +385,155 @@ class ApiProvider {
     }
   }
 
+  // Multipart Request Method for File Uploads (using Dio)
+  Future<Response?> postMultipartRequest(
+      String url,
+      Map<String, dynamic> dictParameter,
+      File file,
+      String fileFieldName,
+      String token,
+      [String signature = ""]
+      ) async {
+    try {
+      Map<String, String> headers = {
+        "Content-Type": "multipart/form-data",
+      };
+
+      // Authorization header
+      if (token.isNotEmpty) {
+        headers["Authorization"] = "Bearer $token";
+      }
+
+      // X-Signature header
+      if (signature.isNotEmpty) {
+        headers["X-Signature"] = signature;
+      }
+
+      // Prepare FormData
+      FormData formData = FormData();
+
+      // Add all text fields
+      dictParameter.forEach((key, value) {
+        formData.fields.add(MapEntry(key, value.toString()));
+      });
+
+      // Add file
+      String fileName = file.path.split('/').last;
+      formData.files.add(
+        MapEntry(
+          fileFieldName,
+          await MultipartFile.fromFile(
+            file.path,
+            filename: fileName,
+          ),
+        ),
+      );
+
+      ConsoleLog.printColor("=== MULTIPART API REQUEST ===", color: "blue");
+      ConsoleLog.printColor("URL: $url", color: "yellow");
+      ConsoleLog.printColor("Headers: ${jsonEncode(headers)}", color: "cyan");
+      ConsoleLog.printColor("Fields: ${jsonEncode(dictParameter)}", color: "yellow");
+      ConsoleLog.printColor("File: $fileName (${fileFieldName})", color: "yellow");
+      ConsoleLog.printColor("=== END REQUEST ===", color: "blue");
+
+      BaseOptions options = BaseOptions(
+        baseUrl: WebApiConstant.BASE_URL,
+        receiveTimeout: Duration(seconds: 60), // Increased for file upload
+        connectTimeout: Duration(seconds: 60),
+        headers: headers,
+        responseType: ResponseType.plain,
+      );
+
+      dio.options = options;
+
+      Response response = await dio.post(
+        url,
+        data: formData,
+        options: Options(
+          followRedirects: false,
+          validateStatus: (status) => true,
+          headers: headers,
+          responseType: ResponseType.plain,
+        ),
+        onSendProgress: (sent, total) {
+          // Optional: Show upload progress
+          double progress = (sent / total) * 100;
+          ConsoleLog.printColor("Upload Progress: ${progress.toStringAsFixed(2)}%", color: "cyan");
+        },
+      );
+
+      ConsoleLog.printColor("=== MULTIPART API RESPONSE ===", color: "green");
+      ConsoleLog.printColor("Response_realUri: ${response.realUri}", color: "yellow");
+      ConsoleLog.printColor("Response_headers: ${response.headers}", color: "yellow");
+      ConsoleLog.printColor("Status: ${jsonEncode(response.statusCode)}", color: "yellow");
+
+      // Parse response (same as postRequest)
+      dynamic parsedData;
+
+      if (response.data == null) {
+        ConsoleLog.printError("❌ Response data is null");
+        parsedData = {"Resp_code": "ERR", "Resp_desc": "Empty response from server"};
+      } else if (response.data is String) {
+        String dataStr = response.data.toString().trim();
+
+        if (dataStr.startsWith('<') || dataStr.startsWith('<!')) {
+          ConsoleLog.printError("❌ Server returned HTML instead of JSON!");
+          ConsoleLog.printError("Status Code: ${response.statusCode}");
+          int previewLen = dataStr.length > 500 ? 500 : dataStr.length;
+          ConsoleLog.printError("HTML Preview: ${dataStr.substring(0, previewLen)}");
+
+          parsedData = {
+            "Resp_code": "ERR",
+            "Resp_desc": "Server error - received HTML (Status: ${response.statusCode})",
+          };
+        } else if (dataStr.isEmpty) {
+          ConsoleLog.printError("❌ Empty response from server");
+          parsedData = {"Resp_code": "ERR", "Resp_desc": "Empty response"};
+        } else {
+          try {
+            parsedData = jsonDecode(dataStr);
+            ConsoleLog.printColor("Response : ${jsonEncode(parsedData)}", color: "yellow");
+          } catch (e) {
+            ConsoleLog.printError("❌ Failed to parse JSON: $e");
+            int rawLen = dataStr.length > 300 ? 300 : dataStr.length;
+            ConsoleLog.printError("Raw: ${dataStr.substring(0, rawLen)}...");
+            parsedData = {
+              "Resp_code": "ERR",
+              "Resp_desc": "Invalid JSON response",
+            };
+          }
+        }
+      } else if (response.data is Map) {
+        parsedData = response.data;
+        ConsoleLog.printColor("Response : ${jsonEncode(parsedData)}", color: "yellow");
+      } else {
+        ConsoleLog.printError("❌ Unknown response type: ${response.data.runtimeType}");
+        parsedData = {"Resp_code": "ERR", "Resp_desc": "Unknown format"};
+      }
+
+      ConsoleLog.printColor("=== END RESPONSE ===", color: "green");
+
+      // Create new Response with parsed Map data
+      Response parsedResponse = Response(
+        requestOptions: response.requestOptions,
+        data: parsedData,
+        statusCode: response.statusCode,
+        headers: response.headers,
+      );
+
+      // Check for auth error
+      if (parsedData is Map<String, dynamic> && parsedData["errorCode"] == 7) {
+        ConsoleLog.printError("❌ Authentication failed - Error Code 7");
+        logoutUser();
+      }
+
+      return parsedResponse;
+    } catch (error) {
+      ConsoleLog.printError("Multipart API Exception: $error");
+      return null;
+    }
+  }
+
 
   //region loadAuthCredentials
   // Load both token and signature properly
@@ -548,6 +700,48 @@ class ApiProvider {
       CustomLoading.showLoading();
       final Response? response = await requestPostForApi(url, dictParameter, token);
       ConsoleLog.printJsonResponse("ResponseNew..........$response.........", color: "green", tag: "Login Api (Post)");
+      if (response != null && response.statusCode == 200) {
+        result = Map<String, dynamic>.from(response.data);
+        ConsoleLog.printSuccess("$result",);
+      }
+      CustomLoading.hideLoading();
+      return result;
+    } catch (e) {
+      CustomLoading.hideLoading();
+      ConsoleLog.printError("Exception..........$e.........");
+      Fluttertoast.showToast(msg: "Something went wrong");
+      return result;
+    }
+  }
+
+  //Verify Login OTP API (Post)
+  Future<Map<String, dynamic>?> verifyLoginOtpApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
+    Map<String, dynamic>? result;
+    try {
+      CustomLoading.showLoading();
+      final Response? response = await requestPostForApi(url, dictParameter, token);
+      ConsoleLog.printJsonResponse("ResponseNew..........$response.........", color: "green", tag: "Verify Login OTP Api (Post)");
+      if (response != null && response.statusCode == 200) {
+        result = Map<String, dynamic>.from(response.data);
+        ConsoleLog.printSuccess("$result",);
+      }
+      CustomLoading.hideLoading();
+      return result;
+    } catch (e) {
+      CustomLoading.hideLoading();
+      ConsoleLog.printError("Exception..........$e.........");
+      Fluttertoast.showToast(msg: "Something went wrong");
+      return result;
+    }
+  }
+
+  //Resend Login OTP API (Post)
+  Future<Map<String, dynamic>?> resendLoginOtpApi(context, String url, Map<String, dynamic> dictParameter, String token) async {
+    Map<String, dynamic>? result;
+    try {
+      CustomLoading.showLoading();
+      final Response? response = await requestPostForApi(url, dictParameter, token);
+      ConsoleLog.printJsonResponse("ResponseNew..........$response.........", color: "green", tag: "Resend Login OTP Api (Post)");
       if (response != null && response.statusCode == 200) {
         result = Map<String, dynamic>.from(response.data);
         ConsoleLog.printSuccess("$result",);

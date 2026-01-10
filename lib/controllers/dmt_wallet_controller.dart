@@ -748,7 +748,7 @@ class DmtWalletController extends GetxController {
     try {
       if (query.length < 2) {
         searchSuggestions.clear();
-        hasMoreSuggestions. value = true;
+        hasMoreSuggestions.value = true;
         return;
       }
 
@@ -756,7 +756,7 @@ class DmtWalletController extends GetxController {
       if (reset) {
         searchPageStart.value = 0;
         searchSuggestions.clear();
-        hasMoreSuggestions. value = true;
+        hasMoreSuggestions.value = true;
       }
 
       // Mark as searching/loading
@@ -778,8 +778,8 @@ class DmtWalletController extends GetxController {
 
       Map<String, dynamic> body = {
         "request_id": generateRequestId(),
-        "lat": loginController.latitude. value. toString(),
-        "long": loginController.longitude.value. toString(),
+        "lat": loginController.latitude.value.toString(),
+        "long": loginController.longitude.value.toString(),
         "start":  searchPageStart.value.toString(),
         "limit": searchPageLimit.toString(),
         "searchby": query,
@@ -800,12 +800,21 @@ class DmtWalletController extends GetxController {
 
         if (suggestionResponse.respCode == "RCS" && suggestionResponse.data != null) {
           List<BeneficiaryData> newData = suggestionResponse.data!;
+          
+          // Filter results to only show accounts where account number matches the search query
+          // This ensures only account number search results are shown
+          String searchQuery = query.trim().toLowerCase();
+          List<BeneficiaryData> filteredData = newData.where((account) {
+            String accountNo = (account.accountNo ?? '').trim().toLowerCase();
+            // Check if account number contains the search query
+            return accountNo.contains(searchQuery);
+          }).toList();
 
           // If first page, replace.  If load more, append
           if (reset || searchPageStart.value == 0) {
-            searchSuggestions.value = newData;
+            searchSuggestions.value = filteredData;
           } else {
-            searchSuggestions.addAll(newData);
+            searchSuggestions.addAll(filteredData);
           }
 
           // Check if there are more results
@@ -885,6 +894,42 @@ class DmtWalletController extends GetxController {
     _searchDebounceTimer = Timer(_searchDebounceDelay, () {
       fetchAccountSuggestions(query, reset: true); // Reset = true for new search
     });
+  }
+//endregion
+
+  //region searchByAccountNumber (Search only by account number)
+  void searchByAccountNumber(String accountNumber) {
+    String trimmedAccount = accountNumber.trim();
+    
+    if (trimmedAccount.isEmpty) {
+      searchSuggestions.clear();
+      searchPageStart.value = 0;
+      hasMoreSuggestions.value = true;
+      return;
+    }
+    
+    // Validate that input contains only numbers
+    if (!RegExp(r'^[0-9]+$').hasMatch(trimmedAccount)) {
+      searchSuggestions.clear();
+      Fluttertoast.showToast(
+        msg: "Please enter only account number (digits only)",
+        gravity: ToastGravity.TOP,
+      );
+      return;
+    }
+    
+    // Validate account number length (9-18 digits)
+    if (!isValidAccountNumber(trimmedAccount)) {
+      searchSuggestions.clear();
+      Fluttertoast.showToast(
+        msg: "Please enter a valid account number (9-18 digits)",
+        gravity: ToastGravity.TOP,
+      );
+      return;
+    }
+    
+    // Search only by account number if valid
+    fetchAccountSuggestions(trimmedAccount, reset: true);
   }
 //endregion
 

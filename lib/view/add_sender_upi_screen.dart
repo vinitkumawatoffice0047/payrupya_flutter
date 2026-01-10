@@ -2183,10 +2183,11 @@ class _AddSenderUPIScreenState extends State<AddSenderUPIScreen> {
 
   @override
   void dispose() {
-    super.dispose();
-    upiWalletController.dispose();
+    // Don't manually dispose GetX controllers - GetX manages their lifecycle
+    // upiWalletController.dispose(); // ❌ Causes "used after being disposed" error
     // signupController.dispose();
     // loginController.dispose();
     otpKey.currentState?.dispose();
+    super.dispose();
   }
 }

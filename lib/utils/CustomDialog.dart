@@ -225,12 +225,15 @@ class CustomDialog{
   // ================================
   // ERROR DIALOG
   // ================================
-  static void error({required String message}) {
+  static void error({required String message, VoidCallback? onContinue,}) {
     _show(
       icon: Image.asset("assets/images/oops.png", height: 80),
       message: message,
       buttonText: "Continue",
-      onPressed: () => Get.back(),
+      onPressed: () {
+        Get.back();
+        if (onContinue != null) onContinue();
+      },
     );
   }
   // static void error({required BuildContext context,required String message,}) {

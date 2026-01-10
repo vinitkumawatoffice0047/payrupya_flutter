@@ -82,7 +82,7 @@ class SenderData {
 
   SenderData.fromJson(Map<String, dynamic> json) {
     identifier = json['identifier']?.toString();
-    txnpin = json['txnpin']?.toString();
+    txnpin = json['txnpin'] != null ? json['txnpin'].toString() : null;
     mobile = json['mobile']?.toString();
     senderId = json['senderId']?.toString();
     beneficiarydetail = json['beneficiarydetail'] != null ? List<Beneficiarydetail>.from(json['beneficiarydetail'].map((x) => Beneficiarydetail.fromJson(x))) : null;
@@ -101,7 +101,7 @@ class SenderData {
     otp = json['otp']?.toString();
     referenceid = json['referenceid']?.toString();
     usedLimit = json['used_limit'];
-    kycStatus = json['kyc_status'];
+    kycStatus = json['kyc_status']?.toString();
   }
 
   Map<String, dynamic> toJson() {
@@ -157,17 +157,17 @@ class SenderDetail {
           : (json['availabel_limit'] is double)
           ? json['availabel_limit']
           : double.tryParse(json['availabel_limit']?.toString() ?? '0') ?? 0.0,
-      consumed_limit: json['consumed_limit'],
+      consumed_limit: json['consumed_limit'] != null ? json['consumed_limit'].toString() : null,
       allowed_limit: (json['allowed_limit'] is int)
           ? (json['allowed_limit'] as int).toDouble()
           : (json['allowed_limit'] is double)
           ? json['allowed_limit']
           : double.tryParse(json['allowed_limit']?.toString() ?? '0') ?? 0.0,
-      senderid: json['senderid'],
-      sendername: json['sendername'],
-      address: json['address'],
-      sendermobile: json['sendermobile'],
-      kycstatus: json['kycstatus'],
+      senderid: json['senderid'] != null ? json['senderid'].toString() : null,
+      sendername: json['sendername']?.toString(),
+      address: json['address']?.toString(),
+      sendermobile: json['sendermobile']?.toString(),
+      kycstatus: json['kycstatus']?.toString(),
 
       // senderId: json['senderid']?.toString(),
       // senderMobile: json['sendermobile'],
@@ -220,12 +220,12 @@ class Beneficiarydetail {
         this.benestatus});
 
   Beneficiarydetail.fromJson(Map<String, dynamic> json) {
-    beneficiaryname = json['beneficiaryname'];
-    accountnumber = json['accountnumber'];
-    bank = json['bank'];
-    ifscode = json['ifscode'];
-    beneficiaryid = json['beneficiaryid'];
-    benestatus = json['benestatus'];
+    beneficiaryname = json['beneficiaryname']?.toString();
+    accountnumber = json['accountnumber']?.toString();
+    bank = json['bank']?.toString();
+    ifscode = json['ifscode']?.toString();
+    beneficiaryid = json['beneficiaryid'] != null ? json['beneficiaryid'].toString() : null;
+    benestatus = json['benestatus']?.toString();
   }
 
   Map<String, dynamic> toJson() {

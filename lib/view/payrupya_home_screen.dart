@@ -138,48 +138,103 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xff80a8ff),
+      backgroundColor: Colors.white,
+      // backgroundColor: Color(0xff80a8ff),
       body: Stack(
         children: [
           Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF2E5BFF), Color(0xFF5E92F3)],
-              ),
-            ),
-            child: Column(
+            // decoration: BoxDecoration(
+            //   gradient: LinearGradient(
+            //     begin: Alignment.topLeft,
+            //     end: Alignment.bottomRight,
+            //     colors: [Color(0xFF2E5BFF), Color(0xFF5E92F3)],
+            //   ),
+            // ),
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                SizedBox(
-                  height: 30,
+                // Landscape Background Image (only in header area)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  // bottom: 0,
+                  child: SizedBox(
+                    height: 215,
+                    child: Image.asset(
+                      'assets/images/landscape_bg.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        // Fallback to gradient if image not found
+                        return Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF4A90E2),
+                                Color(0xFF357ABD),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
-                buildHeader(),
-                Expanded(
+                // Overlay for better text visibility
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
-                    ),
-                    child: SingleChildScrollView(
-                      physics: BouncingScrollPhysics(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: 20),
-                          buildQuickLinks(),
-                          SizedBox(height: 20),
-                          buildPromoBanner(),
-                          SizedBox(height: 20),
-                          buildDownBanks(),
-                          SizedBox(height: 20),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.2),
                         ],
                       ),
                     ),
                   ),
+                ),
+                // Content
+                Column(
+                  children: [
+                    SizedBox(
+                      height: 30,
+                    ),
+                    buildHeader(),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(30),
+                            topRight: Radius.circular(30),
+                          ),
+                        ),
+                        child: SingleChildScrollView(
+                          physics: BouncingScrollPhysics(),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(height: 20),
+                              buildQuickLinks(),
+                              SizedBox(height: 20),
+                              buildPromoBanner(),
+                              SizedBox(height: 20),
+                              buildDownBanks(),
+                              SizedBox(height: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -289,10 +344,13 @@ class _PayrupyaHomeScreenState extends State<PayrupyaHomeScreen> with SingleTick
           padding: EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(100),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
+            shape: BoxShape.circle,
+            // borderRadius: BorderRadius.circular(100),
+            // border: Border.all(color: Colors.white.withOpacity(0.3)),
           ),
-          child: Image.asset(imagePath, width: 22, height: 22, color: Colors.white),
+          child: Image.asset(imagePath, width: 22, height: 22, color: Colors.white, errorBuilder: (context, error, stackTrace) {
+            return Icon(Icons.error, color: Colors.white, size: 20);
+          },),
         ),
       ),
     );

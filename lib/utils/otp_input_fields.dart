@@ -125,12 +125,26 @@ class OtpInputFieldsState extends State<OtpInputFields> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: List.generate(widget.length, (index) {
-        return SizedBox(
-          width: 50,
-          child: RawKeyboardListener(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate available width and box size to prevent overflow
+        final availableWidth = constraints.maxWidth.isFinite && constraints.maxWidth > 0 
+            ? constraints.maxWidth 
+            : MediaQuery.of(context).size.width - 100;
+        final spacing = 6.0; // Reduced spacing between boxes
+        final totalSpacing = spacing * (widget.length - 1);
+        final calculatedBoxWidth = (availableWidth - totalSpacing) / widget.length;
+        final boxWidth = calculatedBoxWidth.clamp(38.0, 48.0);
+        
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(widget.length, (index) {
+            return Padding(
+              padding: EdgeInsets.only(right: index < widget.length - 1 ? spacing : 0),
+              child: SizedBox(
+                width: boxWidth,
+                child: RawKeyboardListener(
             // Backspace handle karne ke liye
             focusNode: FocusNode(),
             onKey: (RawKeyEvent event) {
@@ -241,10 +255,13 @@ class OtpInputFieldsState extends State<OtpInputFields> {
                   _notifyOtpChanged();
                 },
               ),
+              ),
             ),
-          ),
+            ),
+            );
+          }),
         );
-      }),
+      },
     );
   }
 
